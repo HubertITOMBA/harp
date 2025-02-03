@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+:root {
+  height: 100%;
+}
+
+
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  font-family: "montserrat", sans-serif !important;
+}
+
+.react-calendar__navigation__label__labelText {
+  font-weight: 600;
+}
+
+.react-calendar__title--active{
+  background-color: #C3EBFA !important;
+  color:black !important;
+}
+
+.lapage {
+  @apply  container font-title text-lg mt-5 sm:text-5xl md:text-6xl;
+}
+
+.article {
+  @apply bg-blue-400 p-4 rounded hover:bg-blue-300 transition duration-300 delay-150;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+ 
+
+/* @layer base {
+    :root {
+      --gradient: #F7941E;
+
+      --background: 35 60.45% 4.4%;
+      --foreground: 35 9.3% 97.75%;
+
+      --muted: 35 46.5% 16.5%;
+      --muted-foreground: 35 9.3% 55.5%;
+
+      --popover: 35 46.4% 7.15%;
+      --popover-foreground: 35 9.3% 97.75%;
+
+      --card: 35 46.4% 7.15%;
+      --card-foreground: 35 9.3% 97.75%;
+
+      --border: 35 46.5% 16.5%;
+      --input: 35 46.5% 16.5%;
+
+      --primary: 35 93% 55%;
+      --primary-foreground: 35 9.3% 5.5%;
+
+      --secondary: 35 46.5% 16.5%;
+      --secondary-foreground: 35 9.3% 97.75%;
+
+      --accent: 35 46.5% 16.5%;
+      --accent-foreground: 35 9.3% 97.75%;
+
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 35 9.3% 97.75%;
+
+      --ring: 35 93% 55%;
+}
+}  */
+
+
+/* @layer base {
+  :root {
+     
+    --gradient: #00467F;
+    --background: 220 100% 98.5%;
+    --foreground: 220 10% 1%;
+
+    --muted: 220 10% 92.5%;
+    --muted-foreground: 220 5% 42.5%;
+
+    --popover: 220 10% 92.5%;
+    --popover-foreground: 220 10% 1.25%;
+
+    --card: 220 10% 92.5%;
+    --card-foreground: 220 10% 1.25%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+
+    --primary: 220 100% 25%;
+    --primary-foreground: 220 2% 92.5%;
+
+    --secondary: 220 5% 96.25%;
+    --secondary-foreground: 220 7% 12.5%;
+
+    --accent: 220 5% 96.25%;
+    --accent-foreground: 220 7% 12.5%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 220 100% 25%;
+
+    --radius: 0.5rem;
+}
+} */
+
+
+/* @layer base {
+  :root {
+    --gradient: #FD8112;
+
+    --background: 30 63.699999999999996% 4.24%;
+    --foreground: 30 9.8% 97.65%;
+
+    --muted: 30 49% 15.9%;
+    --muted-foreground: 30 9.8% 55.3%;
+
+    --popover: 30 45.4% 6.890000000000001%;
+    --popover-foreground: 30 9.8% 97.65%;
+
+    --card: 30 45.4% 6.890000000000001%;
+    --card-foreground: 30 9.8% 97.65%;
+
+    --border: 30 49% 15.9%;
+    --input: 30 49% 15.9%;
+
+    --primary: 30 98% 53%;
+    --primary-foreground: 30 9.8% 5.300000000000001%;
+
+    --secondary: 30 49% 15.9%;
+    --secondary-foreground: 30 9.8% 97.65%;
+
+    --accent: 30 49% 15.9%;
+    --accent-foreground: 30 9.8% 97.65%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 30 9.8% 97.65%;
+
+    --ring: 30 98% 53%;
+  }
+} */

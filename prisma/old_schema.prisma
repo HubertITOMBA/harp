@@ -1,0 +1,848 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+// model netidManquants {
+//   netid String? @db.VarChar(10)
+//   nom   String? @db.VarChar(25)
+//   num   Int     @id @default(autoincrement())
+// }
+
+model psadm_appli {
+  appli     String      @db.Char(2)
+  psversion String      @db.VarChar(50)
+  descr     String      @db.VarChar(50)
+  psadm_env psadm_env[]
+
+  @@id([appli, psversion])
+}
+
+model psadm_base {
+  nom     String  @id @db.VarChar(8)
+  groupe  String? @db.VarChar(30)
+  libelle String? @db.VarChar(50)
+  volume  String? @db.VarChar(4)
+  typage  String? @db.VarChar(9)
+}
+
+model psadm_dispo {
+  env           String        @db.VarChar(32)
+  statenvId     Int           @default(4)
+  statenv       String        @db.VarChar(32)
+  fromdate      DateTime      @db.DateTime(0)
+  msg           String?       @db.VarChar(255)
+  psadm_env     psadm_env     @relation(fields: [env], references: [env], map: "psadm_dispo_ibfk_1")
+  psadm_statenv psadm_statenv @relation(fields: [statenv], references: [statenv], map: "psadm_dispo_ibfk_2")
+  //  statutenv     statutenv     @relation(fields: [statenvId], references: [id], map: "statutenv_ibfk_1")
+  // statutenv     statutenv     @relation(fields: [statenvId], references: [id])
+  statutenv     statutenv?    @relation(fields: [statutenvId], references: [id])
+  statutenvId   Int?
+
+  @@id([env, fromdate])
+  @@index([statenv], map: "statenv")
+  @@index([statenvId])
+}
+
+model psadm_domain {
+  domain String  @id @default("") @db.VarChar(10)
+  hw     String? @db.VarChar(10)
+  site   String? @db.VarChar(32)
+  cpu    Int?    @db.SmallInt
+  core   Int?    @db.SmallInt
+  ram    Int?    @db.SmallInt
+}
+
+model psadm_droits {
+  groupe_nom         String              @default("") @db.VarChar(9)
+  typage             String              @default("") @db.VarChar(9)
+  habilitation       String?             @db.VarChar(13)
+  psadm_groupe       psadm_groupe        @relation(fields: [groupe_nom], references: [nom], onDelete: Cascade, onUpdate: Restrict, map: "psadm_droits_ibfk_1")
+  psadm_habilitation psadm_habilitation? @relation(fields: [habilitation], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "psadm_droits_ibfk_2")
+
+  @@id([groupe_nom, typage])
+  @@index([habilitation], map: "habilitation")
+}
+
+model envsharp {
+  id                 Int           @id @default(autoincrement())
+  env                String        @unique @db.VarChar(32)
+  url                String        @db.VarChar(255)
+  appli              String        @db.Char(2)
+  psversion          String        @db.VarChar(50)
+  ptversion          String        @db.VarChar(50)
+  harprelease        String        @db.VarChar(20)
+  volum              String?       @db.VarChar(60)
+  datmaj             DateTime?     @db.Timestamp(0)
+  gassi              String?       @db.VarChar(50)
+  rpg                String?       @db.VarChar(50)
+  msg                String?       @db.VarChar(255)
+  descr              String        @db.VarChar(255)
+  anonym             String?       @db.Char(1)
+  edi                String?       @db.Char(1)
+  typenvid           Int?
+  statenvId          Int?           @default(0)
+  releaseId          Int?
+  harpora            harpora[]
+  harpenvinfo        harpenvinfo[]
+  harpmonitor        harpmonitor[]
+  statutenv          statutenv?     @relation(fields: [statenvId], references: [id])
+  releaseenv         releaseenv?    @relation(fields: [releaseId], references: [id]) 
+  harptypenv         harptypenv?   @relation(fields: [typenvid], references: [id])
+
+  @@index([appli, psversion])
+  @@index([harprelease])
+  @@index([ptversion])
+  @@index([volum])
+  @@index([typenvid])
+  @@index([statenvId])
+  @@index([releaseId])
+  @@index([env])
+}
+
+model harpora {
+  id            Int      @id @default(autoincrement())
+  envId         Int
+  oracle_sid    String   @db.Char(8)
+  aliasql       String   @db.VarChar(32)
+  oraschema     String   @db.Char(8)
+  descr         String   @db.VarChar(50)
+  orarelease    String?  @db.VarChar(32)
+  statenvId     Int           @default(0)
+  createddt     DateTime @default(now()) @db.Timestamp(0)
+  envsharp      envsharp @relation(fields: [envId], references: [id], onDelete: Cascade)
+  statutenv     statutenv     @relation(fields: [statenvId], references: [id])
+
+  @@unique([oracle_sid, aliasql, oraschema])
+  @@index([aliasql])
+  @@index([envId])
+}
+
+model harptypenv {
+  id        Int         @id @default(autoincrement()) 
+  typenv    String      @unique @db.VarChar(32)
+  href      String      @db.VarChar(32)
+  descr     String      @db.VarChar(50)
+  envsharp  envsharp[]
+  
+}
+
+model statutenv {
+  id          Int           @id @default(autoincrement())
+  statenv     String        @unique @db.VarChar(32)
+  descr       String?       @db.VarChar(70)
+  icone       String?       @db.VarChar(70)
+  envsharp    envsharp[]
+  harpora     harpora[]
+  psadm_env   psadm_env[]
+  psadm_dispo psadm_dispo[]
+}
+
+model harpenvinfo {
+  envId               Int       @id  
+  datadt              DateTime? @db.Timestamp(0)
+  modetp              String?   @db.VarChar(10)
+  modedt              DateTime? @db.Timestamp(0)
+  refreshdt           DateTime? @db.Timestamp(0)
+  lastcheckstatus     Int?      @db.SmallInt
+  lastcheckdt         DateTime? @db.Timestamp(0)
+  lastcheckmsg        String?   @db.VarChar(255)
+  datmaj              DateTime  @default(now()) @db.Timestamp(0)
+  deploycbldt         String?   @db.VarChar(25)
+  userunx             String?   @db.VarChar(12)
+  pswd_ft_exploit     String?   @db.VarChar(32)
+  envsharp            envsharp   @relation(fields: [envId], references: [id]) 
+
+  @@index([envId, datadt])
+}
+
+model harpmonitor {
+  id            Int       @id @default(autoincrement())
+  envId         Int
+  monitordt     DateTime  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  dbstatus      Int?
+  nbdom         Int?
+  asstatus1     Int?
+  asstatus2     Int?
+  asstatus3     Int?
+  asstatus4     Int?
+  asstatus5     Int?
+  lastasdt      DateTime? @db.Timestamp(0)
+  prcsunxstatus Int?
+  lastprcsunxdt DateTime? @db.Timestamp(0)
+  prcsntstatus  Int?
+  lastprcsntdt  DateTime? @db.Timestamp(0)
+  lastlogin     String?   @db.VarChar(32)
+  lastlogindt   DateTime? @db.Timestamp(0)
+  envsharp      envsharp   @relation(fields: [envId], references: [id]) 
+
+  @@index([envId])
+
+}
+
+model releaseenv {
+  id            Int         @id @default(autoincrement())
+  harprelease   String      @unique @db.VarChar(20) 
+  descr         String      @db.VarChar(50)
+  envsharp      envsharp[] 
+
+  @@index([harprelease])
+
+}
+
+
+model psadm_env {
+  display       Int           @db.SmallInt
+  env           String        @id @unique @db.VarChar(32)
+  site          String        @db.VarChar(32)
+  typenv        String        @db.VarChar(32)
+  url           String        @db.VarChar(255)
+  oracle_sid    String        @db.Char(8)
+  aliasql       String        @db.VarChar(32)
+  oraschema     String        @db.Char(8)
+  appli         String        @db.Char(2)
+  psversion     String        @db.VarChar(50)
+  ptversion     String        @db.VarChar(50)
+  harprelease   String        @db.VarChar(20)
+  volum         String?       @db.VarChar(60)
+  datmaj        DateTime?     @db.Timestamp(0)
+  gassi         String?       @db.VarChar(50)
+  rpg           String?       @db.VarChar(50)
+  msg           String?       @db.VarChar(255)
+  descr         String        @db.VarChar(255)
+  anonym        String?       @db.Char(1)
+  edi           String?       @db.Char(1)
+  typenvid      Int?
+  statenvId     Int           @default(0)
+  psadm_dispo   psadm_dispo[]
+  // statutenv     statutenv     @relation(fields: [statenvId], references: [id], map: "statut_env_ibfk_1")
+  statutenv     statutenv     @relation(fields: [statenvId], references: [id])
+  psadm_typenv  psadm_typenv  @relation(fields: [typenv], references: [typenv], map: "psadm_env_ibfk_1")
+  psadm_oracle  psadm_oracle  @relation(fields: [oracle_sid, aliasql, oraschema], references: [oracle_sid, aliasql, oraschema], map: "psadm_env_ibfk_2")
+  psadm_release psadm_release @relation(fields: [harprelease], references: [harprelease], map: "psadm_env_ibfk_5")
+  psadm_ptools  psadm_ptools  @relation(fields: [ptversion], references: [ptversion], map: "psadm_env_ibfk_8")
+  psadm_appli   psadm_appli   @relation(fields: [appli, psversion], references: [appli, psversion], map: "psadm_env_ibfk_9")
+
+  psadm_rolesrv psadm_rolesrv[]
+  // psadm_envinfo psadm_envinfo   @relation(fields: [env], references: [env], map: "psadm_envinfo_ibfk_1")
+
+  @@index([appli, psversion], map: "appli")
+  @@index([harprelease], map: "harprelease")
+  @@index([oracle_sid, aliasql, oraschema], map: "oracle_sid")
+  @@index([ptversion], map: "ptversion")
+  @@index([typenv], map: "typenv")
+  @@index([volum], map: "volum")
+  @@index([statenvId], map: "id")
+  @@index([env], map: "env")
+}
+
+model psadm_envinfo {
+  env             String    @id @db.VarChar(32)
+  datadt          DateTime? @db.Timestamp(0)
+  modetp          String?   @db.VarChar(10)
+  modedt          DateTime? @db.Timestamp(0)
+  refreshdt       DateTime? @db.Timestamp(0)
+  lastcheckstatus Int?      @db.SmallInt
+  lastcheckdt     DateTime? @db.Timestamp(0)
+  lastcheckmsg    String?   @db.VarChar(255)
+  datmaj          DateTime  @default(now()) @db.Timestamp(0)
+  deploycbldt     String?   @db.VarChar(25)
+  userunx         String?   @db.VarChar(12)
+  pswd_ft_exploit String?   @db.VarChar(32)
+  // psadm_env      psadm_env   @relation(fields: [env], references: [env], map: "psadm_env_infk") 
+
+  @@index([env], map: "env")
+}
+
+model psadm_environnement {
+  alias    String  @id @db.VarChar(11)
+  nom      String? @db.VarChar(6)
+  type     String? @db.VarChar(2)
+  nature   String? @db.VarChar(8)
+  domaine  String? @db.VarChar(8)
+  machine  String? @db.VarChar(8)
+  instance String? @db.VarChar(8)
+}
+
+model psadm_equivprofil {
+  groupe_nom   String       @id @db.VarChar(9)
+  profilUX     String?      @db.VarChar(20)
+  psadm_groupe psadm_groupe @relation(fields: [groupe_nom], references: [nom], onUpdate: Restrict, map: "psadm_equivprofil_ibfk_1")
+}
+
+model psadm_expora {
+  netid      String    @db.VarChar(8)
+  oracle_sid String    @db.Char(8)
+  expora     DateTime? @db.DateTime(0)
+
+  @@id([netid, oracle_sid])
+  @@index([oracle_sid], map: "oracle_sid")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+// model psadm_externes {
+//   env    String @db.VarChar(32)
+//   typsrv String @db.VarChar(32)
+//   domain String @db.VarChar(32)
+//   num    Int    @id @default(autoincrement())
+
+//   @@index([env], map: "env")
+
+// }
+
+model psadm_groupe {
+  nom               String             @id @db.VarChar(9)
+  description       String?            @db.VarChar(50)
+  valideur          String?            @db.VarChar(10)
+  psadm_droits      psadm_droits[]
+  psadm_equivprofil psadm_equivprofil?
+}
+
+model psadm_habilitation {
+  id           String         @id @db.VarChar(13)
+  description  String?        @db.VarChar(70)
+  psadm_droits psadm_droits[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+// model psadm_historique {
+//   date          DateTime @default(now()) @db.Timestamp(0)
+//   id_modifieur  String?  @db.VarChar(10)
+//   netid_updated String?  @db.VarChar(10)
+//   num_demande   String?  @db.VarChar(20)
+//   commentaire   String?  @db.VarChar(100)
+//   num           Int      @id @default(autoincrement())
+
+// }
+
+model psadm_info {
+  num      Int      @id @default(autoincrement())
+  msg      String   @db.VarChar(255)
+  fromdate DateTime @db.DateTime(0)
+  todate   DateTime @db.DateTime(0)
+}
+
+model psadm_link {
+  display Int    @db.SmallInt
+  link    String @db.VarChar(32)
+  typlink String @db.VarChar(32)
+  url     String @db.VarChar(255)
+  tab     String @db.VarChar(32)
+  logo    String @db.VarChar(50)
+  descr   String @db.VarChar(50)
+
+  @@id([link, typlink, tab])
+}
+
+model psadm_log {
+  num    Int      @id @default(autoincrement())
+  netid  String?  @db.VarChar(32)
+  event  String?  @db.VarChar(64)
+  log    String   @db.VarChar(255)
+  datmaj DateTime @default(now()) @db.Timestamp(0)
+}
+
+model psadm_logo {
+  statenv       String        @db.VarChar(32)
+  appli         String        @db.Char(2)
+  logo          String        @db.VarChar(50)
+  psadm_statenv psadm_statenv @relation(fields: [statenv], references: [statenv], map: "psadm_logo_ibfk_1")
+
+  @@id([statenv, appli])
+}
+
+model psadm_monitor {
+  env           String    @db.VarChar(32)
+  monitordt     DateTime  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  dbstatus      Int?
+  nbdom         Int?
+  asstatus1     Int?
+  asstatus2     Int?
+  asstatus3     Int?
+  asstatus4     Int?
+  asstatus5     Int?
+  lastasdt      DateTime? @db.Timestamp(0)
+  prcsunxstatus Int?
+  lastprcsunxdt DateTime? @db.Timestamp(0)
+  prcsntstatus  Int?
+  lastprcsntdt  DateTime? @db.Timestamp(0)
+  lastlogin     String?   @db.VarChar(32)
+  lastlogindt   DateTime? @db.Timestamp(0)
+
+  @@id([env, monitordt])
+}
+
+model psadm_oracle {
+  oracle_sid String      @db.Char(8)
+  aliasql    String      @db.VarChar(32)
+  oraschema  String      @db.Char(8)
+  descr      String      @db.VarChar(50)
+  orarelease String?     @db.VarChar(32)
+  typenvid   Int?
+  psadm_env  psadm_env[]
+
+  @@id([oracle_sid, aliasql, oraschema])
+  @@index([aliasql])
+}
+
+model psadm_param {
+  param  String @id @db.VarChar(12)
+  valeur String @db.VarChar(100)
+  descr  String @db.VarChar(50)
+}
+
+model psadm_perm {
+  perm           String           @db.VarChar(32)
+  typerm         String           @db.VarChar(32)
+  descr          String           @db.VarChar(50)
+  psadm_roleperm psadm_roleperm[]
+
+  @@id([perm, typerm])
+}
+
+model psadm_ptools {
+  ptversion String      @id @db.VarChar(50)
+  descr     String      @db.VarChar(50)
+  psadm_env psadm_env[]
+}
+
+model psadm_release {
+  harprelease String      @id @db.VarChar(20)
+  descr       String      @db.VarChar(50)
+  psadm_env   psadm_env[]
+}
+
+model psadm_report {
+  env          String   @db.VarChar(32)
+  typereport   String   @db.VarChar(32)
+  fullfilename String?  @db.VarChar(255)
+  filename     String   @db.VarChar(100)
+  url          String   @db.VarChar(255)
+  datmaj       DateTime @default(now()) @db.Timestamp(0)
+
+  @@id([env, typereport, filename])
+}
+
+model harpmenus {
+  id           Int            @id @default(autoincrement())
+  display      Int            @default(0) @db.SmallInt
+  level        Int            @default(0) @db.SmallInt
+  menu         String         @unique @db.VarChar(32)
+  href         String?        @db.VarChar(100)
+  descr        String?        @db.VarChar(50)
+  icone        String?        @db.VarChar(50)
+  active       Int            @default(1) @db.SmallInt
+  role         UserRole       @default(TMA_LOCAL)
+  harpmenurole harpmenurole[]
+}
+
+model harpmenurole {
+  menuId    Int
+  roleId    Int
+  datmaj    DateTime  @default(now()) @db.Timestamp(0)
+  harpmenus harpmenus @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@id([menuId, roleId])
+  @@index([menuId])
+  @@index([roleId])
+}
+
+model psadm_role {
+  role           String           @id @db.VarChar(32)
+  descr          String           @db.VarChar(50)
+  psadm_roleperm psadm_roleperm[]
+  psadm_roleuser psadm_roleuser[]
+}
+
+model psadm_roleperm {
+  role       String     @db.VarChar(32)
+  perm       String     @db.VarChar(32)
+  typerm     String     @db.VarChar(32)
+  datmaj     DateTime   @default(now()) @db.Timestamp(0)
+  psadm_role psadm_role @relation(fields: [role], references: [role], map: "psadm_roleperm_ibfk_1")
+  psadm_perm psadm_perm @relation(fields: [perm, typerm], references: [perm, typerm], map: "psadm_roleperm_ibfk_2")
+
+  @@id([role, perm, typerm])
+  @@index([perm, typerm], map: "perm")
+}
+
+model psadm_rolesrv {
+  srv          String       @db.VarChar(32)
+  env          String       @db.VarChar(32)
+  typsrv       String       @db.VarChar(32)
+  status       Int?
+  psadm_srv    psadm_srv    @relation(fields: [srv], references: [srv], map: "psadm_rolesrv_ibfk_1")
+  psadm_env    psadm_env    @relation(fields: [env], references: [env], map: "psadm_rolesrv_ibfk_2")
+  psadm_typsrv psadm_typsrv @relation(fields: [typsrv], references: [typsrv], map: "psadm_rolesrv_ibfk_3")
+
+  @@id([srv, env, typsrv])
+  @@index([env], map: "env")
+  @@index([typsrv], map: "typsrv")
+}
+
+model psadm_roleuser {
+  netid      String     @default("") @db.VarChar(32)
+  role       String     @db.VarChar(32)
+  rolep      String     @db.Char(1)
+  datmaj     DateTime   @default(now()) @db.Timestamp(0)
+  psadm_role psadm_role @relation(fields: [role], references: [role], map: "psadm_roleuser_ibfk_2")
+  psadm_user psadm_user @relation(fields: [netid], references: [netid], map: "psadm_roleuser_ibfk_1")
+
+  @@id([netid, role])
+  @@index([role], map: "role")
+  @@index([netid])
+}
+
+model psadm_srv {
+  srv           String          @id @db.VarChar(32)
+  ip            String          @db.VarChar(15)
+  pshome        String          @db.VarChar(32)
+  os            String          @db.VarChar(15)
+  psuser        String?         @db.Char(15)
+  domain        String?         @db.VarChar(10)
+  psadm_rolesrv psadm_rolesrv[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_srv_save {
+  srv    String  @db.VarChar(32)
+  ip     String  @db.VarChar(15)
+  pshome String  @db.VarChar(32)
+  os     String  @db.VarChar(15)
+  psuser String? @db.Char(15)
+  domain String? @db.VarChar(10)
+
+  @@ignore
+}
+
+model psadm_statenv {
+  statenv     String        @id @db.VarChar(32)
+  descr       String?       @db.VarChar(70)
+  icone       String?       @db.VarChar(50)
+  display     Int?          @db.SmallInt
+  psadm_dispo psadm_dispo[]
+  psadm_logo  psadm_logo[]
+}
+
+model psadm_tab {
+  display Int      @default(0) @db.SmallInt
+  level   Int?     @default(1) @db.SmallInt
+  tab     String   @id @db.VarChar(32)
+  newhref String?  @db.VarChar(255)
+  href    String?  @db.VarChar(255)
+  icone   String?  @db.VarChar(50)
+  active  Int?     @default(1) @db.SmallInt
+  descr   String?  @db.VarChar(50)
+  role    UserRole @default(TMA_LOCAL)
+}
+
+model psadm_tools {
+  tool     String @id @db.VarChar(32)
+  cmd      String @db.VarChar(255)
+  descr    String @db.VarChar(50)
+  tooltype String @db.Char(5)
+  cmdarg   String @db.VarChar(255)
+  page     String @db.VarChar(32)
+  mode     String @db.VarChar(10)
+  output   String @db.Char(1)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_tools_env {
+  function  String  @db.VarChar(32)
+  tool      String  @db.VarChar(32)
+  ptversion String? @db.VarChar(50)
+  env       String? @db.VarChar(32)
+
+  @@index([env], map: "env")
+  @@index([ptversion], map: "ptversion")
+  @@index([tool], map: "tool")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_tpasenv {
+  env           String? @db.VarChar(10)
+  short         String? @db.VarChar(10)
+  ftnature      String? @db.VarChar(32)
+  fttype        String? @db.VarChar(32)
+  ftutilisation String? @db.VarChar(32)
+  dossier       String? @db.VarChar(32)
+  nature        String? @db.VarChar(32)
+
+  @@ignore
+}
+
+model psadm_typenv {
+  display   Int         @db.SmallInt
+  typenv    String      @id @db.VarChar(32)
+  href      String      @db.VarChar(32)
+  descr     String      @db.VarChar(50)
+  psadm_env psadm_env[]
+}
+
+model psadm_typsrv {
+  typsrv        String          @id @db.VarChar(8)
+  descr         String          @db.VarChar(50)
+  psadm_rolesrv psadm_rolesrv[]
+}
+
+model psadm_user {
+  netid          String           @id @default("") @db.VarChar(32)
+  unxid          String?          @db.VarChar(32)
+  oprid          String?          @db.VarChar(32)
+  nom            String?          @db.VarChar(32)
+  prenom         String?          @db.VarChar(32)
+  mdp            String           @db.VarChar(50)
+  defpage        String?          @db.VarChar(32)
+  pkeyfile       String?          @db.VarChar(50)
+  expunx         DateTime?        @db.DateTime(0)
+  expora         DateTime?        @db.DateTime(0)
+  lastlogin      DateTime?        @db.DateTime(0)
+  email          String?          @db.VarChar(100)
+  psadm_roleuser psadm_roleuser[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_user_bckp {
+  netid     String    @db.VarChar(8)
+  unxid     String    @db.VarChar(8)
+  oprid     String?   @db.VarChar(32)
+  nom       String    @db.VarChar(32)
+  prenom    String    @db.VarChar(32)
+  mdp       String    @db.VarChar(50)
+  defpage   String    @db.VarChar(32)
+  pkeyfile  String?   @db.VarChar(32)
+  expunx    DateTime? @db.DateTime(0)
+  expora    DateTime? @db.DateTime(0)
+  lastlogin DateTime  @db.DateTime(0)
+  email     String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_user_hpe {
+  netid     String    @db.VarChar(8)
+  unxid     String    @db.VarChar(8)
+  oprid     String?   @db.VarChar(32)
+  nom       String    @db.VarChar(32)
+  prenom    String    @db.VarChar(32)
+  mdp       String    @db.VarChar(50)
+  defpage   String    @db.VarChar(32)
+  pkeyfile  String?   @db.VarChar(50)
+  expunx    DateTime? @db.DateTime(0)
+  expora    DateTime? @db.DateTime(0)
+  lastlogin DateTime  @db.DateTime(0)
+  email     String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_user_saved {
+  netid     String    @db.VarChar(8)
+  unxid     String    @db.VarChar(8)
+  oprid     String?   @db.VarChar(32)
+  nom       String    @db.VarChar(32)
+  prenom    String    @db.VarChar(32)
+  mdp       String    @db.VarChar(50)
+  defpage   String    @db.VarChar(32)
+  pkeyfile  String?   @db.VarChar(50)
+  expunx    DateTime? @db.DateTime(0)
+  expora    DateTime? @db.DateTime(0)
+  lastlogin DateTime  @db.DateTime(0)
+  email     String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_userapplicatif {
+  numDem       String?   @db.VarChar(15)
+  dateCrea     DateTime  @default(now()) @db.Timestamp(0)
+  typeGroupe   String?   @default("HP_Generic") @db.VarChar(20)
+  usage_compte String?   @db.VarChar(50)
+  user         String?   @db.VarChar(15)
+  uid          Int?
+  groupePrinc  String?   @db.VarChar(10)
+  groupesSec   String?   @db.VarChar(50)
+  date_suppr   DateTime? @default(dbgenerated("('0000-00-00')")) @db.Date
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model psadm_userreference {
+  netid           String   @default("") @db.VarChar(10)
+  nom             String?  @db.VarChar(30)
+  prenom          String?  @db.VarChar(30)
+  compte_orcl     Boolean? @default(false)
+  compte_ux       Boolean? @default(false)
+  mail            String?  @db.VarChar(100)
+  groupe          String?  @db.VarChar(9)
+  role            String?  @db.VarChar(30)
+  id_valideur     String?  @db.VarChar(10)
+  date_creation   DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  date_modif      DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  date_suppr      DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  date_suppr_ux   DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  harpEntite      String?  @db.VarChar(15)
+  typeGroupe      String?  @db.VarChar(20)
+  harpResponsable String?  @db.VarChar(20)
+  emplnbr         Int?
+  HPmanager       String?  @db.VarChar(20)
+  numDemande      String?  @db.VarChar(15)
+  groupePrinc     String?  @db.VarChar(10)
+  numDem_suppr_ux String?  @db.VarChar(15)
+
+  @@ignore
+}
+
+model psadm_version {
+  appli       String @db.Char(2)
+  psversion   String @db.VarChar(50)
+  ptversion   String @db.VarChar(20)
+  harprelease String @db.VarChar(20)
+  descr       String @db.VarChar(50)
+
+  @@id([appli, psversion, ptversion, harprelease])
+}
+
+model psadm_volum {
+  volum String @id @db.VarChar(50)
+  descr String @db.VarChar(50)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model test {
+  netid           String    @default("") @db.VarChar(10)
+  nom             String?   @db.VarChar(30)
+  prenom          String?   @db.VarChar(30)
+  mail            String?   @db.VarChar(100)
+  groupe          String?   @db.VarChar(9)
+  role            String?   @db.VarChar(30)
+  id_valideur     String?   @db.VarChar(10)
+  date_modif      DateTime? @db.Timestamp(0)
+  date_creation   DateTime  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  date_suppr      DateTime  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  date_suppr_ux   DateTime  @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  harpEntite      String?   @db.VarChar(15)
+  typeGroupe      String?   @db.VarChar(20)
+  harpResponsable String?   @db.VarChar(20)
+  emplnbr         Int?
+  HPmanager       String?   @db.VarChar(20)
+  numDemande      String?   @db.VarChar(15)
+  groupePrinc     String?   @db.VarChar(10)
+  numDem_suppr_ux String?   @db.VarChar(15)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp {
+  env String @db.VarChar(32)
+
+  @@ignore
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String?
+  email         String?        @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  // role           UserRole         @default(TMA_LOCAL)
+  netid         String?        @unique @db.VarChar(32)
+  unxid         String?        @db.VarChar(32)
+  oprid         String?        @db.VarChar(32)
+  nom           String?        @db.VarChar(32)
+  prenom        String?        @db.VarChar(32)
+  defpage       String?        @db.VarChar(32)
+  pkeyfile      String?        @db.VarChar(50)
+  lastlogin     DateTime?      @db.DateTime(0)
+  createdAt     DateTime       @default(now()) @db.Timestamp(0)
+  accounts      Account[]
+  harpuseroles  harpuseroles[]
+}
+
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model harproles {
+  id           Int            @id @default(autoincrement())
+  role         String         @db.VarChar(32)
+  descr        String         @db.VarChar(50)
+  harpuseroles harpuseroles[]
+}
+
+//  harproles     harproles    @relation(fields: [id], references: [id], onDelete: Cascade)
+
+model harpuseroles {
+  userId    Int
+  roleId    Int
+  datmaj    DateTime  @default(now()) @db.Timestamp(0)
+  harproles harproles @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@index([userId])
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  PSADMIN
+  TMA_LOCAL
+  TMA_OFFSHORE
+  DADS
+  DMOSTD
+  DRP
+  EFO
+  FR_FT_UNIX
+  FT_MOE
+  HP_MUTUALISE
+  METRO
+  POC92
+  PORTAL_ADMIN
+  PORTAL_SECURITY
+  PUM
+  REF
+  REFRESH_INFOS
+  UPDSTATUS_DEV
+  UPGRADE92
+}
+
+model harpevent {
+  id         Int       @id @default(autoincrement())
+  name       String
+  descr      String?
+  target     String?
+  deliveryat DateTime?
+  createdat  DateTime?
+  status     String    @db.VarChar(255)
+}
