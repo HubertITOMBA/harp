@@ -717,7 +717,8 @@ export async function migrerLesUtilisateurs() {
             pkeyfile: user.pkeyfile,
             lastlogin: user.lastlogin,
             email: user.email,
-            defpage: user.defpage
+            password: user.mdp,
+             
           }
         })
         console.log(`Utilisateurs migré avec succès: ${user.netid}`)
@@ -1146,7 +1147,6 @@ export const migrerLesUtilisateursNEW = async () => {
         pkeyfile: true,
         lastlogin: true,
         email: true,
-        defpage: true
       }
     });
 
@@ -1161,7 +1161,6 @@ export const migrerLesUtilisateursNEW = async () => {
         pkeyfile: user.pkeyfile,
         lastlogin: user.lastlogin,
         email: user.email,
-        defpage: user.defpage
       })),
       skipDuplicates: true // Ignore les doublons basés sur les champs uniques (netid)
     });

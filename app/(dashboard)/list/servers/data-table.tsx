@@ -80,20 +80,20 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between ">
+     <div className="flex items-center justify-between text-gray-500  font-semibold">
      <div className="flex items-center py-4 ">
         <Input
-          placeholder="Filtrer par environnement..."
+          placeholder="Filtrer par serveur..."
           value={(table.getColumn("srv")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("srv")?.setFilterValue(event.target.value)
           }
-          className="rounded-xl max-w-sm"
+          className="rounded-lg max-w-sm"
         />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl ml-auto">
+            <Button variant="outline" className="rounded-lg ml-auto p-2.5">
               Colonnes
             </Button>
           </DropdownMenuTrigger>

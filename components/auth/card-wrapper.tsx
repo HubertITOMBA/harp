@@ -22,9 +22,9 @@ export const CardWrapper = ({
 
     return(
         
-        <Card className="w-[400px]  bg-white shadow-xl">
-            <CardHeader>
-                <Header  label={headerLabel}/>
+        <Card className="w-[400px] bg-white  shadow-md">
+            <CardHeader className="font-semibold mt-2 text-2xl">
+                <Header  label={headerLabel} />
             </CardHeader>
             <CardContent>
             { children}

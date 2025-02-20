@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 
 export type ListRoles = {
+  id: number
   role: string
   descr: string
 }
@@ -59,6 +60,11 @@ export const columns: ColumnDef<ListRoles>[] = [
       )
     }
   },
+  {
+    accessorKey: 'id',
+    header: "id"
+    
+  },
 
 {
   accessorKey: 'descr',
@@ -97,9 +103,9 @@ export const columns: ColumnDef<ListRoles>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem>View customer</DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href={`/list/roles/${base.role}`}> 
+              <Link href={`/list/roles/${base.id}`}> 
                {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.role}</Link>
+                Voir les details {base.id}</Link>
            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

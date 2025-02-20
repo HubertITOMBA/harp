@@ -8,11 +8,11 @@ import { DataTable } from './data-table';
 const HarpRolesListPage = async () => {
      
   
-  const data = await db.psadm_role.findMany();
+  const data = await db.harproles.findMany();
  
   return (
      <section className="py-2">
-             <div className="container ">
+             <div className="container bg-transparent">
                  <h1 className="text-3xl font-semibold">Les Rôles</h1>
                  <DataTable columns= {columns} data = {data} />
               </div>

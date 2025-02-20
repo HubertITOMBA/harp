@@ -4,7 +4,9 @@ import { cn } from "@/lib/utils"
 import { LoginButton } from "@/components/auth/login-button"
 import { migratePsUserData, migrateUserRoles, migrerUserRoles, syncUserRoles } from "@/actions/importOra"
 
-
+export const metadata = {
+  title: 'Accueil',
+}
     
 export default function Home() {
   return (

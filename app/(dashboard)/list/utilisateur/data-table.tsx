@@ -80,7 +80,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between">
+     <div className="flex items-center justify-between text-gray-500  font-semibold">
      <div className="flex items-center py-4">
         <Input
           placeholder="Filtrer par NetID..."
@@ -93,7 +93,7 @@ export function DataTable<TData, TValue>({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl ml-auto">
+            <Button variant="outline" className="rounded-xl ml-auto p-2.5">
               Colonnes
             </Button>
           </DropdownMenuTrigger>

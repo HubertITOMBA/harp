@@ -53,11 +53,12 @@ export const RegisterForm = () => {
     };
 
     return (
+        <div className="fixed inset-0  bg-gray-500 flex items-center justify-center p-4"> 
         <CardWrapper
             labelBox= "Connexion"
             headerLabel="Créér un compte"
             backButtonLabel="Vous avez déjà un compte ?"
-            backButtonHref="/auth/login"
+            backButtonHref="/login"
         >
             <Form {...form}>
                 <form 
@@ -120,7 +121,7 @@ export const RegisterForm = () => {
                                             asChild
                                             className="px-0 font-normal"
                                         >
-                                            <Link href="/auth/reset">Mot de passe oublié ?</Link>
+                                            <Link href="/reset">Mot de passe oublié ?</Link>
                                         </Button>
                                     </FormItem>
                                 )}   
@@ -141,6 +142,7 @@ export const RegisterForm = () => {
                 </form>
             </Form>
         </CardWrapper>
+       </div>  
     )
 }
 

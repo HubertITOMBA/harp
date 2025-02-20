@@ -5,7 +5,7 @@ import { LoginSchema } from "@/schemas";
 import { signIn } from "@/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 import { AuthError } from "next-auth";
-import { getUserByEmail } from "@/data/user";
+import { getUserByEmail, getUserByNetId } from "@/data/user";
 
 
 export const login = async (values: z.infer<typeof LoginSchema>,
@@ -18,12 +18,18 @@ export const login = async (values: z.infer<typeof LoginSchema>,
         return { error: "Informations de connexion invalides !"}
      }
 
-     const { email, password, name } = validatedFields.data;
+     const {netid, password  } = validatedFields.data;
 
-     const existingUser = await getUserByEmail(email);
+     const existingUser = await getUserByNetId(netid);
 
-        if (!existingUser || !existingUser.email || !existingUser.password) {
-            return { error: "Email n'existe pas!" }
+     console.log("existingUser DANS login.ts ==>", existingUser);
+     
+
+        if (!existingUser || 
+            !existingUser.netid 
+            || !existingUser.password
+        ) {
+            return { error: "Le netid saisi n'existe pas !" }
          }
 
 
@@ -32,18 +38,18 @@ export const login = async (values: z.infer<typeof LoginSchema>,
 
    try {
         await signIn("credentials", {
-            email,
+            netid,
             password, 
             redirectTo : DEFAULT_LOGIN_REDIRECT,
         })
 
-    console.log(email, password, name, DEFAULT_LOGIN_REDIRECT);
+    console.log("DANS login.ts ==>", password, netid, DEFAULT_LOGIN_REDIRECT);
 
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {
             case "CredentialsSignin":
-                return { error: "Informations d'identification invalides loginTS !" }
+                return { error: "Informations d'identification invalides voir login.ts !" }
             default:
                 return { error: "Quelque chose s'est mal passée !" }
             }

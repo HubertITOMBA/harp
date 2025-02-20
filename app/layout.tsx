@@ -8,10 +8,9 @@ import HarpBandeau from "@/components/home/HarpBandeau";
 import { Toaster } from "@/components/ui/toaster";
 import { ToastContainer } from 'react-toastify'
 import "react-toastify/dist/ReactToastify.css";
-import { ThemeProvider } from "@/components/theme-provider";
-
-
-
+// import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "next-themes";
+import { APP_DESCRIPTION, APP_NAME, SERVER_URL, } from "@/lib/constants";
 
 
 const montserrat = localFont({
@@ -26,8 +25,12 @@ const montserrat = localFont({
 
 
 export const metadata: Metadata = {
-  title: "Portail Harp",
-  description: "Gestion des environnements Harp",
+  title: {
+    template: `%s | Portail TMA Harp`,
+    default: APP_NAME,
+  },
+  description: APP_DESCRIPTION,
+  // metadataBase: new URL(SERVER_URL),
 };
 
 export default function RootLayout({
@@ -49,13 +52,13 @@ export default function RootLayout({
       <body
             className={`${montserrat.className}  antialiased`}
       >
-            <ThemeProvider 
+            {/* <ThemeProvider  
                   attribute="class"
                   defaultTheme="system"
                   enableSystem
                   disableTransitionOnChange
-            >
-                  <div className=" h-screen bg-green-50">
+            >*/}
+                  <div className=" h-screen bg-gray-150">
                       {modal}
                       {children}
                     
@@ -64,7 +67,8 @@ export default function RootLayout({
                       {/* <ToastContainer position='top-center'/> */}
                       <ToastContainer theme='colored' />
                   </div>
-            </ThemeProvider>
+            {/* </ThemeProvider> */}
+           
       </body>
     </html>
   );

@@ -41,7 +41,11 @@ import { Button } from '@/components/ui/button';
        },            
      });
 
+      
      const concatenatedRoles = userRoles.map(role => `"${role.harproles.role}"`).join(', ');
+     const concatRolesMenus = ["HUBERT","AXEL","NICOLAS"];
+     const droitPourMenus = [...new Set([...userRoles.map(role => role.harproles.role), ...concatRolesMenus])].join(', ');
+     const droitMenus = [...new Set([...userRoles.map(role => `"${role.harproles.role}"`), ...concatRolesMenus.map(role => `"${role}"`)])].join(', ');
 
 
   return (
@@ -113,12 +117,15 @@ import { Button } from '@/components/ui/button';
                               <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Compte unix Expiration :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Users.expunx)}</Label>  
                             </div>  
 
-                            <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Autorisé à :</Label>
-                                <Label className="whitespace-nowrap text-2xl text-gray-500">
-                                    {concatenatedRoles}
-                                  </Label>  
-                            </div>
+                              <div className="flex gap-4 items-center">
+                                <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Roles :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{concatenatedRoles}</Label>  
+                              </div>
+                              {/* <div className="flex gap-4 items-center">
+                                <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Menus & Rôles :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitPourMenus}</Label>  
+                              </div> */}
+                              <div className="flex gap-4 items-center">
+                                <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Menus & Rôles:</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitMenus}</Label>  
+                              </div>
                             
                        </div>
                                   

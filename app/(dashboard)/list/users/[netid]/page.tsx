@@ -27,14 +27,16 @@ import { Button } from '@/components/ui/button';
      if (!Users) {
       return notFound();
     } 
-    const UserRoles = await prisma.psadm_roleuser.findMany({
+    const userRoles = await prisma.psadm_roleuser.findMany({
       where: {
         netid: netid,
        },
      }); 
 
-     const concatenatedRoles = UserRoles.map(role => `"${role.role}"`).join(', ');
-
+     const concatenatedRoles = userRoles.map(role => `"${role.role}"`).join(', ');
+     const concatRolesMenus = ["HUBERT","AXEL","NICOLAS"];
+     const droitPourMenus = [...new Set([...userRoles.map(role => role.role), ...concatRolesMenus])].join(', ');
+     const droitMenus = [...new Set([...userRoles.map(role => `"${role.role}"`), ...concatRolesMenus.map(role => `"${role}"`)])].join(', ');
      
    //  const enfInfos = await prisma.psadm_envinfo.findUnique({ where: { env: env } });  
       
@@ -196,10 +198,16 @@ import { Button } from '@/components/ui/button';
                               <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Compte unix Expiration :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Users.expunx)}</Label>  
                             </div>  
 
-                            <div className="flex gap-4 items-center">
+                            {/* <div className="flex gap-4 items-center">
                               <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Autorisé à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{concatenatedRoles}</Label>  
                             </div>
-                            
+                            <div className="flex gap-4 items-center">
+                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">MENUS Autorisé à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitPourMenus}</Label>  
+                            </div>
+                            <div className="flex gap-4 items-center">
+                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">MENUS à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitMenus}</Label>  
+                            </div> */}
+
                        </div>
                                   
                      
@@ -228,7 +236,7 @@ import { Button } from '@/components/ui/button';
                                                       </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 bg-white">
-                                                      {UserRoles.map((item, index) => (
+                                                      {userRoles.map((item, index) => (
                                                         <tr key={index} className="hover:bg-harpSkyLight transition-colors duration-200">
                                                           <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.role}</td>
                                                           <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.rolep}</td>

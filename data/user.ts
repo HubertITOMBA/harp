@@ -10,10 +10,9 @@ export const getUserByEmail = async (email: string) => {
   }
 };
 
-export const getUserByNetId = async (email: string) => {
+export const getUserByNetId = async (netid: string) => {
   try {
-    const user = await db.user.findUnique({ where: { email } });
-
+    const user = await db.user.findUnique({ where: { netid } });
     return user;
   } catch {
     return null;

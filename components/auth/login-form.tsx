@@ -31,6 +31,7 @@ export const LoginForm = () => {
     const form = useForm<z.infer<typeof LoginSchema>>({
         resolver: zodResolver(LoginSchema),
         defaultValues: {
+            netid: "",
             email: "",
             password: "",
         },
@@ -58,12 +59,12 @@ export const LoginForm = () => {
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-20 z-20 flex items-center justify-center p-4">
+        <div className="fixed inset-0  bg-gray-500 flex items-center justify-center p-4">
         <CardWrapper
             labelBox= "Connexion"
             headerLabel="Content de vous revoir !"
             backButtonLabel="Vous n'avez pas encore de compte ?"
-            backButtonHref="/auth/register"
+            backButtonHref="/register"
         >
             <Form {...form}>
                 <form 
@@ -73,14 +74,15 @@ export const LoginForm = () => {
                    <div className="space-y-">
                      <FormField 
                              control={form.control}
-                             name="name"
+                             name="netid"
                              render={({ field }) => (
                              <FormItem>
-                                 <FormLabel>NetID</FormLabel>
+                                 <FormLabel className="block text-sm font-semibold text-gray-700 mb-1">NetID</FormLabel>
                                  <FormControl className="rounded-md">
                                  <Input
                                      {...field}
                                      disabled={isPending}
+                                    // className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                                     //  placeholder="Entrer le netId exemple => hitomba"
                                  />
                                  </FormControl>
@@ -88,7 +90,7 @@ export const LoginForm = () => {
                              </FormItem>
                              )}
                         />
-                         <FormField 
+                         {/* <FormField 
                              control={form.control}
                              name="email"
                              render={({ field }) => (
@@ -105,7 +107,7 @@ export const LoginForm = () => {
                                  <FormMessage />
                              </FormItem>
                              )}
-                        />
+                        /> */}
                         <FormField
                                control={form.control}
                                name="password"
@@ -126,7 +128,7 @@ export const LoginForm = () => {
                                             asChild
                                             className="px-0 font-normal"
                                         >
-                                            <Link href="/auth/reset">
+                                            <Link href="/reset">
                                                 Mot de passe oublié ?
                                             </Link>
                                         </Button>

@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 
 interface EnvInfoProps {
@@ -247,7 +248,7 @@ interface EnvInfoProps {
                                <Label>Sudo Sudoer :</Label> <Label className='bg-harpOrange text-white rounded-lg'>
                                   <Link href={`ssh://hubert@192.168.1.49:22`}> 
                                   {enfInfos?.userunx}</Link>
-                            </Label>
+                            </Label> <Badge variant="destructive">{enfInfos?.userunx}</Badge>
                             </div>
                             <div className="w-full flex items-center gap-2">
                                     <Label>DB serve  :</Label> <Label className="font-semibold text-sm">{dbServers?.psadm_srv.ip}</Label>

@@ -1,45 +1,77 @@
 "use client"
 
 import * as React from "react"
-import { Moon, MoonIcon, Sun } from "lucide-react"
+import { Moon, MoonIcon, SunMoon, SunIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
+import { useEffect, useState } from "react"
 
 export function ThemeToggle({
     className,
     ...props
   }: React.HTMLAttributes<HTMLDivElement>) {
-  const { setTheme } = useTheme()
+    const [mounted, setMounted] = useState(false);
+    const { theme, setTheme } = useTheme();
+
+    useEffect(() => {
+      setMounted(true);
+    }, []);
+  
+    if (!mounted) {
+      return null;
+    }
+  
 
   return (
     <div className={className} {...props}>
-        <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Changer le thème</span>
-            </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setTheme("light")}>
-            Light
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("dark")}>
-            Sombre
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("system")}>
-            System
-            </DropdownMenuItem>
-        </DropdownMenuContent>
-        </DropdownMenu>
+         <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant='ghost'
+          className='focus-visible:ring-0 focus-visible:ring-offset-0'
+        >
+          {theme === 'system' ? (
+            <SunMoon />
+          ) : theme === 'dark' ? (
+            <MoonIcon />
+          ) : (
+            <SunIcon />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuLabel>Apparence</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem
+          checked={theme === 'system'}
+          onClick={() => setTheme('system')}
+        >
+          Système
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={theme === 'dark'}
+          onClick={() => setTheme('dark')}
+        >
+          Sombre
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={theme === 'light'}
+          onClick={() => setTheme('light')}
+        >
+          Clair
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+           </DropdownMenu>
    </div> 
   )
 }

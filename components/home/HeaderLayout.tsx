@@ -1,9 +1,11 @@
 "use client"
 import { useState } from 'react'
+
 // import { Dialog, DialogPanel } from '@headlessui/react'
 // import { Menu, X } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+
 // import { Dialog } from '../ui/dialog'
 //import { LoginButton } from '../auth/login-button'
 
@@ -40,8 +42,13 @@ export default function HeaderLayout() {
             <div className='h-2 w-full p-3 bg-orange-500'>
             </div >
             <div >
+
+               
+
                   <nav className="mx-auto flex max-w-7xl items-center justify-between p-1 lg:px-4">
-                      <div className="flex items-center justify-between font-medium gap-5">
+
+                     
+                     <div className="flex items-center justify-between font-medium gap-5">
                             {navigation.map((item) => (
                               <Link 
                                   key={item.name} 

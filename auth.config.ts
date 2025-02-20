@@ -14,10 +14,10 @@ export default {
             const validatedFields = LoginSchema.safeParse(credentials);
 
             if (validatedFields.success) {
-                const { email, password } = validatedFields.data;
-               // const user = await getUserByNetId(netid);
+                const { netid, password } = validatedFields.data;
+                const user = await getUserByNetId(netid);
                
-                const user = await getUserByEmail(email);
+               // const user = await getUserByEmail(email);
 
                 console.log( "USER CONNECTE :", {user});
                 

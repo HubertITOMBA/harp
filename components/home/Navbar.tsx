@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ThemeToggle } from '../ThemeToggle'
 import { Input } from "@/components/ui/input";
 import { UserButton } from "@/components/auth/user-button";
 import Link from "next/link";
@@ -13,24 +14,16 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
+import { logOut } from "@/actions/logout";
+
+interface RoleMenuProps {
+  DroitsUser : string ;
+}; 
 
 
+const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
+   
 
-const navigation = [
-    // { name: "Environnements", href: '/' },
-    { name: "Self-service", href: '/program' , visible: ["PSADMIN", "admin", "teacher", "student", "parent"]},
-    { name: "Refresh Infos", href: '/galery', visible: ["PSADMIN", "admin", "teacher", "student", "parent"] },
-    { name: "Recherche", href: '/galery' , visible: ["PSADMIN", "admin", "teacher", "student", "parent"]},
-    { name: 'Statacm', href: '/agenda' , visible: ["PSADMIN", "admin", "teacher", "student", "parent"]},
-    { name: 'Base de connaissances', href: '/fitness', visible: ["PSADMIN", "admin", "teacher", "student", "parent"] },
-    { name: 'Administration Portail', href: '/admin' , visible: ["PSADMIN", "admin", "teacher", "student", "parent"]},
-    { name: 'Aide', href: '/contact' },
-    // { name: 'Mot de passe', href: '/contact' },
-    // { name: 'Déconnexion', href: '/contact' },
-  ]
-
-
-const Navbar = async () => {
     const optionMenu = await prisma.harpmenus.findMany(
       {
         where : {
@@ -98,27 +91,36 @@ const Navbar = async () => {
                  
              </div>
 
-            <div className="flex flex-col text-xs items-center justify-center">
-                <Image src="/ressources/avatar.png" alt="" width={30} height={30} className="rounded-full"/>
-                 {/* <span className="mt-4 text-sm leading-3 font-medium">Hubert ITOMBA</span> */}
-                 {/* <span className="text-[10px] text-gray-500 text-right">Admin</span> */}
+             <ThemeToggle />
+             <UserButton />
 
+
+            {/* <div className="flex flex-col text-xs items-center justify-center">
+                <Image src="/ressources/avatar.png" alt="" width={30} height={30} className="rounded-full"/>
                  <DropdownMenu >
                     <DropdownMenuTrigger >Mon compte (<span className="text-[10px] text-gray-500 text-right">{role})</span>)</DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-white">
-                        {/* <DropdownMenuLabel>Mon compte</DropdownMenuLabel> */}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem >Mot de passe</DropdownMenuItem>
+                        <DropdownMenuItem ><Link href="/reset">Mot de passe</Link> </DropdownMenuItem>
                         <DropdownMenuItem>Compte Unix :</DropdownMenuItem>
                         <DropdownMenuItem>Dernière connexion :</DropdownMenuItem>
                         < DropdownMenuSeparator />
-                        <DropdownMenuItem>Déconnexion</DropdownMenuItem>
+                        <DropdownMenuItem>
+                            <form action={async () => {
+                              "use server";
+                              await logOut();
+                            }}
+                            > 
+                             <button type="submit"> 
+                              Déconnexion
+                              </button>
+                            </form>
+                         </DropdownMenuItem>
                     </DropdownMenuContent>
-                    </DropdownMenu>
+                 </DropdownMenu>
                   
-            </div>
-                {/* <Image src="/ressources/avatar.png" alt="" width={36} height={36} className="rounded-full"/>
-             <UserButton /> */}
+            </div> */}
+          
 
         </div>
 

@@ -1,44 +1,34 @@
-import Image from "next/image";
-import { auth, signOut } from "@/auth"
+ "use client"; 
+
+// import Image from "next/image";
+// import { auth, signOut } from "@/auth"
 // mport prisma from "@/lib/prisma"; 
+import { Session } from "next-auth";
+// import { SessionProvider, signOut } from "next-auth/react";
+// import { useSession, signOut } from "next-auth/react";
+
 import HarpEventPage from "@/components/harp/HarpEvents";
-import migratePsadmData, { migrateEnvsData, migrateMenuDashData, migrateMenusData, migratePsUserData } from "@/actions/importOra";
+import { logOut } from "@/actions/logout";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCurrentRole } from "@/hooks/use-current-role";
 
+// import { getUserRoles } from "@/actions/menurigth";
 
-
-// async function migratePsadmData() {
-//   "use server";
-  
-//   try {
-//     const { prisma } = await import('@/lib/prisma');
-    
-//     // Récupérer les données de psadm_oracle
-//     const psadmData = await prisma.psadm_oracle.findMany();
-    
-//     // Insérer les données dans harpora
-//     await prisma.harpora.createMany({
-//       data: psadmData.map(record => ({
-//         id: crypto.randomUUID(),
-//         oracle_sid: record.oracle_sid,
-//         aliasql: record.aliasql,
-
-
-
-
-//     });
-    
-//     return { success: true, message: 'Migration réussie' };
-//   } catch (error) {
-//     console.error('Erreur lors de la migration:', error);
-//     return { success: false, message: 'Erreur lors de la migration' };
-//   }migrateUserRoles
+// export const metadata = {
+//   title: 'Accueil',
 // }
 
+ const Home = () => {
+  const user = useCurrentUser();
+  const roles = useCurrentRole();
 
+   // const currentUser = session?.user?.id;
+   // const userRoles = await getUserRoles(parseInt(currentUser));
+  
+   const onClick = () => {
+     logOut();
+   }
 
-
-export default async function Home() {
-  //const session = await auth();
   return (
     <>
         {/* {JSON.stringify(session)}
@@ -47,14 +37,39 @@ export default async function Home() {
              await signOut();
           }}>
                </button>
+ 
+       PUM", "DMOSTD", "POC92", "TMA_LOCAL", "REF", "DRP", "HUBERT", "AXEL", "NICOLAS"
          </form> 
          */}
         
+        {JSON.stringify(user)}
+         <p>
+         
+          mes roles:  {roles}
+         </p>
+        <button onClick ={onClick} type="submit"> 
+                Déconnexion
+         </button>
 
-      <HarpEventPage />
+
+         {/* <p>
+         {session?.user?.id}
+         {userRoles}
+      </p> */}
+        {/* <form action={async () => {
+            "use server";
+            await signOut();
+          }}
+          > 
+            
+          </form> */}
+
+      {/* <HarpEventPage /> */}
 
 
     </>
  
   );
-}
+};
+
+export default Home;

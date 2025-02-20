@@ -71,10 +71,10 @@ export const columns: ColumnDef<Users>[] = [
 //   accessorKey: 'unxid',
 //   header: 'Unix ID'
 // },
-// {
-//   accessorKey: 'oprid',
-//   header: 'Oprid'
-// },
+{
+  accessorKey: 'id',
+  header: 'id'
+},
 {
   accessorKey: 'nom',
   header: ({ column }) => {

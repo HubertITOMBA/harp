@@ -28,8 +28,8 @@ export default async function EnvListPage () {
   );
 
   return (
-    <section className="py-2">
-        <div className="container ">
+    <section className="py-2  bg-gray-250">
+        <div className="container">
             <h1 className="text-3xl font-semibold">Tous les environnements</h1>
             <DataTable columns= {columns} data = {data} />
           {/* <DataTable columns= {columns} data = {DescEnvts} /> */}

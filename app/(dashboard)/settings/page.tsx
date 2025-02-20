@@ -267,7 +267,7 @@ export default function Home() {
     <main className="container w-full bg-transarent">
         
            <div className="flex-2  w-ful">
-              <div className="flex gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 
                <div className="w-1/4 flex-1 flex-row  p-4 items-center gap-8">
                      <div>
@@ -294,7 +294,7 @@ export default function Home() {
                               variant="default"
                               className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                         >
-                          10 - Importer les statuts d'environnement
+                          3 - Les statuts d'environnement
                         </Button>
                         </div>
                         <div>
@@ -303,7 +303,7 @@ export default function Home() {
                                     variant="default"
                                     className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                               >
-                                    7 - Importer les versions PeopleSoft
+                                    4 - Importer les versions PeopleSoft
                               </Button>  
                         </div> 
                         <div>
@@ -312,7 +312,7 @@ export default function Home() {
                                   variant="default"
                                   className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                             >
-                              9 - Importer les Harp Release
+                              5 - Importer les Harp Release
                             </Button>
                         </div>  
                         <div>
@@ -321,7 +321,7 @@ export default function Home() {
                                     variant="default"
                                     className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                               >
-                                    8 - Importer les liens de types d'environnements
+                                    6 - Les liens de types d'environnements
                               </Button>  
                         </div>
                     
@@ -332,7 +332,7 @@ export default function Home() {
                             variant="default"
                             className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                       >
-                          3- Lier les Envs au Types d'environnement
+                          7- Lier les Types d'environnement
                       </Button>
                      </div>
 
@@ -343,7 +343,7 @@ export default function Home() {
                             variant="default"
                             className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                       >
-                           4- Importer les roles
+                           8- Les roles
                       </Button>
                      </div>
                      
@@ -353,7 +353,7 @@ export default function Home() {
                             variant="default"
                             className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                       >
-                           5- Generer les Liens des Envs pour PRISMA
+                           9- Les Liens des Envs pour PRISMA
                       </Button>  
                      </div>
                      <div>
@@ -362,7 +362,7 @@ export default function Home() {
                             variant="default"
                             className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                       >
-                            6 - Importer les instances d'environnements
+                            10 - Les instances d'environnements
                       </Button>  
                      </div>
 
@@ -382,7 +382,7 @@ export default function Home() {
                             variant="default"
                             className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
                       >
-                        11 - Statut de Disponibilités d'environnements 
+                        11 - Disponibilités d'environnements 
                       </Button>
                       </div>                  
                       <div>
@@ -427,7 +427,7 @@ export default function Home() {
                         
 
                       <div>
-                      <h1 className="text-2xl mb-4">Vérification des doublons Oracle SID</h1>
+                      <h1 className="text-2xl mb-4">Vérifier doublons SID</h1>
                       <VerifierDoublons />
                       </div>
 

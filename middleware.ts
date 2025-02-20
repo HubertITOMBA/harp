@@ -16,8 +16,8 @@ export default auth((req) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;
 
-    console.log("ROUTE: ", req.nextUrl.pathname);
-    console.log("IL EST CONNECTE: ", isLoggedIn);
+    console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
+    console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
     const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
@@ -34,9 +34,9 @@ export default auth((req) => {
         return null;
     }
 
-    // if (!isLoggedIn && !isPublicRoute) {
-    //     return Response.redirect(new URL("/auth/login", nextUrl));
-    // }
+    if (!isLoggedIn && !isPublicRoute) {
+        return Response.redirect(new URL("/", nextUrl));
+    }
   
    return null;
 
@@ -45,7 +45,7 @@ export default auth((req) => {
 // Read more: https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
 export const config = {
     //  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-    // matcher: ["/auth/login", "/auth/register"],
+    // matcher: ["/login", "/register"],
     matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
     
     }

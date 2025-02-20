@@ -6,27 +6,6 @@ import { toast } from "react-toastify";
 import { GenererLesMenus } from '@/actions/importharp';
  
 
-// DADS
-// DMOSTD
-// DRP
-// EFO
-// FR-FT-UNIX
-// FT-MOE
-// HP_MUTUALISE
-// METRO
-// POC92
-// PORTAL_ADMIN
-// PORTAL_SECURITY
-// PSADMIN
-// PUM
-// REF
-// REFRESH_INFOS
-// TMA_LOCAL
-// TMA_OFFSHORE
-// UPDSTATUS_DEV
-// UPGRADE92
-
-
 const menuItems = [
     {
       icon: "/ressources/profile.png",
@@ -48,9 +27,12 @@ const menuItems = [
     },                          
 ]; 
 
-
+interface RoleMenuProps {
+  DroitsUser : string ;
+  sessionCount: number;
+}; 
   
-const Menu = async () => {
+const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
 
     // Vérifier si la table est vide
     //  const count = await prisma.harpmenus.count();

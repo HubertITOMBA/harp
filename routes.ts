@@ -6,8 +6,8 @@
 
 export const publicRoutes = [
     "/",
-    "/lists",
-    "/harp/"
+    // "/lists",
+    // "/harp/"
     
 ];
 
@@ -18,11 +18,11 @@ export const publicRoutes = [
  * @type {string[]}
  */
 export const authRoutes = [
-   "/auth/login",
-   "/auth/register",
-   "/auth/error",
-   "/auth/reset",
-   "/auth/new-password",  
+   "/login",
+   "/register",
+   "/error",
+   "/reset",
+   "/new-password",  
 ];
 
 /**

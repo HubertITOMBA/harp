@@ -2,7 +2,7 @@
 
 import * as z from "zod";
 import { RegisterSchema } from "@/schemas";
-import { getUserByEmail } from "@/data/user";
+import { getUserByEmail, getUserByNetId } from "@/data/user";
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 
@@ -17,27 +17,25 @@ export const register = async (values: z.infer<typeof RegisterSchema>) => {
   }
     
 
-    const { netid, email, password, name} = validatedFields.data;
+    const { netid, email, password} = validatedFields.data;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // const existingUser = await getUserByNetId(netid);
-    const existingUser = await getUserByEmail(email);
+    const existingUser = await getUserByNetId(netid);
 
     if (existingUser) {
-      return { error: " Le mail est déjà utilisé !"}
+      return { error: " Le netID est déjà utilisé !"}
     }
 
     await db.user.create({
       data: {
-          name, 
+          netid,
           email,
           password: hashedPassword,
-          netid,
+          
       }
      });
-      
-
-
+   
    
    return { success: "Compte créé avec succès !"}
 
