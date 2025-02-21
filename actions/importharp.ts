@@ -103,7 +103,10 @@ export const importerLesStatus = async () => {
       // Mise à jour de tous les environnements
       await prisma.envsharp.updateMany({ data: { statenvId: 8 } });
 
-            
+      await prisma.$executeRaw`UPDATE psadm_user set lastlogin = now() where lastlogin = 0`;
+      await prisma.$executeRaw`UPDATE psadm_dispo set fromdate = now() where fromdate = 0`;
+      await prisma.$executeRaw`UPDATE psadm_env set datmaj = now() where datmaj is null`;
+      
       // const countUser = await prisma.psadm_user.count({
       //   where: { lastlogin: null }
       // });
@@ -130,8 +133,6 @@ export const importerLesStatus = async () => {
       //   return { info: "Pas de date (lastlogin) nulle  sur psadm_user", countDispo };
       // };
       
-
-
 
       return { success: "Mises à jour es valeur par defaut effectuées avec succès !" };
   } catch (error) {
@@ -261,69 +262,6 @@ export const lierTypeEnvs = async () => {
 
  
 
-// export const lierTypeEnvs = async () => {
-//   try {
-//     // Récupérer d'abord tous les types d'environnement
-//     const typenvs = await prisma.psadm_typenv.findMany({
-//       select: {
-//         typenv: true,
-//         display: true
-//       }
-//     });
-
-//     // Créer un map pour un accès plus rapide
-//     const typenvMap = new Map(
-//       typenvs.map(item => [item.typenv, item.display])
-//     );
-
-//     // Effectuer les mises à jour en batch
-//     const updates = await prisma.$transaction(
-//       [
-//         "PSADMIN",
-//         "TMA",
-//         "DEVOPS 1",
-//         "DEVOPS 2",
-//         "PUM-MAINTENANCE PS",
-//         "SECOURS - DRP",
-//         "DEVELOPPEMENT PROJET",
-//         "DEVOPS FUSION",
-//         "DEVELOPPEMENT HOTFIX",
-//         "POC92",
-//         "PRE-PRODUCTION",
-//         "PRODUCTION",
-//         "RECETTE",
-//         "QUALIFICATION",
-//         "REFERENCE LIVRAISON",
-//       ].map(typenv => {
-//         const display = typenvMap.get(typenv);
-//         if (!display) {
-//           console.warn(`Type d'environnement non trouvé: ${typenv}`);
-//           return null;
-//         }
-        
-//         return prisma.psadm_env.updateMany({
-//           where: { typenv },
-//           data: { typenvid: display }
-//         });
-//       }).filter(Boolean)
-//     );
-
-//     const totalUpdated = updates.reduce((sum, result) => sum + (result?.count || 0), 0);
-    
-//     return { 
-//       success: `Les environnements ont été liés aux menus avec succès (${totalUpdated} mises à jour)!`
-//     };
-//   } catch (error) {
-//     console.error("Erreur lors de la liaison des environnements aux menus :", error);
-//     return { 
-//       error: "Erreur lors de la mise à jour des environnements",
-//       details: error instanceof Error ? error.message : "Erreur inconnue"
-//     };
-//   }
-// };
-
- 
-
 export const lierEnvauTypeEnv = async () => {
   try {
       const updates = [
@@ -412,59 +350,7 @@ export const importerLesHarproles = async () => {
 };
  
 
-// export async function importListEnvs ()  {
-//   try {
-      
-//      // Vérifier si la table est vide
-//      const count = await prisma.envsharp.count();
-    
-//      if (count > 0) {
-//        return { info: "La table envsharp contient déjà tous les environnements Harp. Importation ignorée." };
-//      }
 
-//      // Réinitialiser l'auto-increment
-//     await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
-
-//     // Récupérer les données de psadm_env
-//     const envData = await prisma.psadm_env.findMany();
-    
-//     // Insérer les données dans envsharp
-//     const result = await prisma.envsharp.createMany({
-//       data: envData.map(record => ({
-//           // display: record.display,
-//           env: record.env,
-//           //site: record.site,
-//           // typenv: record.typenv,
-//           url: record.url,
-//           // oracle_sid: record.oracle_sid,
-//           // aliasql: record.aliasql,
-//           // oraschema: record.oraschema,
-//           appli: record.appli,
-//           psversion: record.psversion,
-//           ptversion: record.ptversion,
-//           harprelease: record.harprelease,
-//           volum: record.volum,
-//           datmaj: record.datmaj,
-//           gassi: record.gassi,
-//           rpg: record.rpg,
-//           msg: record.msg,
-//           descr: record.descr,
-//           anonym: record.anonym,
-//           edi: record.edi,
-//           typenvid: record.typenvid,
-//           statenvId: record.statenvId
-//         }))
-//     });
-
-//     return { success: `${result.count} environnements Harp importé pour Prisma avec succès !` };
-//     } catch (error) {
-//     console.error("Erreur l'importation des environnements Harp pour Prisma:", error);
-//     return { error: "Erreur l'importation des environnements Harp pour Prisma" };
-// }
-
-// };
-
- 
 
 export async function importListEnvs() {
   try {
@@ -475,19 +361,22 @@ export async function importListEnvs() {
       return { info: "La table envsharp contient déjà des données. Importation ignorée." };
     }
 
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
-
+   
     // Récupérer les données de psadm_env
-    const envData = await prisma.psadm_env.findMany({
-      where: {
-        env: { not: null } // S'assurer que env n'est pas null
-      }
-    });
+    const envData = await prisma.psadm_env.findMany();
+    // const envData = await prisma.psadm_env.findMany({
+    //   where: {
+    //     env: { not: null } // S'assurer que env n'est pas null
+    //   }
+    // });
 
     if (!envData.length) {
       return { warning: "Aucune donnée trouvée dans psadm_env" };
     }
+
+     // Réinitialiser l'auto-increment
+     await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
+
 
     // Insérer les données dans envsharp
     const result = await prisma.envsharp.createMany({
@@ -500,12 +389,12 @@ export async function importListEnvs() {
         harprelease: record.harprelease || null,
         volum: record.volum || null,
         datmaj: record.datmaj || new Date(),
-        gassi: record.gassi || false,
-        rpg: record.rpg || false,
+        gassi: record.gassi || "",
+        rpg: record.rpg || "",
         msg: record.msg || null,
         descr: record.descr || null,
-        anonym: record.anonym || false,
-        edi: record.edi || false,
+        anonym: record.anonym || "",
+        edi: record.edi || "",
         typenvid: record.typenvid || null,
         statenvId: record.statenvId || null
       })),
@@ -548,22 +437,50 @@ export const importInstanceOra = async () => {
        return { info: "La table harpora contient déjà toutes les instances d'environnements. Importation ignorée." };
      }
 
+
+     // Récupérer les données avec un JOIN entre envsharp et psadm_oracle
+     const instances = await prisma.$queryRaw<Array<{
+      envId: number;
+      oracle_sid: string;
+      aliasql: string;
+      oraschema: string;
+      descr: string | null;
+      orarelease: string | null;
+    }>>`
+      SELECT 
+        e.id as envId,
+        o.oracle_sid,
+        o.aliasql,
+        o.oraschema,
+        o.descr,
+        o.orarelease 
+      FROM envsharp e
+      JOIN psadm_oracle o ON e.env = o.aliasql 
+      ORDER BY e.id ASC
+    `;  
+
+    
+    if (instances.length === 0) {
+      return { info: "La table harpora ne contient aucun environnement. Importation ignorée." };
+    }
+    
+
      // Réinitialiser l'auto-increment
     await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
 
 
     // Récupérer les données depuis les tables existantes
-    
+    const psadmData = await prisma.psadm_oracle.findMany();
 
     // Insérer les résultats dans la table harpora
     const importedData = await prisma.harpora.createMany({
-      data: results.map((row: any) => ({
-        envId: row.envId,
-        oracle_sid: row.oracle_sid,
-        aliasql: row.aliasql,
-        oraschema: row.oraschema,
-        descr: row.descr,
-        orarelease: row.orarelease
+      data: instances.map( instance => ({
+        envId: instance.envId,
+        oracle_sid: instance.oracle_sid,
+        aliasql: instance.aliasql,
+        oraschema: instance.oraschema,
+        descr: instance.descr,
+        orarelease: instance.orarelease
       })),
       skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
     });
@@ -707,7 +624,7 @@ export async function migrerLesUtilisateurs() {
 
       if (!existingUser) {
         // Créer le nouvel utilisateur dans la table User
-        await prisma.User.create({
+        await prisma.user.create({
           data: {
             netid: user.netid,
             unxid: user.unxid,
@@ -1089,6 +1006,14 @@ export const migrateDataToEnvsharp = async () => {
     // Récupérer les données de psadm_env
     const psadmEnvData = await prisma.psadm_env.findMany()
 
+
+    if (psadmEnvData.length === 0) {
+      return { info: "La table psadm_env est vide." };
+   }
+
+     // Réinitialiser l'auto-increment
+     await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
+
     // Insérer les données dans envsharp
     const result = await prisma.envsharp.createMany({
       data: psadmEnvData.map(record => ({
@@ -1137,18 +1062,21 @@ export const migrerLesUtilisateursNEW = async () => {
      await prisma.$executeRaw`ALTER TABLE user AUTO_INCREMENT = 1`;
 
     // Récupérer tous les utilisateurs de psadm_user
-    const psadmUsers = await prisma.psadm_user.findMany({
-      select: {
-        netid: true,
-        unxid: true,
-        oprid: true,
-        nom: true,
-        prenom: true,
-        pkeyfile: true,
-        lastlogin: true,
-        email: true,
-      }
-    });
+    const psadmUsers = await prisma.psadm_user.findMany();
+    // const psadmUsers = await prisma.psadm_user.findMany({
+    //   select: {
+    //     netid: true,
+    //     unxid: true,
+    //     oprid: true,
+    //     nom: true,
+    //     prenom: true,
+    //     pkeyfile: true,
+    //     lastlogin: true,
+    //     email: true,
+    //     mdp: true,
+    //   }
+    // });
+    
 
     // Pour chaque utilisateur dans psadm_user
     const createdUsers = await prisma.user.createMany({
@@ -1161,6 +1089,7 @@ export const migrerLesUtilisateursNEW = async () => {
         pkeyfile: user.pkeyfile,
         lastlogin: user.lastlogin,
         email: user.email,
+        password: user.mdp,
       })),
       skipDuplicates: true // Ignore les doublons basés sur les champs uniques (netid)
     });
