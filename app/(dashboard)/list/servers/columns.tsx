@@ -21,6 +21,10 @@ export type Servs = {
     os: string
     psuser: string
     domain: string
+    statenvId: number
+    statenv: string
+    descr: string
+    icone: string
 }
 
 export const columns: ColumnDef<Servs>[] = [
@@ -47,6 +51,27 @@ export const columns: ColumnDef<Servs>[] = [
     enableHiding: false,
   },
   {
+    accessorKey: 'icone',
+    header: '',
+    cell: ({ row }) => (
+      row.original.icone !== "" ? (
+        <img 
+          src={`/ressources/${row.original.statutenv.icone}`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent"
+        />
+      ) : ( <img 
+        src={`/ressources/special.png`} 
+        alt="" 
+        width={20} 
+        height={20} 
+        className="items-end bg-transparent"
+      />)
+    )
+  },
+  {
     accessorKey: 'srv',
     header: ({ column }) => {
       return (
@@ -60,6 +85,7 @@ export const columns: ColumnDef<Servs>[] = [
       )
     }
   },
+
 
 {
   accessorKey: 'ip',

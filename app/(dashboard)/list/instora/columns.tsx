@@ -15,22 +15,60 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 
 export type OraIns = {
-  id: number
-  envid: string
-  oracle_sid: string
-  aliasql: string
-  oraschema: string
-  descr: string
-  orarelease: string
-  statenvid: number
-  createdAt: Date;
-  env: string,
-  anonym: string,
-  edi: string,
-  url: string,
-  icone: string
-  }
+      id: number
+      envid: string
+      oracle_sid: string
+      srv: string
+      ip: string
+      pshome: string
+      os: string
+      psuser: string
+      domain: string
+
+
+
+
+
+
+      // aliasql: string
+      // oraschema: string
+      // descr: string
+      // orarelease: string
+      // statenvid: number
+      // createdAt: Date;
+      // env: string,
+      // anonym: string,
+      // edi: string,
+      // url: string,
+      // icone: string
+      }
  
+      // id    : true, 
+      // oracle_sid: true,
+      // descr : true,   
+      // serverId  : true, 
+      // envsharp: {
+      //     select: {
+      //         id: true,
+      //         env: true,
+      //         anonym: true,
+      //         edi: true,
+      //         url: true,
+      //     }
+      // },
+      // harpserve: {
+      //       select: {
+      //             id: true,
+      //             srv: true,
+      //             ip: true,
+      //             pshome: true,
+      //             os: true,
+      //             psuser: true,
+      //             domain: true,
+      //             typsrv: true,
+      //             statenvId: true,  
+
+
   //  envsharp: statutenv
 
 export const columns: ColumnDef<OraIns>[] = [
@@ -75,83 +113,60 @@ export const columns: ColumnDef<OraIns>[] = [
   //   header: 'id'
   // },
   {
-    accessorKey: 'envsharp.env',
+    accessorKey: 'harpserve.srv',
     header: ({ column }) => {
       return (
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Env
+          Serveur
           <ArrowUpDown className='ml-2 h-4 w-4' />
         </Button>
       )
     }
   },
 {
-  accessorKey: 'oracle_sid',
+  accessorKey: 'harpserve.ip',
   header: ({ column }) => {
     return (
       <Button
         variant='ghost'
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Instance
+        IP
         <ArrowUpDown className='ml-2 h-4 w-4' />
       </Button>
     )
   }
 },
 {
-  accessorKey: 'aliasql',
+  accessorKey: 'harpserve.pshome',
   header: ({ column }) => {
     return (
       <Button
         variant='ghost'
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Alisa SQL*Net
+        Ps Home
         <ArrowUpDown className='ml-2 h-4 w-4' />
       </Button>
     )
   }
 },
 {
-  accessorKey: 'oraschema',
-  header: 'Schema'
+  accessorKey: 'harpserve.os',
+  header: 'Os'
 },
 {
-  accessorKey:  'descr',
-  header: 'Description'
+  accessorKey:  'harpserve.psuser',
+  header: 'User'
 },
 {
-  accessorKey: 'orarelease',
-  header: 'Release'
+  accessorKey: 'harpserve.domain',
+  header: 'Domaine'
 },
-{
-  accessorKey: 'envsharp.anonym',
-  header: 'Anonym'
-},
-{
-  accessorKey: 'envsharp.edi',
-  header: 'Edi'
-},
-{
-  accessorKey: 'envsharp.url',
-  header: 'Url'
-},
-{
-  accessorKey: 'statutenv.icone',
-  header: 'Edi'
-},
-{
-  accessorKey: 'statenvid',
-  header: 'Icone Statut'
-},
-{
-  accessorKey: 'id',
-  header: 'id'
-},
+
  {
     id: 'actions',
     cell: ({ row }) => {
@@ -175,9 +190,24 @@ export const columns: ColumnDef<OraIns>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem>View customer</DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href={`/list/instora/${base.oracle_sid}`}> 
+              <Link href={`/list/instora/${base.id}`}> 
                {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
                 Voir les details {base.oracle_sid}</Link>
+           </DropdownMenuItem>
+           <DropdownMenuItem>
+              <Link href={`/list/instora/${base.id}`}> 
+               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
+                Ajouter une base à {base.oracle_sid}</Link>
+           </DropdownMenuItem>
+           <DropdownMenuItem>
+              <Link href={`/list/instora/${base.id}`}> 
+               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
+                Editer {base.oracle_sid}</Link>
+           </DropdownMenuItem>
+           <DropdownMenuItem>
+              <Link href={`/list/instora/${base.id}`}> 
+               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
+                Supprimer {base.oracle_sid}</Link>
            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

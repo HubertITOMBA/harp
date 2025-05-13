@@ -62,7 +62,7 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
         {optionMenu.map((item)  =>  
             <div className="flex gap-2 text-sm" key={item.menu}>
                 <Link href={`${item.href}`}
-                          className="flex items-center justify-center lg:justify-start gap-4 px-1 p-2 rounded-xl hover:bg-orange-300"
+                          className="flex items-center justify-center lg:justify-start gap-4 px-1 p-2 rounded-xl hover:bg-orange-300 transition-colors "
                     >
 
                           { item.icone !== "" ? 
@@ -85,7 +85,7 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
                     <Link 
                         href={item.href} 
                         key={item.label} 
-                        className="flex text-xl justify-left lg:justify-start gap-4 rounded-md hover:bg-orange-300">
+                        className="flex text-xl justify-left lg:justify-start gap-4 rounded-md hover:text-orange-500 transition-colors">
                         <Image src={item.icon} alt='' width={20} height={20} />  
                           <span className="hidden lg:block">{item.label}</span>
                     </Link>

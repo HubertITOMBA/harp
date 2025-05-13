@@ -90,8 +90,8 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
 
   return (
     <div className="mt-4 px-2 text-sm">
-      Connexion en cours : {sessionCount} 
-      ENVIRONNEMENTS
+      {/* Connexion en cours : {sessionCount} 
+      ENVIRONNEMENTS */}
              
        {optionMenu.map(async (i) => {
        

@@ -2,6 +2,9 @@ import React from 'react'
 import { columns } from './columns'
 import { db } from "@/lib/db";
 import { DataTable } from './data-table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Ghost } from 'lucide-react';
 
 
 
@@ -18,8 +21,8 @@ import { DataTable } from './data-table';
 export default async function EnvListPage () {
 
   //const data = await getUsers()
-
-  const data = await db.psadm_env.findMany({
+  //  const data = await db.psadm_env.findMany({
+  const data = await db.envsharp.findMany({
     include: {
       statutenv: true,
     },
@@ -28,9 +31,19 @@ export default async function EnvListPage () {
   );
 
   return (
-    <section className="py-2  bg-gray-250">
+    <section className="px-4 py-2">
         <div className="container">
             <h1 className="text-3xl font-semibold">Tous les environnements</h1>
+            {/* <Button  type="button" className="rounded-xl ml-auto p-2.5">
+               <Link href='/list/envs/create'>Créer un environnement</Link>
+             </Button> */}
+   
+             <dialog >
+               Ouverture de Modal
+             </dialog>
+
+
+
             <DataTable columns= {columns} data = {data} />
           {/* <DataTable columns= {columns} data = {DescEnvts} /> */}
         </div>

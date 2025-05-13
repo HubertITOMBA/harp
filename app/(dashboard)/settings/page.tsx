@@ -8,7 +8,17 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   lierEnvauTypeEnv,
   migrerLesUtilisateursNEW,
   importerInstancesOracle,
-  importInstanceOra} from "@/actions/importharp";
+  importInstanceOra,
+  migrateServers,
+  importerLesEnvInfos,
+  importerOraInstances,
+  updateInstanceServerIds,
+  importerLesEnvServeurs,
+  updateEnvsharpInstanceIds,
+  updateEnvsharpOrarelease,
+  importerLesPToolsVersions,
+  importerLesEnvDispos,
+  insertTypeBases} from "@/actions/importharp";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button"
 import VerifierDoublons from '@/components/harp/VerifierDoublons';
@@ -211,6 +221,25 @@ const handlePsoft = async () => {
   }
 } 
 
+
+const handlePTools = async () => {
+  try {
+    const result =  await importerLesPToolsVersions();
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success(result.success);
+     }
+     else if (result.info) {
+      toast.info(result.info);
+    }
+  } catch (error) {
+    toast.error("Une erreur est survenue lors de l'importation de version PeopleTools !");
+  }
+} 
+
+
+
 const handleRelease = async () => {
   try {
     const result = await migrateReleaseData();
@@ -261,6 +290,162 @@ const handleRealeseEnv = async () => {
 }
  
 
+const handleImporterHarpServe = async () => {
+  try {
+    const result = await migrateServers();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+const handleImportHistoEnvs = async () => {
+  try {
+    const result = await  importerLesEnvInfos();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+
+
+const handleImportINSTANCES = async () => {
+  try {
+    const result = await  importerOraInstances();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+
+const handleMAjINSTANCES = async () => {
+  try {
+    const result = await  updateInstanceServerIds();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+
+
+const handleLesEnvServeurs = async () => {
+  try {
+    const result = await  importerLesEnvServeurs();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+
+const handleMAjInstance_ID_ENVS = async () => {
+  try {
+    const result = await  updateEnvsharpInstanceIds();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+const handleOraRelease = async () => {
+  try {
+    const result = await  updateEnvsharpOrarelease();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
+}
+}
+
+
+
+const handleLesEnvDispos = async () => {
+  try {
+    const result = await  importerLesEnvDispos();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
+}
+}
+
+
+
+
+const handleLesTypeBases = async () => {
+  try {
+    const result = await  insertTypeBases();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
+}
+}
+
+
  //=============================================   
 export default function Home() {
   return (
@@ -279,6 +464,17 @@ export default function Home() {
                             1 - Ajuster les valeurs nulles
                         </Button>
                       </div>
+                      
+                      <div>
+                      <Button 
+                              onClick={handleLesTypeBases}
+                              variant="default"
+                              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                        >
+                            1a - Ajouter les types de bases
+                        </Button>
+                      </div>
+
                       <div>
                         <Button 
                                 onClick={handleGenererMenus}
@@ -306,6 +502,17 @@ export default function Home() {
                                     4 - Importer les versions PeopleSoft
                               </Button>  
                         </div> 
+                         
+                        <div>
+                            <Button 
+                                    onClick={handlePTools}
+                                    variant="default"
+                                    className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                              >
+                                    401 - Importer les versions PeopleTools
+                              </Button>  
+                        </div> 
+
                         <div>
                               <Button 
                                   onClick={handleRelease}
@@ -346,7 +553,74 @@ export default function Home() {
                            8- Les roles
                       </Button>
                      </div>
+
                      
+                     <div>
+                     <Button 
+                            onClick={handleImporterHarpServe}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           800- Importer les serveurs
+                      </Button>
+                     </div>
+                     
+
+                     
+                     <div>
+                     <Button 
+                            onClick={handleImportINSTANCES}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           801- Importer les ORACLE_SID
+                      </Button>
+                     </div> 
+
+                     
+
+                     <div>
+                     <Button 
+                            onClick={handleMAjINSTANCES}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           802- MAJ les ORACLE_SID
+                      </Button>
+                     </div> 
+                  
+
+                     <div>
+                     <Button 
+                            onClick={handleLesEnvServeurs}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           803-  importer Les ENVS Serveurs
+                      </Button>
+                     </div>  
+
+                     <div>
+                     <Button 
+                            onClick={handleMAjInstance_ID_ENVS}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           804-  Mis a jours INSTANCES ID dans Les ENVS Serveurs
+                      </Button>
+                     </div>  
+                     
+
+                     <div>
+                     <Button 
+                            onClick={handleOraRelease}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                           805-  Mis a jours Version ORACLE sur Les ENVS
+                      </Button>
+                     </div>  
+
                      <div>
                      <Button 
                             onClick={handleEnvsHarp}
@@ -375,7 +649,18 @@ export default function Home() {
                   
                     <div className="w-1/6 flex-1 p-4 items-center gap-8">
                     
-                       
+                         
+    
+                          <div>
+                        <Button 
+                            onClick={handleImportHistoEnvs}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                        1OO - Historique d'environnements 
+                      </Button>
+                      </div>          
+
                         <div>
                         <Button 
                             onClick={handleStatutDisponible}
@@ -384,7 +669,20 @@ export default function Home() {
                       >
                         11 - Disponibilités d'environnements 
                       </Button>
-                      </div>                  
+                      </div> 
+
+                      <div>
+                        <Button 
+                            onClick={handleLesEnvDispos}
+                            variant="default"
+                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
+                      >
+                        110 - Importer les InDisponibilités d'environnements 
+                      </Button>
+                      </div> 
+                      
+
+
                       <div>
                       <Button 
                             onClick={handleImportUsers}

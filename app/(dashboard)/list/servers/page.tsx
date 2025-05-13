@@ -7,10 +7,17 @@ import { DataTable } from './data-table';
 
 const ServerListPage = async () => {
      
-  const data = await db.psadm_srv.findMany();
- 
+  const data = await db.harpserve.findMany({
+    include: {
+      statutenv: true,
+    
+    },
+  }
+   
+ );
+
   return (
-     <section className="py-2">
+     <section className="px-4 py-2">
              <div className="container ">
                  <h1 className="text-3xl font-semibold">Tous les Serveurs</h1>
                  <DataTable columns= {columns} data = {data} />

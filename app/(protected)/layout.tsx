@@ -43,11 +43,14 @@ export default async function HarpLayout ( {
     <div className="h-screen flex">
        <SessionProvider session={session}>
           <div className="w-[14%] md:w[8%] lg:w-[16%] xl:w-[14%]p-4">
-              <Link href="/" className="flex items-center justify-center gap-2">
-                  <Image className="h-100 w-100 ml-2 mt-5  object-cover" src="/images/OPSE_logo.gif" width={250} height={50} alt="logo" />    
+          <Link href="/" >
+            <h1 className="text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+            <h2 className="mx-2 text-sm font-bold text-gray-500">Human Ressources <span className="text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
+              {/* <Link href="/" className="flex items-center justify-center gap-2"> */}
+                {/* <Image className="h-100 w-100 ml-2 mt-5  object-cover" src="/images/OPSE_logo.gif" width={250} height={50} alt="logo" />     */}
+                  {/* <Image className="h-100 w-100 ml-2 mt-5  object-cover" src="/images/OPSE_logo.gif" width={250} height={50} alt="logo" />     */}
               </Link>
-              
-              <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
+            <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
               
           </div>
           <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-scroll flex flex-col">

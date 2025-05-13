@@ -16,25 +16,26 @@ import { Badge } from '@/components/ui/badge';
 
 
 interface EnvInfoProps {
-  env : string;
+  id : number;
 };
   
-    const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
+    const EnvSinglePage = async ({ params }: { params: { id: number } }) => {
  // const EnvSinglePage = async ({ params: { env },}: { params: { env: string }; }) => {
  // const EnvSinglePage = async ({ env }: EnvInfoProps) => {
    
  //  const envParam = await params.env;
-  const { env } = await params;
+  const { id } = await params;
 
-  const Envs  = await prisma.psadm_env.findUnique({
-      where: { env: env },
+  
+  const Envs  = await prisma.envsharp.findUnique({
+      where: { id: id },
         include: {
           // _count: {
           //   select: {
               statutenv: true,
-              psadm_rolesrv : true,    
+              //psadm_rolesrv : true,    
              // psadm_oracle : true,
-              psadm_dispo: true,
+             // psadm_dispo: true,
               //psadm_typenv: true,
              // psadm_release: true,  
             //  psadm_ptools: true,   
@@ -49,40 +50,40 @@ interface EnvInfoProps {
     } 
 
      
-     const enfInfos = await prisma.psadm_envinfo.findUnique({ where: { env: env } });  
+     const envInfos = await prisma.harpenvinfo.findUnique({ where: { envId: id } });  
     
    
-      const OraInfos = await prisma.psadm_env.findUnique({
+      const OraInfos = await prisma.envsharp.findUnique({
         where: {
-          env: env
+          id: id
         },
         select: {
           env: true,
-          site: true,
-          oracle_sid: true,
-          psadm_oracle: {
-            select: {
-              aliasql: true,
-              orarelease: true
-            }
-          }
+         // site: true,
+        //  oracle_sid: true,
+          // psadm_oracle: {
+          //   select: {
+          //     aliasql: true,
+          //     orarelease: true
+          //   }
+          // }
         }
       }); 
 
       
-        const dbServers = await prisma.psadm_rolesrv.findFirst({
+        const dbServers = await prisma.harpenvserv.findFirst({
           where: {
               typsrv: "DB",
-              env: env,
-              srv: {
-                  equals: prisma.psadm_srv.srv // Note: ceci ne fonctionnera pas comme prévu
-              }
+              envId: id,
+              // serverId: {
+              //     equals: prisma.harpserve. // Note: ceci ne fonctionnera pas comme prévu
+              // }
           },
           select: {
-              srv: true,
-              env: true,
+              serverId: true,
+              // env: true,
               typsrv: true,
-              psadm_srv: {
+              harpserve: {
                   select: {
                       srv: true,
                       ip: true,
@@ -201,7 +202,7 @@ interface EnvInfoProps {
                               <Label>Schema Owner  :</Label> <Label className="font-semibold text-sm">{Envs.oraschema}</Label>
                               </div>
                               <div className="w-full flex items-center gap-2">
-                              <Label>Version Oracle  :</Label> <Label className="font-semibold text-sm">{OraInfos?.psadm_oracle.orarelease}</Label>
+                             pr {/* <Label>Version Oracle  :</Label> <Label className="font-semibold text-sm">{OraInfos?.psadm_oracle.orarelease}</Label> */}
                               </div> 
                               <div className="w-full flex items-center gap-2">
                                       <Label>PeopleSoft User  :</Label> <Label className="font-semibold text-sm">{dbServers?.psadm_srv.psuser} </Label>
@@ -276,7 +277,7 @@ interface EnvInfoProps {
             <div className="w-full flex gap-5">
                  <div >
                     {/* <h1 className="text-xl font-semibold mb-4">Roles de serveurs de l'environnement  {env}</h1> */}
-                    <EnvServRoles env={Envs.env}/>
+                    <EnvServRoles id={Envs.id}/>
                  </div>
                  <div >
                     <div className="flex gap-4"><p>Dernière requete SQL domaine AS: </p><h2 className='text-sm font-semibold'>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastasdt )}</h2></div>

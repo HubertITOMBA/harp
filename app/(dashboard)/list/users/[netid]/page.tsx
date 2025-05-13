@@ -150,6 +150,8 @@ import { Button } from '@/components/ui/button';
                   
                  <h2 className="text-2xl font-semibold mt-3">{Users.prenom} </h2> 
                  <h2 className="text-2xl font-semibold mt-3">{Users.nom} </h2> 
+
+                 JE suis ici
             </div>
 
 

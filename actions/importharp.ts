@@ -5,44 +5,77 @@ import { toast } from "react-toastify";
 import prisma  from "@/lib/prisma";
 
 
-export const importerLesStatus = async () => {
+export const insertTypeBases = async () => {
    try {
  
      // Vérifier si la table est vide
-      const count = await prisma.statutenv.count();
+      const count = await prisma.harptypebase.count();
      
       if (count > 0) {
        // toast.info("La table statutenv contient déjà des données. Importation ignorée.");
-        return { info: "La table statutenv contient déjà des données. Importation ignorée."};
+        return { info: "La table harptypebase contient déjà des données. Insertion ignorée."};
       }
  
      // Réinitialiser l'auto-increment
-     await prisma.$executeRaw`ALTER TABLE harpmenus AUTO_INCREMENT = 1`;
+     await prisma.$executeRaw`ALTER TABLE harptypebase AUTO_INCREMENT = 1`;
      
      // Création des statuts d'environnement
-     await prisma.statutenv.createMany({
+     await prisma.harptypebase.createMany({
        data: [
-         { statenv: 'ANONYMISE', descr: 'Données anonymisées', icone: 'anonym.png' },
-         { statenv: 'BASE_ONLY', descr: 'Accès uniquement à la base de données', icone: 'base_only.png' },
-         { statenv: 'DECOMMISSION', descr: 'Environnement à Décommissionner', icone: 'decommission.png' },
-         { statenv: 'DUMMY', descr: 'Divers', icone: 'special.png' },
-         { statenv: 'FERME', descr: 'Evironnement indisponible', icone: 'ferme.png' },
-         { statenv: 'INVISIBLE', descr: 'Invisible', icone: 'invisible.png' },
-         { statenv: 'OBSOLETE', descr: 'Environnement obsolète', icone: 'obsolete.png' },
-         { statenv: 'OUVERT',  descr: 'Environnement disponible', icone: 'ouvert.png' },
-         { statenv: 'REFRESH', descr: 'Environnement en cours de rafraichissement', icone: 'refresh.png' },
-         { statenv: 'RESTREINT', descr: 'Accès reservé à certains utilisateurs', icone: 'restreint.png' }
-       ]
+         { type_base: '2K', descr: 'Base 2K', icone: '' },
+         { type_base: '4K', descr: 'Base 4K', icone: '' },
+         { type_base: '150K', descr: 'Base 150K', icone: '' },
+        ]
      });
  
+
     // toast.success("Les statuts d'environnements ont été chargésortés avec succès !") ;
 
-     return { success: "Les statuts d'environnement ont été importés avec succès !" };
+     return { success: "Les stypes de bases ont été ajoutés avec succès !" };
    } catch (error) {
-     return { error: "HARP Erreur lors de l'importation des statuts d'environnement" };
+     return { error: "HARP Erreur lors de l'ajout de type de bases" };
    }
     
  };
+
+ export const importerLesStatus = async () => {
+  try {
+
+    // Vérifier si la table est vide
+     const count = await prisma.statutenv.count();
+    
+     if (count > 0) {
+      // toast.info("La table statutenv contient déjà des données. Importation ignorée.");
+       return { info: "La table statutenv contient déjà des données. Importation ignorée."};
+     }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harpmenus AUTO_INCREMENT = 1`;
+    
+    // Création des statuts d'environnement
+    await prisma.statutenv.createMany({
+      data: [
+        { statenv: 'ANONYMISE', descr: 'Données anonymisées', icone: 'anonym.png' },
+        { statenv: 'BASE_ONLY', descr: 'Accès uniquement à la base de données', icone: 'base_only.png' },
+        { statenv: 'DECOMMISSION', descr: 'Environnement à Décommissionner', icone: 'decommission.png' },
+        { statenv: 'DUMMY', descr: 'Divers', icone: 'special.png' },
+        { statenv: 'FERME', descr: 'Evironnement indisponible', icone: 'ferme.png' },
+        { statenv: 'INVISIBLE', descr: 'Invisible', icone: 'invisible.png' },
+        { statenv: 'OBSOLETE', descr: 'Environnement obsolète', icone: 'obsolete.png' },
+        { statenv: 'OUVERT',  descr: 'Environnement disponible', icone: 'ouvert.png' },
+        { statenv: 'REFRESH', descr: 'Environnement en cours de rafraichissement', icone: 'refresh.png' },
+        { statenv: 'RESTREINT', descr: 'Accès reservé à certains utilisateurs', icone: 'restreint.png' }
+      ]
+    });
+
+   // toast.success("Les statuts d'environnements ont été chargésortés avec succès !") ;
+
+    return { success: "Les statuts d'environnement ont été importés avec succès !" };
+  } catch (error) {
+    return { error: "HARP Erreur lors de l'importation des statuts d'environnement" };
+  }
+   
+};
 
 
  export const updateDispoEnvIds = async () => {
@@ -382,6 +415,9 @@ export async function importListEnvs() {
     const result = await prisma.envsharp.createMany({
       data: envData.map(record => ({
         env: record.env,
+        aliasql: record.aliasql,
+        oraschema: record.oraschema,
+       // orarelease: record.orarelease,
         url: record.url || null,
         appli: record.appli || null,
         psversion: record.psversion || null,
@@ -603,12 +639,12 @@ export async function migrerLesUtilisateurs() {
      // Vérifier si la table est vide
      const count = await prisma.user.count();
     
-     if (count > 0) {
+     if (count > 1) {
        return { info: "La table user contient déjà tous les utilisateurs Harp. Importation ignorée." };
      }
 
       // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
+    await prisma.$executeRaw`ALTER TABLE User AUTO_INCREMENT = 1`;
 
      // Récupérer tous les utilisateurs de psadm_user
     const psadmUsers = await prisma.psadm_user.findMany()
@@ -631,6 +667,7 @@ export async function migrerLesUtilisateurs() {
             oprid: user.oprid,
             nom: user.nom,
             prenom: user.prenom,
+            name: `${user.nom} ${user.prenom}`,
             pkeyfile: user.pkeyfile,
             lastlogin: user.lastlogin,
             email: user.email,
@@ -860,6 +897,41 @@ export const importerLesPsoftVersions = async () => {
   }
 }; 
 
+export const importerLesPToolsVersions = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.ptoolsversion.count();
+    
+    if (count > 0) {
+      return { info: "La table ptoolsversion contient déjà des données. Importation ignorée." };
+    }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE ptoolsversion AUTO_INCREMENT = 1`;
+
+    // Récupérer les données de psadm_version
+    const versions = await prisma.$queryRaw`
+      SELECT ptversion, descr 
+      FROM psadm_ptools
+    `;
+
+
+    // Insérer les données dans psoftversion
+    const result = await prisma.ptoolsversion.createMany({
+      data: versions.map((version: any) => ({
+        ptversion: version.ptversion,
+        descr: version.descr
+      })),
+      skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
+    });
+
+    return { success: `${result.count} versions PeopleTools importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des versions PeopleTools:", error);
+    return { error: "Erreur lors de l'importation des versions PeopleTools" };
+  }
+}; 
+
 
 export const migrateReleaseData = async () => {
   try {
@@ -991,11 +1063,58 @@ export const updateReleaseEnvIds = async () => {
   }
 };
 
+export const migrateServers = async () => {
+   
+  try {
+    // Vérifier si harpserve est vide
+    const harpserveCount = await prisma.harpserve.count()
+    
+    if (harpserveCount > 0) {
+       return { info: "La table harpserve n'est pas vide." };
+    }
+    
+    // Récupérer les données de psadm_env
+    const psadmSrvData = await prisma.psadm_srv.findMany()
+
+
+    if (psadmSrvData.length === 0) {
+      return { info: "La table psadm_srv est vide." };
+   }
+
+     // Réinitialiser l'auto-increment
+     await prisma.$executeRaw`ALTER TABLE harpserve AUTO_INCREMENT = 1`;
+
+     // Insérer les données dans harpserve
+    const result = await prisma.harpserve.createMany({
+      data: psadmSrvData.map(record => ({
+        srv: record.srv,
+        ip: record.ip,
+        pshome: record.pshome,
+        os: record.os,
+        psuser: record.psuser,
+        domain: record.domain,
+        // typsrv: record.,
+        statenvId: 8,
+        
+      }))
+    })
+
+    console.log(`Migration terminée. ${result.count} enregistrements insérés.`)
+    return { success: `${result.count} enregistrements insérés dans HARPSERV !` };
+
+  } catch (error) {
+    console.error('Erreur lors de la migration:', error)
+    return { error: "Erreur lors de l'import dans HARPSERV" };
+  // } finally {
+  //   await prisma.$disconnect()
+  }
+
+
+}
 
 export const migrateDataToEnvsharp = async () => {
  
-  
-  try {
+    try {
     // Vérifier si envsharp est vide
     const envsharpCount = await prisma.envsharp.count()
     
@@ -1054,9 +1173,9 @@ export const migrerLesUtilisateursNEW = async () => {
     // Vérifier si la table est vide
     const count = await prisma.user.count();
     
-    if (count > 0) {
-      return { info: "La table user contient déjà tous les utilisateurs Harp. Importation ignorée." };
-    }
+    // if (count > 1) {
+    //   return { info: "La table user contient déjà tous les utilisateurs Harp. Importation ignorée." };
+    // }
 
      // Réinitialiser l'auto-increment
      await prisma.$executeRaw`ALTER TABLE user AUTO_INCREMENT = 1`;
@@ -1084,6 +1203,7 @@ export const migrerLesUtilisateursNEW = async () => {
         netid: user.netid,
         unxid: user.unxid,
         oprid: user.oprid,
+        name: `${user.nom} ${user.prenom}`,
         nom: user.nom,
         prenom: user.prenom,
         pkeyfile: user.pkeyfile,
@@ -1101,4 +1221,375 @@ export const migrerLesUtilisateursNEW = async () => {
   }
 }
 
+ 
 // ... existing code ...
+
+export const OLD_importerLesEnvInfos = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpenvinfo.count();
+    
+    if (count > 0) {
+      return { info: "La table harpenvinfo contient déjà des données. Importation ignorée." };
+    }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harpenvinfo AUTO_INCREMENT = 1`;
+
+    // Récupérer les données avec un JOIN entre envsharp et psadm_envinfo
+    const results = await prisma.$queryRaw`
+      SELECT 
+        e.id as envId,
+        i.datadt,
+        i.modetp,
+        i.modedt,
+        i.refreshdt,
+        i.lastcheckstatus,
+        i.lastcheckdt,
+        i.lastcheckmsg,
+        i.datmaj,
+        i.deploycbldt,
+        i.userunx,
+        i.pswd_ft_exploit
+      FROM envsharp e
+      JOIN psadm_envinfo i ON e.env = i.env
+      ORDER BY e.id
+    `;
+ 
+
+    const importedData = await prisma.harpenvinfo.createMany({
+      data: results.map((row: any) => ({
+        envId: row.envId,
+        datadt: row.datadt || new Date(),
+       // modetp: row.modetp,
+        modedt: row.modedt || new Date(),
+        refreshdt: row.refreshdt || new Date(),
+        lastcheckstatus: row.lastcheckstatus,
+        lastcheckdt: row.lastcheckdt || new Date(),
+        lastcheckmsg: row.lastcheckmsg,
+        datmaj: row.datmaj || new Date(),
+        deploycbldt: row.deploycbldt,
+        userunx: row.userunx,
+        pswd_ft_exploit: row.pswd_ft_exploit
+      }))
+    });
+
+    return { success: `${importedData.count} informations d'environnements importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des informations d'environnements:", error);
+    return { error: "Erreur lors de l'importation des informations d'environnements" };
+  }
+};
+
+
+export const importerLesEnvInfos = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpenvinfo.count();
+    
+    if (count > 0) {
+      return { info: "La table harpenvinfo contient déjà des données. Importation ignorée." };
+    }
+
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt is null`;
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt = 0`;
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET refreshdt = datmaj where refreshdt is null`;
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET refreshdt = datmaj where refreshdt = 0`;
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt is null`;
+    await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt = 0`;
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harpenvinfo AUTO_INCREMENT = 1`;
+
+    // Récupérer les environnements
+    const envs = await prisma.envsharp.findMany({
+      select: {
+        id: true,
+        env: true,
+      }
+    });
+
+    // Récupérer les informations d'environnement
+    const envInfos = await prisma.psadm_envinfo.findMany();
+
+    // Préparer les données pour l'import
+    const dataToImport = envs.map(env => {
+      const matchingInfo = envInfos.find(info => info.env === env.env);
+      if (!matchingInfo) return null;
+
+      return {
+        envId: env.id,
+        datadt: matchingInfo.datadt || new Date(),
+        modetp: matchingInfo.modetp,
+        // modedt: matchingInfo.modedt || new Date(),
+        refreshdt: matchingInfo.refreshdt || new Date(),
+        lastcheckstatus: matchingInfo.lastcheckstatus,
+        lastcheckdt: matchingInfo.lastcheckdt || new Date(),
+        lastcheckmsg: matchingInfo.lastcheckmsg,
+        datmaj: matchingInfo.datmaj || new Date(),
+        deploycbldt: matchingInfo.deploycbldt,
+        userunx: matchingInfo.userunx,
+        pswd_ft_exploit: matchingInfo.pswd_ft_exploit
+      };
+    }).filter(Boolean);
+
+    // Insérer les données
+    const importedData = await prisma.harpenvinfo.createMany({
+      data: dataToImport,
+      skipDuplicates: true
+    });
+
+    return { success: `${importedData.count} informations d'environnements importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des informations d'environnements:", error);
+    return { error: "Erreur lors de l'importation des informations d'environnements" };
+  }
+};
+// ... existing code ...
+
+
+
+// select distinct e.oracle_sid from psadm_env e;
+export const importerOraInstances = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpinstance.count();
+    
+    if (count > 0) {
+      return { info: "La table harpinstance contient déjà des données. Importation ignorée." };
+    }
+   
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harpinstance AUTO_INCREMENT = 1`;
+
+    const results = await prisma.$queryRaw`
+      SELECT DISTINCT
+        oracle_sid
+      FROM psadm_env  
+      WHERE oracle_sid IS NOT NULL
+      ORDER BY oracle_sid
+    `;
+
+    const importedData = await prisma.harpinstance.createMany({
+      data: results.map((row: any) => ({
+        oracle_sid: row.oracle_sid
+      }))
+    });
+
+    return { success: `${importedData.count} instances Oracle importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des instances Oracle:", error);
+    return { error: "Erreur lors de l'importation des instances Oracle" };
+  }
+};
+
+
+export const updateInstanceServerIds = async () => {
+  try {
+    // Vérifier si les tables nécessaires contiennent des données
+    const countInstances = await prisma.harpinstance.count();
+    if (countInstances === 0) {
+      return { info: "La table harpinstance est vide. Veuillez d'abord importer les instances." };
+    }
+
+    const countServers = await prisma.harpserve.count();
+    if (countServers === 0) {
+      return { info: "La table harpserve est vide. Veuillez d'abord importer les serveurs." };
+    }
+
+    // Récupérer les relations entre instances et serveurs
+    const relations = await prisma.$queryRaw`
+      SELECT DISTINCT o.id as instanceId, h.id as serverId
+      FROM harpinstance o
+      JOIN psadm_env e ON o.oracle_sid = e.oracle_sid
+      JOIN psadm_rolesrv s ON s.env = e.env
+      JOIN harpserve h ON h.srv = s.srv
+      ORDER BY o.id
+    `;
+
+    // Mettre à jour chaque instance avec son serverId correspondant
+    const updates = relations.map(async (relation: any) => {
+      return prisma.harpinstance.update({
+        where: { id: relation.instanceId },
+        data: { serverId: relation.serverId }
+      });
+    });
+
+    await Promise.all(updates);
+
+    return { success: `Les relations instance-serveur ont été mises à jour avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des relations instance-serveur:", error);
+    return { error: "Erreur lors de la mise à jour des relations instance-serveur" };
+  }
+};
+// select * from psadm_rolesrv where env like '%HPR1'; 
+export const importerLesEnvServeurs = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpenvserv.count();
+    
+    if (count > 0) {
+      return { info: "La table harpenvserv contient déjà des données. Importation ignorée." };
+    }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status = 21`;
+    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status is null`;
+    await prisma.$executeRaw`ALTER TABLE harpenvserv AUTO_INCREMENT = 1`;
+
+    // Récupérer les données avec la requête
+    const results = await prisma.$queryRaw`
+      SELECT 
+        e.id as envId,
+        s.id as serverId,
+        r.typsrv,
+        r.status
+      FROM envsharp e, harpserve s, psadm_rolesrv r
+      WHERE e.env = r.env AND s.srv = r.srv 
+      ORDER BY e.env
+    `;
+
+    // Insérer les données dans harpenvserv
+    const importedData = await prisma.harpenvserv.createMany({
+      data: results.map((row: any) => ({
+        envId: row.envId,
+        serverId: row.serverId,
+        typsrv: row.typsrv,
+        status: row.status  // Utilise 8 comme valeur par défaut si statenvId est null
+      })),
+      skipDuplicates: true // Ignore les doublons basés sur les contraintes uniques
+    });
+
+    return { success: `${importedData.count} relations environnement-serveur importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des relations environnement-serveur:", error);
+    return { error: "Erreur lors de l'importation des relations environnement-serveur" };
+  }
+};
+
+export const updateEnvsharpInstanceIds = async () => {
+  try {
+    // Vérifier si les tables nécessaires contiennent des données
+    const countEnvs = await prisma.envsharp.count();
+    if (countEnvs === 0) {
+      return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
+    }
+
+    const countInstances = await prisma.harpinstance.count();
+    if (countInstances === 0) {
+      return { info: "La table harpinstance est vide. Veuillez d'abord importer les instances." };
+    }
+
+    // Récupérer les relations entre environnements et instances
+    const relations = await prisma.$queryRaw`
+      SELECT e.id, i.id as instanceId
+      FROM psadm_env p, envsharp e, harpinstance i        
+      WHERE e.env = p.env
+        AND p.oracle_sid = i.oracle_sid
+      ORDER BY e.id
+    `;
+
+    // Mettre à jour chaque environnement avec son instanceId correspondant
+    const updates = relations.map(async (relation: any) => {
+      return prisma.envsharp.update({
+        where: { id: relation.id },
+        data: { instanceId: relation.instanceId }
+      });
+    });
+
+    await Promise.all(updates);
+
+    return { success: `Les relations environnement-instance ont été mises à jour avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des relations environnement-instance:", error);
+    return { error: "Erreur lors de la mise à jour des relations environnement-instance" };
+  }
+};
+
+
+export const updateEnvsharpOrarelease = async () => {
+  try {
+    // Vérifier si la table envsharp contient des données
+    const countEnvs = await prisma.envsharp.count();
+    
+    if (countEnvs === 0) {
+      return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
+    }
+
+    // Récupérer les relations entre envsharp et psadm_oracle
+    const relations = await prisma.$queryRaw`
+      SELECT e.id, o.orarelease
+      FROM envsharp e
+      JOIN psadm_oracle o ON e.aliasql = o.aliasql
+      WHERE o.orarelease IS NOT NULL
+    `;
+
+    // Mettre à jour chaque environnement avec son orarelease correspondant
+    const updates = relations.map(async (relation: any) => {
+      return prisma.envsharp.update({
+        where: { id: relation.id },
+        data: { orarelease: relation.orarelease }
+      });
+    });
+
+    const result = await Promise.all(updates);
+
+    return { success: `${result.length} environnements mis à jour avec leur version Oracle !` };
+
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des versions Oracle:", error);
+    return { error: "Erreur lors de la mise à jour des versions Oracle dans ENVSHARP" };
+  }
+};
+
+
+
+// ... existing code ...
+
+export const importerLesEnvDispos = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpenvdispo.count();
+    
+    if (count > 0) {
+      return { info: "La table harpenvdispo contient déjà des données. Importation ignorée." };
+    }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harpenvdispo AUTO_INCREMENT = 1`;
+
+    // Récupérer les données avec la requête
+    const results = await prisma.$queryRaw`
+      SELECT 
+        e.id as envId,
+        d.fromdate,
+        d.msg,
+        d.statenvId 
+      FROM 
+        envsharp e,
+        psadm_dispo d
+      WHERE d.env = e.env
+      ORDER BY e.env, d.fromdate DESC
+    `;
+
+    // Insérer les données dans harpenvdispo
+    const importedData = await prisma.harpenvdispo.createMany({
+      data: results.map((row: any) => ({
+        envId: row.envId,
+        fromdate: row.fromdate || new Date(),
+        msg: row.msg,
+        statenvId: row.statenvId || 8 // Utilise 8 (OUVERT) comme valeur par défaut si statenvId est null
+      })),
+      skipDuplicates: true // Ignore les doublons basés sur les contraintes uniques
+    });
+
+    return { success: `${importedData.count} dispositions d'environnements importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des dispositions d'environnements:", error);
+    return { error: "Erreur lors de l'importation des dispositions d'environnements" };
+  }
+};
+
+
+

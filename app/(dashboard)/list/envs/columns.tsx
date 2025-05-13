@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 
 export type Envs = {
+    id: Number
     env: string
     site: string
     typenv: string
@@ -87,6 +88,7 @@ export const columns: ColumnDef<Envs>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="font-semibold text-white"
         >
           Base
           <ArrowUpDown className='ml-2 h-4 w-4' />
@@ -110,6 +112,7 @@ export const columns: ColumnDef<Envs>[] = [
 {
   accessorKey: 'oracle_sid',
   header: 'Sid'
+  
 },
 // {
 //   accessorKey: 'aliasql',
@@ -185,27 +188,35 @@ export const columns: ColumnDef<Envs>[] = [
       const base = row.original
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <DropdownMenu  >
+          <DropdownMenuTrigger asChild >
             <Button variant='ghost' className='h-8 w-8 p-0'>
               <span className='sr-only'>Open menu</span>
               <MoreHorizontal className='h-4 w-4' />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
+          <DropdownMenuContent align='end' className="rounded-xl bg-harpOrange">
+            <DropdownMenuLabel className="rounded-md bg-harpSky border-none">Actions sur {base.env}</DropdownMenuLabel>
+            {/* <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(base.env)}
             >
               Copier Environnement
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-           
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les de   <Link href={`/list/envs/${base.env}`}> tails {base.env}</Link>
+            <DropdownMenuItem>View customer</DropdownMenuItem>*/}
+            <DropdownMenuItem> 
+            <Link className="hover:text-white hover:font-bold" href={`/list/envs/${base.env}`}>Voir</Link>
            </DropdownMenuItem>
+           {/* <DropdownMenuSeparator /> */}
+            <DropdownMenuItem>
+            <Link className="hover:text-white hover:font-bold" href={`/list/envs/edit/${parseInt(base.id)}`}>Modifier  = {base.env} = {base.id}</Link> 
+            </DropdownMenuItem>
+         
+            {/* <DropdownMenuSeparator /> */}
+            <DropdownMenuItem >
+            <Link className="hover:text-white hover:font-bold" href={`/list/envs/${base.env}`}>Supprimer</Link> 
+            </DropdownMenuItem>
+            <DropdownMenuItem></DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

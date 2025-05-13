@@ -30,8 +30,7 @@ export const {
         if (token.sub && session.user) {
             session.user.id = token.sub;
             session.user.name = token.name;
-            
-            
+                       
          }
 
          session.user.customField =  await getUserRoles(parseInt(session.user.id));

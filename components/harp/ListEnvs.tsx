@@ -1,6 +1,6 @@
 
 //import EnvCard from '@/components/harp/EnvCard'
-import { Prisma, psadm_dispo, psadm_env, psadm_envinfo, psadm_logo, psadm_oracle, psadm_rolesrv, psadm_roleuser, psadm_srv, psadm_statenv, psadm_typenv } from "@prisma/client";
+import { Prisma, psadm_dispo, envsharp, envsharpinfo, psadm_logo, psadm_oracle, psadm_rolesrv, psadm_roleuser, psadm_srv, psadm_statenv, psadm_typenv } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/db";
 import Pagination from '@/components/harp/Pagination';
@@ -46,7 +46,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
 // const HarpEnvPage =  async ({params} : { params: { id: string };}  ) => {
 // const HarpEnvPage =  async ( {id} : {id: string;} ) => {
  
-      const DescEnvs = await prisma.psadm_env.findMany(
+      const DescEnvs = await prisma.envsharp.findMany(
         {
           where: {
               typenvid: typenvid,
@@ -59,33 +59,33 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                    icone : true,
                  }
              }, 
-             psadm_rolesrv : true,    
-             psadm_oracle : true,
-             psadm_dispo: { 
+             harpenvinfo : true,    
+            // psadm_oracle : true,
+             harpenvdispo: { 
                 orderBy: {
                   fromdate: 'desc',
               },
               take: 1
             }, 
-            psadm_typenv: true,
-            psadm_release: true,  
-            psadm_ptools: true,   
-            psadm_appli: true,
-                      
+            harptypenv: true,
+            releaseenv: true,  
+            psoftversion: true,   
+            ptoolsversion: true, 
+                                 
           },
           orderBy: [
-            {
-            display: "asc",
-            },
+            // {
+            // display: "asc",
+            // },
             { env: "asc",}
           ]
          
       });  
 
 
-    const count = await prisma.psadm_env.count(); 
+    const count = await prisma.envsharp.count(); 
 
-    const envCount = await prisma.psadm_env.count({
+    const envCount = await prisma.envsharp.count({
       where: {
         typenvid: typenvid
       }
@@ -93,7 +93,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
     
 
 
-         const userCourent = await prisma.psadm_user.findUnique(
+         const userCourent = await prisma.user.findUnique(
         {
           where : {
             netid : "hitomba",
@@ -125,22 +125,23 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                     {props.id}
                     </div> */}
                <p>{userCourent?.netid} {userCourent?.email}</p>
-               <p>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(userCourent?.lastlogin )}</p>
+               {/* <p>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(userCourent?.lastlogin )}</p> */}
                <p>{userCourent?.pkeyfile}</p>
           
               
 
 
-            { DescEnvs.map((psadm_env) => (
-                  <div className="h-auto w-full mb-3 bg-white rounded-xl shadow-xl justify-between hover:bg-orange-100 p-2 gapx-10" key={psadm_env.env}>
+            { DescEnvs.map((envsharp) => (
+                  <div className="h-auto w-full mb-3 bg-white rounded-xl shadow-xl justify-between hover:bg-orange-100 p-2 gapx-10" key={envsharp.id}>
                       <div className="mt-1 flex ml-3 items-center  gap-8 relative ">  
-                            <Image src={`/ressources/${psadm_env.statutenv.icone}`} alt="" width={40} height={40} className=""/>
-                            <Link href={psadm_env.url}   className="text-3xl font-semibold">{psadm_env.env} </Link>
-                              {psadm_env.statutenv.icone} 
-                              { psadm_env.anonym ==="N" ? "" : <Image src="/ressources/anonym.png" alt="" width={40} height={40} className="" />}
-                              <h1 className="text-xl font-semibold items-center justify-center">{psadm_env.descr} </h1> 
+                            <Image src={`/ressources/${envsharp.statutenv.icone}`} alt="" width={40} height={40} className=""/>
+                            {envsharp.id} 
+                            <Link href={envsharp.url}   className="text-3xl font-semibold">{envsharp.env} </Link>
+                              {envsharp.statutenv.icone} 
+                              { envsharp.anonym ==="N" ? "" : <Image src="/ressources/anonym.png" alt="" width={40} height={40} className="" />}
+                              <h1 className="text-xl font-semibold items-center justify-center">{envsharp.descr} </h1> 
                               <h1 className="text-right text-5xl font-bold. items-center justify-end w-auto"></h1>
-                              { psadm_env.edi ==="N" ? "" : <Image src="/ressources/edi.png" alt="" width={150} height={50} className="items-end bg-transparent" />}
+                              { envsharp.edi ==="N" ? "" : <Image src="/ressources/edi.png" alt="" width={150} height={50} className="items-end bg-transparent" />}
                       </div> 
                     
                       <Tabs defaultValue="environment" className="w-full ">
@@ -175,31 +176,31 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                           <div className="basis-1/2"> 
                                           
                                               <div className="flex gap-4 items-center">
-                                                  <Label>Version Harp :</Label><Label className="font-semibold text-sm mt-1">{psadm_env.appli}</Label>  
+                                                  <Label>Version Harp :</Label><Label className="font-semibold text-sm mt-1">{envsharp.appli}</Label>  
                                               </div> 
                                               <div className="flex gap-4 items-center">
-                                                  <Label>Type :</Label><Label className="font-semibold text-sm mt-1">{psadm_env.typenv}</Label>  
+                                                  <Label>Type :</Label><Label className="font-semibold text-sm mt-1">{envsharp.typenvid}</Label>  
                                               </div>   
                                               <div className="flex gap-4 items-center">
-                                                <Label>Version Harp :</Label><Label className="font-semibold text-sm mt-1"><Link href=""> {psadm_env.harprelease}</Link></Label>  
+                                                <Label>Version Harp :</Label><Label className="font-semibold text-sm mt-1"><Link href=""> {envsharp.harprelease}</Link></Label>  
                                               </div> 
                                               <div className="flex gap-4 items-center">
-                                                <Label>Instance Oracle :</Label><Label className="font-semibold text-sm mt-1">{psadm_env.oracle_sid}</Label>  
+                                                <Label>Instance Oracle :</Label><Label className="font-semibold text-sm mt-1">{envsharp.instanceId}</Label>  
                                               </div> 
                                               <div className="flex gap-4 items-center">
-                                                <Label>Alias SQL*Net :</Label><Label className="font-semibold text-sm mt-1"><Link href=""> {psadm_env.aliasql}</Link></Label>  
+                                                <Label>Alias SQL*Net :</Label><Label className="font-semibold text-sm mt-1"><Link href=""> {envsharp.aliasql}</Link></Label>  
                                               </div> 
                                               <div className="flex gap-4 items-center">
-                                                  <Label>Schéma Oracle : </Label><Label  className="font-semibold text-sm mt-1"><Link href="">  {psadm_env.psadm_oracle.oraschema}</Link></Label>  
+                                                  <Label>Schéma Oracle : </Label><Label  className="font-semibold text-sm mt-1"><Link href="">  {envsharp.oraschema}</Link></Label>  
                                               </div>                               
                                               <div className="flex gap-4 items-center">
-                                                      <Label>Version PSoft :</Label><Label className="font-semibold text-sm"><Link href=""> {psadm_env.psversion}</Link>  </Label>
+                                                      <Label>Version PSoft :</Label><Label className="font-semibold text-sm"><Link href=""> {envsharp.psversion}</Link>  </Label>
                                               </div>
                                               <div className="flex gap-4 items-center">
-                                                      <Label>Version PTools :</Label><Label className="font-semibold text-sm"><Link href=""> {psadm_env.ptversion}</Link> </Label>
+                                                      <Label>Version PTools :</Label><Label className="font-semibold text-sm"><Link href=""> {envsharp.ptversion}</Link> </Label>
                                               </div>
                                               <div className="flex gap-2 items-center">  
-                                                  <Label>Version Cobol :</Label>  <p className="font-semibold text-sm"> {psadm_env.volum} </p><br />
+                                                  <Label>Version Cobol :</Label>  <p className="font-semibold text-sm"> {envsharp.volum} </p><br />
                                               </div>
                                           </div>       
                                           <LancerApplis />
@@ -221,7 +222,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             </CardHeader> 
                             <CardContent className="space-y-2">
                               <div className="basis-1/2">                         
-                                <EnvInfos env={psadm_env.env} srv=""/>        
+                                <EnvInfos env={envsharp.env} srv=""/>        
                               </div> 
                             </CardContent>
                             <CardFooter>
@@ -238,7 +239,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                               </CardDescription>
                             </CardHeader>
                             <CardContent className="space-x-1"> */}
-                                  <EnvServRoles env={psadm_env.env}/>
+                                  <EnvServRoles id={envsharp.id}/>
                             {/*</CardContent>
                              <CardFooter>
                               <Button>Save password</Button>

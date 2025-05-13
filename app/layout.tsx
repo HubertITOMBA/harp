@@ -50,15 +50,15 @@ export default function RootLayout({
           <link rel="manifest" href="/site.webmanifest" />
       </head> 
       <body
-            className={`${montserrat.className}  antialiased`}
+            className={`${montserrat.className} antialiased min-h-screen grid grid-rows-[auto_1fr_auto]`}
       >
-            {/* <ThemeProvider  
+            <ThemeProvider  
                   attribute="class"
                   defaultTheme="system"
                   enableSystem
                   disableTransitionOnChange
-            >*/}
-                  <div className=" h-screen bg-gray-150">
+            >
+                  <div className=" h-screen">
                       {modal}
                       {children}
                     
@@ -67,7 +67,7 @@ export default function RootLayout({
                       {/* <ToastContainer position='top-center'/> */}
                       <ToastContainer theme='colored' />
                   </div>
-            {/* </ThemeProvider> */}
+            </ThemeProvider>
            
       </body>
     </html>

@@ -1,58 +1,45 @@
 'use client'
 
-import { getServerData } from '@/actions/roleServer'
+ 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-//import { getServerData } from './actions/roleServer'
-
+ 
 interface HarpPageProps {
-  env: string
+  id: number
 }
 
 
-export default function HarpPage({ env }: HarpPageProps) {
-  const [serverData, setServerData] = useState<any[]>([])
-  //const [serverData, setServerData] = useState<any[]>([])
-  const [selectedEnv, setSelectedEnv] = useState('')
-
-  const handleSearch = async (env: string) => {
-    const data = await getServerData(env)
-    setServerData(data)
-  }
-
+export default function HarpPage({ id }: HarpPageProps) {
+  const [serverData, setServerData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await getServerData(env)
-      setServerData(data)
-    }
-    
-    fetchData()
-  }, [env])
+      try {
+        const response = await fetch(`/api/envserv/${id}`);
+        const data = await response.json();
+        setServerData(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchData();
+  }, [id]);
 
+  if (loading) {
+    return <div>Chargement...</div>;
+  }
+ 
 
 
 
   return (
     <div className="flex flex-col">
-
-            {/* <div className="mb-4">
-              <input
-                type="text"
-                value={selectedEnv}
-                onChange={(e) => setSelectedEnv(e.target.value)}
-                placeholder="Entrez l'environnement"
-                className="border p-2 rounded"
-              />
-              <button
-                onClick={() => handleSearch(selectedEnv)}
-                className="ml-2 px-4 py-2 bg-blue-500 text-white rounded"
-              >
-                Rechercher
-              </button>
-            </div> */}
+        
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         
@@ -74,12 +61,12 @@ export default function HarpPage({ env }: HarpPageProps) {
           <tbody className="divide-y divide-gray-200 bg-white">
             {serverData.map((item, index) => (
               <tr key={index} className="hover:bg-harpSkyLight transition-colors duration-200">
-                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.srv}</td>
-                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.ip}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harpserve.srv}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harpserve.ip}</td>
                 {/* <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.pshome}/HARP_FILES</td> */}
-                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.os}</td>
-                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.psuser}</td> 
-                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_srv.domain}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harpserve.os}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harpserve.psuser}</td> 
+                <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harpserve.domain}</td>
                 {/* <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.env}</td> */}
                 <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.typsrv}</td>
                 <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_typsrv.descr}</td>

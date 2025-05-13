@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,7 +12,7 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
 import {
   Table,
@@ -20,24 +21,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
 DropdownMenu,
 DropdownMenuCheckboxItem,
 DropdownMenuContent,
 DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"  
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/dropdown-menu";  
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState } from "react"
+import EnvForm from "@/components/admin/env-form";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -48,6 +51,9 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+
+
+    const dialogRef = useRef<HTMLDialogElement | null>(null);
 
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
@@ -70,7 +76,7 @@ export function DataTable<TData, TValue>({
       onColumnVisibilityChange: setColumnVisibility,
       onRowSelectionChange: setRowSelection,
 
-      state: {
+      state: { 
         sorting,
         columnFilters,
         columnVisibility,
@@ -80,6 +86,17 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
+    {/* <Button variant="ghost" className="rounded-lg ml-auto p-2.5 bg-blue-500">
+        <Link href='/list/envs/create'>Créer un environnement</Link>
+        
+        </Button> */}
+
+              <dialog ref ={dialogRef}>
+               Ouverture de Modal
+               <EnvForm type='Créer' />
+             </dialog>
+
+
      <div className="flex items-center justify-between text-gray-500 ">
      <div className="flex items-center py-4 ">
         <Input
@@ -105,7 +122,7 @@ export function DataTable<TData, TValue>({
               )
               .map((column) => {
                 return (
-                  <DropdownMenuCheckboxItem
+                  <DropdownMenuCheckboxItem  
                     key={column.id}
                     className="capitalize"
                     checked={column.getIsVisible()}
@@ -119,16 +136,22 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button className="rounded-lg ml-auto p-2.5">
+        <Link href='/list/envs/create'>Créer un environnement</Link>
+        </Button>
+        <Button onClick={() => dialogRef.current?.showModal()} className="rounded-lg ml-auto p-2.5">
+        
+        </Button>
       </div>
 
     <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
-      <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
+      <Table className="min-w-full divide-y divide-gray-800">
+        <TableHeader className="text-white font-bold bg-harpOrange text-center">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="text-white font-bold">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white font-bold bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(

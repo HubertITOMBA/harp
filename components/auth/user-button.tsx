@@ -75,13 +75,14 @@ export const UserButton = () => {
                 </Link>
           </DropdownMenuItem>
 
-          {/* {user?.role === 'admin' && (
+          {user?.role === 'PORTAL_ADMIN' && (
                 <DropdownMenuItem>
-                <Link href='/admin/overview' className='w-full'>
-                    Admin
+                <Link href='/admin' className='w-full'>
+                    Administration
                 </Link>
                 </DropdownMenuItem>
-            )} */}
+            )}
+
             <DropdownMenuItem className="hover:bg-orange-300">
                <LogoutButton>
                  Deconnexion

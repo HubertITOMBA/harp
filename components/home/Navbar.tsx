@@ -38,16 +38,15 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
 
 
   return (
-
-    <div>
-         <h1 className='my-10 text-3xl  text-right font font-semibold text-orange-500 mb-1'>PORTAIL TMA HARP</h1> 
+    <nav className="backdrop-blur-lg sticky top-0 z-[999]">
+         <h1 className='my-10 text-3xl  text-right font font-semibold text-orange-500 mb-1'>TMA HARP</h1> 
          <div className='h-2 w-full p-1 bg-orange-500'>
          </div >
     
 
     <div className="flex items-center justify-between p-2">
       
-        <div className="flex items-center gap-6 justify-end w-full">
+        <div className="flex items-center gap-5 justify-end w-full">
 
 
             {/* <div>
@@ -73,9 +72,9 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
                  <nav className="mx-auto flex max-w-7xl justify-between p-1 lg:px-4">
                       <div className="flex items-center justify-between text-xs font-medium gap-5">
                       {optionMenu.map((item)  =>  
-                      <div className="flex gap-2 text-sm text-semibold" key={item.display}>
+                      <div className="flex gap-2 text-xl text-bold" key={item.display}>
                          <Link href={`${item.href}`}
-                                    className="flex items-center justify-center lg:justify-start gap-4 text-semibold px-1 p-2 rounded-xl hover:bg-orange-300"
+                                    className="flex items-center justify-center lg:justify-start gap-4 text-semibold px-1 p-2 rounded-xl hover:text-orange-500 transition-colors"
                               >
                              {/* { item.icone !== "" ? 
                           <Image src={`/ressources/${item.icone}`}alt="" width={20} height={20} className="" /> 
@@ -126,7 +125,7 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
 
     </div>
 
-    </div>
+    </nav>
   )
 }
 

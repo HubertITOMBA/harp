@@ -11,7 +11,7 @@ import { EnvSchema } from '@/schemas';
 
 type Inputs = z.infer<typeof EnvSchema>;
 
-const EnvForm = ({
+const EnvsForm = ({
         type,
         data,
        }: {

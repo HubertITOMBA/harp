@@ -19,9 +19,9 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
   const { ora } = await params;
 
   // const OraIns  = await prisma.psadm_oracle.findFirst({
-  const OraIns  = await prisma.harpora.findFirst({
+  const OraIns  = await prisma.harpinstance.findFirst({
       where: { 
-         oracle_sid: ora 
+         id: parseInt(ora) 
         },
         // select: {
         //      typenvid : true,
@@ -41,10 +41,15 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
      
     // const enfInfos = await prisma.psadm_envinfo.findUnique({ where: { env: env } });  
       
+    const InfoServ = await prisma.harpserve.findFirst({
+      where: {
+        id: OraIns?.serverId
+      },
+      }); 
         
-      const OraInfos = await prisma.psadm_env.findMany({
+      const OraInfos = await prisma.envsharp.findMany({
         where: {
-          oracle_sid: ora
+          instanceId: parseInt(ora) 
         },
         // select: {
         //   env: true,
@@ -129,7 +134,7 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
 
 
   return (
-      <div className="container p-2 gap-4 xl:flex-row w-full">
+      <div className="container px-2 p-2 gap-4 xl:flex-row w-full">
       {/* <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">  */}
 
       {/* <div className="bg-white rounded-xl w-full shadow-2xl"> */}
@@ -157,104 +162,121 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
 
        
         <div className="flex-2  w-ful">
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-5">
               {/** TOP */}
-                <div className="flex bg-red-500 rounded-xl shadow-xl mb-5 mt-2 py-2 px-2 gap-4">
-                              
-                       <div className="w-1/2 bg-yellow-400 p-2 gap-2">
-                              <div className="w-full flex items-center gap-2">
-                                  <Label>Environnement  :</Label> <Label className="font-semibold text-sm">
-                                    <h1 className="text-sm font-semibold">{OraIns.descr}</h1>
-                                  </Label>
+              
+                         <div className="bg-white w-1/3 rounded-xl shadow-xl p-2 gap-5 text-gray-500">
+                              <div className="w-full flex items-center gap-2 ">
+                                  <Label className="text-xl font-medium">Serveur  :</Label><Label className="text-xl font-medium uppercase">{InfoServ?.srv}</Label>
                               </div> 
                               <div className="w-full flex items-center gap-2">
-                                  <Label>Application  :</Label> <Label className="font-semibold text-sm">
-                                    <h1 className="text-sm font-semibold">{OraIns.aliasql}</h1>
-                                  </Label>
+                                  <Label className="text-2xl font-medium">Ip  :</Label> <Label className="text-xl font-medium">{InfoServ?.ip}</Label>
                               </div> 
                               <div className="w-full flex items-center gap-2">
-                              <Label>Version Harp  :</Label> <Label className="font-semibold text-sm">
-                              <h1 className="text-sm font-semibold">{OraIns.orarelease}</h1>
-                              </Label>
+                              <Label className="text-2xl font-medium">Version Harp  :</Label><Label>{InfoServ?.os}</Label>
                               </div>
                             
                               <div className="w-full flex items-center gap-2">
-                              <Label>Istance Oracle  :</Label> <Label className="font-semibold text-sm">{OraIns.oraschema}</Label>
+                              <Label className="text-2xl font-medium">Domaine  :</Label> <Label>{InfoServ?.domain}</Label>
                               </div>
                               <div className="w-full flex items-center gap-2">
-                              <Label>Alias SQL *Net  :</Label> <Label className="font-semibold text-sm">{OraIns.typenvid}</Label>
+                              <Label className="text-2xl font-medium">PS Home  :</Label><Label className="">{InfoServ?.pshome}</Label>
+                              </div>
+                              <div className="w-full flex items-center gap-2">
+                              <Label className="text-2xl font-medium">Os User  :</Label> <Label>{InfoServ?.psuser}</Label>
+                              </div>
+                              <div className="w-full flex items-center gap-2">
+                              <Label className="text-2xl font-medium">Statut  :</Label> <Label>{InfoServ?.statenvId}</Label>
                               </div>
                               
                        </div>
+
+                    {/* <div className="bg-white  w-full rounded-xl shadow-md overflow-hidden">
+                       <h1 className="text-xl font-semibold">Les Instances de {OraIns.oracle_sid}</h1>
+                          <table className="min-w-full divide-y divide-gray-200 rounded-xl shadow-md ">
+                            <thead className="bg-gray-50 ">
+                              <tr className="bg-harpOrange text-white">
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Base</th>
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Alias</th>
+                                <th className="px-6 py-4 text-left text-xl font-semibold text-white">Schema</th>  
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Appli</th>
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Release</th> 
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">PSoft</th>
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Ptools</th>
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Ano</th>
+                                <th className="px-2 py-2 text-left text-xl font-semibold text-white">Edi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                              {OraInfos.map((item, instanceId) => (
+                                <tr key={instanceId} className="hover:bg-harpSkyLight transition-colors duration-200">
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.env}</td>
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.aliasql}</td>
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.oraschema}</td>
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.appli}</td> 
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harprelease}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.psversion}</td>  
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.ptversion}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.anonym}</td>  
+                                  <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.edi}</td>
                                   
-                       {/* <div className="w-1/2 gap-4 bg-yellow-400 p-2 h-[auto]">
-                          
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
 
-                            <div className="w-full flex items-center gap-2">
-                                <Label>Dernière mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Envs.datmaj)} </Label>  
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                <Label>Image production :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.datadt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                <Label>Dernier refresh :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.refreshdt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                            <Label>Dernier mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.modedt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                              <Label>Dernier mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(enfInfos?.datmaj)} </Label>  
-                            </div>
-                            
+                          <div className="w-full flex items-center gap-2">
+                              <h1 className="text-xl font-semibold">Les Instances de {OraIns.oracle_sid}</h1>
+                              <Button className="rounded-lg ml-auto p-2.5 mb-5">
+                                <Link href='/list/instora/create'>Créer un instance oracle</Link>
+                              </Button>
+                          </div>
+                     </div> */}
                            
-                           
-                             
-
-                              
-                      </div> */}
-                </div>
-
             </div>
         {/** BOTTOM */}
-
-           <h1 className="text-xl font-semibold mb-4">Roles de serveurs de l'environnement  {ora}</h1>
-            {/* <div className="w-full flex gap-5">
-                 <div >
-                  <EnvServRoles env={Envs.env}/>
-                 </div>
-            </div> */}
-
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+           <div className="w-full flex items-center gap-5 mt-5">
+              <h1 className="text-xl font-semibold">Les Instances de {OraIns.oracle_sid}</h1>
+              <Button className="rounded-lg ml-auto p-2.5 mb-5">
+                <Link href='/list/instora/create'>Créer un instance oracle</Link>
+              </Button>
+           </div>
+           
+            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
                     
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50 ">
                         <tr className="bg-harpOrange text-white">
-                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Descr</th>
-                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Env</th>
+                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Base</th>
+                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Alias</th>
                           <th className="px-6 py-4 text-left text-xl font-semibold text-white">Schema</th>  
                           <th className="px-2 py-2 text-left text-xl font-semibold text-white">Appli</th>
                           <th className="px-2 py-2 text-left text-xl font-semibold text-white">Release</th> 
                           <th className="px-2 py-2 text-left text-xl font-semibold text-white">PSoft</th>
                           <th className="px-2 py-2 text-left text-xl font-semibold text-white">Ptools</th>
+                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Ano</th>
+                          <th className="px-2 py-2 text-left text-xl font-semibold text-white">Edi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 bg-white">
-                        {OraInfos.map((item, oracle_sid) => (
-                          <tr key={oracle_sid} className="hover:bg-harpSkyLight transition-colors duration-200">
-                            <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.descr}</td>
+                        {OraInfos.map((item, instanceId) => (
+                          <tr key={instanceId} className="hover:bg-harpSkyLight transition-colors duration-200">
                             <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.env}</td>
+                            <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.aliasql}</td>
                             <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.oraschema}</td>
                             <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.appli}</td> 
                             <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.harprelease}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.psversion}</td>  
                             <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.ptversion}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-900">{item.anonym}</td>  
+                            <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.edi}</td>
                             
                           </tr>
                         ))}
                       </tbody>
                       
                     </table>
-                  </div>
+              </div>
 
 
       </div>

@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState } from "react"
+import Link from "next/link"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -119,6 +120,9 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button className="rounded-lg ml-auto p-2.5">
+        <Link href='/list/servers/create'>Ajouter un serveur</Link>
+        </Button>
       </div>
 
     <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
@@ -128,7 +132,7 @@ export function DataTable<TData, TValue>({
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
