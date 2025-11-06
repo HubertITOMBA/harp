@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { equal } from 'assert';
 import { HarpserSchema } from '@/schemas';
 import { getUserRoles } from '@/actions/menurigth';
+import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
  
 
 
@@ -51,10 +52,11 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
       },
     });
   
-    // Récupérer les rôles pour chaque menu
+    // Récupérer les rôles pour chaque menu (harpmenus.role + harpmenurole via harproles)
     const menuRoles = await Promise.all(
       optionMenu.map(async (menu) => {
-        const roles = await prisma.harpmenurole.findMany({
+        // Récupérer les rôles depuis harpmenurole via harproles
+        const menuRoleRelations = await prisma.harpmenurole.findMany({
           where: {
             menuId: menu.id
           },
@@ -67,14 +69,32 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
           }
         });
         
-        // Créer la chaîne de rôles pour ce menu
-        const rolesString = roles
-          .map(role => `"${role.harproles.role}"`)
+        // Créer un tableau de tous les rôles autorisés pour ce menu
+        const allMenuRoles: string[] = [];
+        
+        // 1. Ajouter le rôle principal du menu (harpmenus.role) s'il existe
+        // Conversion explicite en string pour garantir la compatibilité
+        if (menu.role) {
+          allMenuRoles.push(String(menu.role));
+        }
+        
+        // 2. Ajouter les rôles depuis harpmenurole via harproles
+        menuRoleRelations.forEach(relation => {
+          if (relation.harproles?.role) {
+            // Conversion explicite en string pour garantir la compatibilité
+            allMenuRoles.push(String(relation.harproles.role));
+          }
+        });
+        
+        // Créer la chaîne de rôles formatée pour l'affichage
+        const rolesString = allMenuRoles
+          .map(role => `"${role}"`)
           .join(', ');
         
         return {
           menuId: menu.id,
-          roles: rolesString
+          roles: rolesString,
+          rolesArray: allMenuRoles // Garder aussi le tableau pour la comparaison
         };
       })
     );
@@ -83,46 +103,63 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
     const rolesByMenuId = new Map(
       menuRoles.map(item => [item.menuId, item.roles])
     );
+    
+    // Créer un Map pour les tableaux de rôles
+    const rolesArrayByMenuId = new Map(
+      menuRoles.map(item => [item.menuId, item.rolesArray])
+    );
 
-    const fatiha =  ["PUM", "DMOSTD", "POC92", "TMA_LOCAL", "REF", "DRP"];
-    const lemenu =  ["POC92", "DRP", "DADS"];
-    console.log("LE MENU FILTER INCLUDE FATIHA ",lemenu.filter(e => fatiha.includes(e))); 
+  
+
+ 
+  const userRolesArray = parseRolesFromString(droitsUtilisteur);
 
   return (
-    <div className="mt-4 px-2 text-sm">
+    <div className="mt-4 px-2 text-xs">
       {/* Connexion en cours : {sessionCount} 
       ENVIRONNEMENTS */}
              
-       {optionMenu.map(async (i) => {
+       {optionMenu.map((i) => {
        
+       // Récupérer les rôles autorisés pour ce menu (harpmenus.role + harpmenurole via harproles)
+       const menuRolesArray = rolesArrayByMenuId.get(i.id) || [];
        const menuRolesStr = rolesByMenuId.get(i.id) || "";
-       const menuRoles = menuRolesStr.split(', ').map(r => r.replace(/"/g, ''));
-      
-       // if (menuRoles.some(menuRole =>  droitsUtilisteur.includes(menuRole))){
-        //  if (menuRolesStr.filter(menuRole =>  droitsUtilisteur.includes(menuRole))){
-        // if (menuRolesStr.includes(droitsUtilisteur)){
-            if (droitsUtilisteur.includes(menuRolesStr)){
-          return (
-            
-                <Link
-                      href={`/harp/envs/${i.display}`}
-                      key={i.id}
-                      className="flex items-center justify-center lg:justify-start gap-4 text-bold px-2 rounded-md hover:bg-orange-300"
-                  >
-                      {i.icone !== "" ? (
-                        <Image src={`/ressources/${i.icone}`} alt="" width={20} height={20} className="" />
-                      ) : (
-                        <Image src={`/ressources/list.png`} alt="" width={20} height={20} className="rounded-full" />
-                      )}
-                      <span className="hidden lg:block">{i.menu}</span>
-                      <span className="hidden lg:block text-red-500 font-semibold">{menuRolesStr}</span>
-                </Link>
-                  
-                
-
-               )
-          }
-          return null; // Ajout d'un return null pour les éléments qui ne correspondent pas
+       
+       // Vérifier si l'utilisateur a au moins un des rôles requis pour ce menu
+       // Selon le PROMPTEUR : Afficher le menu et son icône seulement si dans la fusion des rôles du menu
+       // (harpmenus.role + harpmenurole via harproles) on retrouve un ou plusieurs rôles identiques
+       // de la fusion des rôles de l'utilisateur (User.role + harpuseroles via harproles)
+       // 
+       // Le menu est affiché si :
+       // - Le menu n'a aucun rôle défini (accessible à tous) OU
+       // - Le menu a au moins un rôle défini ET l'utilisateur a au moins un rôle correspondant
+       const hasAccess = menuRolesArray.length === 0 || hasAnyRole(userRolesArray, menuRolesArray);
+       
+       // Ne pas rendre le menu si l'utilisateur n'a pas accès
+       if (!hasAccess) {
+         return null;
+       }
+       
+       // Afficher l'icône seulement si le menu est visible (hasAccess = true)
+       return (
+         <Link
+           href={`/harp/envs/${i.display}`}
+           key={i.id}
+           className="flex items-center justify-center lg:justify-start gap-2 text-xs px-2 py-1 rounded-md hover:bg-orange-300"
+         >
+           {i.icone && i.icone !== "" && i.icone !== "N" ? (
+             <Image src={`/ressources/${i.icone}`} alt="" width={16} height={16} className="" />
+           ) : (
+             <Image src={`/ressources/list.png`} alt="" width={16} height={16} className="rounded-full" />
+           )}
+           <span className="hidden lg:block text-xs">{i.menu}</span>
+           {/* {process.env.NODE_ENV === 'development' && (
+             <span className="hidden lg:block text-red-500 font-semibold text-xs">
+               {menuRolesStr || "Aucun rôle requis"}
+             </span>
+           )} */}
+         </Link>
+       );
         })}
       {/* <p>Mes DROITS = { droitsUtilisteur }</p> */}
        

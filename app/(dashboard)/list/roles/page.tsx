@@ -11,8 +11,8 @@ const HarpRolesListPage = async () => {
   const data = await db.harproles.findMany();
  
   return (
-     <section className="py-2">
-             <div className="container bg-transparent">
+     <section className="px-4 py-2">
+             <div className="container ">
                  <h1 className="text-3xl font-semibold">Les Rôles</h1>
                  <DataTable columns= {columns} data = {data} />
               </div>

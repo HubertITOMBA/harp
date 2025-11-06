@@ -11,8 +11,8 @@ export default async function EnvListPage () {
   //console.log("USER  DATA", data);
   
   return (
-    <section className="py-2">
-        <div className="container">
+    <section className="px-4 py-2">
+        <div className="container ">
             <h1 className="text-3xl font-semibold">Les utilisateurs</h1>
             <DataTable columns= {columns} data = {data} />
         </div>

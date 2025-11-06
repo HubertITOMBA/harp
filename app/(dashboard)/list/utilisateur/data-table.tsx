@@ -88,7 +88,7 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn("netid")?.setFilterValue(event.target.value)
           }
-          className="rounded-xl max-w-sm"
+          className="rounded-lg max-w-sm"
         />
         </div>
         <DropdownMenu>
@@ -121,14 +121,14 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
         <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(

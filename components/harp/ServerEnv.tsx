@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { role } from "@/lib/data";
+import { ServerConnectionButtons } from "@/components/ui/server-connection-buttons";
  
 
 type ServerList = psadm_srv & { psadm_rolesrv: psadm_rolesrv};
@@ -41,6 +42,10 @@ const ServerEnvPage = async ({qlenv} : {qlenv: string;} ) => {
       header: "Type",
       accessor: "typsrv",
      },
+    {
+      header: "Connexion",
+      accessor: "connection",
+     },
     ...(role === "PSADMIN"
       ? [
           {
@@ -58,12 +63,19 @@ const ServerEnvPage = async ({qlenv} : {qlenv: string;} ) => {
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="flex items-center gap-4 p-4">{item.srv}</td>
-      <td >{item.pshome}</td>
-      <td >{item.ip}</td>
-      <td>{item.psuser}</td>
-      <td> {item.ip}</td>
-      <td >{item.domain}</td>
-       <td>{item.psuser}</td>
+      <td >{item.psadm_srv?.pshome}</td>
+      <td >{item.psadm_srv?.ip}</td>
+      <td>{item.psadm_srv?.psuser}</td>
+      <td> {item.psadm_srv?.os}</td>
+      <td >{item.typsrv}</td>
+      <td className="p-4">
+        <ServerConnectionButtons 
+          ip={item.psadm_srv?.ip}
+          srv={item.srv}
+          psuser={item.psadm_srv?.psuser}
+          className="justify-center"
+        />
+      </td>
     </tr>
   );
  
@@ -118,7 +130,7 @@ console.log("CA CEST QUEL ENV", qlenv);
       */}
 
   return (
-    <div className="bg-yellow-100 p-4 rounded-md flex-1 m-4 mt-0">
+    <div className="bg-muted/50 p-4 rounded-md flex-1 m-4 mt-0">
      
       <Table columns={columns} renderRow={renderRow} data={data} />
     

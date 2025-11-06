@@ -10,7 +10,7 @@ const HarpVersListPage = async () => {
    const data = await db.psadm_release.findMany();
  
   return (
-     <section className="py-2">
+     <section className="px-4 py-2">
              <div className="container ">
                  <h1 className="text-3xl font-semibold">Release Management</h1>
                  <DataTable columns= {columns} data = {data} />

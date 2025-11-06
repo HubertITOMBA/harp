@@ -19,9 +19,8 @@ export type StatusEnv = {
   statenvId: number
   statenv: string
   fromdate: Date
-  msg: string
-  descr: string
-  icone: string
+  msg: string | null
+  icone: string | null
 }
 
 
@@ -53,15 +52,29 @@ export const columns: ColumnDef<StatusEnv>[] = [
 
 
   {
-    accessorKey: 'statutenv.icone',
-    header: 'Statut',
-    cell: ({ row }) => (
-      <img src={`/ressources/${row.original.icone}`}  alt="" width={20} height={20} className="items-end bg-transparent" />
-    //  <img src={`/ressources/${row.original.statutenv.icone}`}  alt="" width={20} height={20} className="items-end bg-transparent" /> 
-    )
-
+    id: 'icone',
+    header: '',
+    cell: ({ row }) => {
+      const icone = row.original.icone
+      return icone ? (
+        <img 
+          src={`/ressources/${icone}`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent" 
+        />
+      ) : (
+        <img 
+          src={`/ressources/special.png`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent" 
+        />
+      )
+    }
   },
-  
   {
     accessorKey: 'env',
     header: ({ column }) => {
@@ -92,8 +105,11 @@ export const columns: ColumnDef<StatusEnv>[] = [
 // },
 
 {
-  accessorKey:  'statutenv.descr',
-  header: 'Description'
+  accessorKey: 'statenv',
+  header: 'Statut',
+  cell: ({ row }) => {
+    return <div className="text-sm">{row.original.statenv}</div>
+  }
 },
 {
   accessorKey: 'msg',
@@ -113,7 +129,7 @@ export const columns: ColumnDef<StatusEnv>[] = [
     )
   },
   cell: ({ row }) => {
-    const fromdate = row.getValue('fromdate')
+    const fromdate = row.getValue('fromdate') as Date
     return (
       <div className="">
         {new Intl.DateTimeFormat("fr-FR", {

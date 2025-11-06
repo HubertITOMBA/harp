@@ -31,8 +31,8 @@ export default async function EnvListPage () {
   );
 
   return (
-    <section className="py-2">
-        <div className="container">
+    <section className="px-4 py-2">
+        <div className="container ">
             <h1 className="text-3xl font-semibold">Tous les environnements</h1>
             {/* <Button  type="button" className="rounded-xl ml-auto p-2.5">
                <Link href='/list/envs/create'>Créer un environnement</Link>

@@ -6,10 +6,7 @@ import HeaderLayout from "@/components/home/HeaderLayout";
 import FooterLayout from "@/components/home/FooterLayout";
 import HarpBandeau from "@/components/home/HarpBandeau";
 import { Toaster } from "@/components/ui/toaster";
-import { ToastContainer } from 'react-toastify'
-import "react-toastify/dist/ReactToastify.css";
-// import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeProvider } from "next-themes";
+import { ToastContainerWrapper } from "@/components/ui/toast-container-wrapper";
 import { APP_DESCRIPTION, APP_NAME, SERVER_URL, } from "@/lib/constants";
 
 
@@ -41,7 +38,7 @@ export default function RootLayout({
   modal: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning={true}>
+    <html lang="fr">
       <head>
           <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -52,23 +49,14 @@ export default function RootLayout({
       <body
             className={`${montserrat.className} antialiased min-h-screen grid grid-rows-[auto_1fr_auto]`}
       >
-            <ThemeProvider  
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-            >
-                  <div className=" h-screen">
-                      {modal}
-                      {children}
-                    
-                      {/* <SonnerToaster /> */}
-                      {/* <Toaster />  */}
-                      {/* <ToastContainer position='top-center'/> */}
-                      <ToastContainer theme='colored' />
-                  </div>
-            </ThemeProvider>
-           
+            <div className=" h-screen">
+                {modal}
+                {children}
+              
+                {/* <SonnerToaster /> */}
+                {/* <Toaster />  */}
+                <ToastContainerWrapper />
+            </div>
       </body>
     </html>
   );

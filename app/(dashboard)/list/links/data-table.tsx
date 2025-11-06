@@ -88,12 +88,12 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn("link")?.setFilterValue(event.target.value)
           }
-          className="rounded-xl max-w-sm"
+          className="rounded-lg max-w-sm"
         />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl ml-auto">
+            <Button variant="outline" className="rounded-lg ml-auto p-2.5">
               Colonnes
             </Button>
           </DropdownMenuTrigger>
@@ -128,7 +128,7 @@ export function DataTable<TData, TValue>({
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(

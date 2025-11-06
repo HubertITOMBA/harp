@@ -1,60 +1,86 @@
 "use client"
  
 import { useState } from 'react';
+import { launchExternalTool } from '@/lib/mylaunch';
+import { Button } from '@/components/ui/button';
+import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
 
-const LancerApplis = () => {
-  const [loading, setLoading] = useState(false);
+interface LancerApplisProps {
+  host?: string;
+  user?: string;
+  port?: string | number;
+  sshkey?: string;
+}
+
+const LancerApplis = ({ host, user, port, sshkey }: LancerApplisProps) => {
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  const execAppli = async () => {
-    setLoading(true);
-
-    // fetch('/api/harp/partHote', {
-    //     method: 'POST'
-    // })
-    //   .then(response => response.json())
-    // //   .then(data => setResult(data))
-    //   .catch(error => setLoading(error))
-    //   .finally(() => setLoading(false))
-
+  const execAppli = () => {
     setError(null);
-    setSuccess(null);
-
-
-    // const puttyPath = "C:\\Program Files\\PuTTY\\putty.exe";
 
     try {
-      const response = await fetch('/api/harp', {
-        method: 'POST',
-        
-      });
-
-     // console.log("PREMIER APPEL ==", response);
-      
-
-      if (!response.ok) {
-        throw new Error('Échec du lancement de Putty');
+      // Vérifier qu'on a au moins un host
+      if (!host) {
+        setError('Aucun serveur spécifié. Veuillez sélectionner un serveur dans l\'onglet "Serveurs".');
+        return;
       }
 
-      const data = await response.json();
-      setSuccess(data.message);
+      // Lancer PuTTY via le protocole mylaunch://
+      const success = launchExternalTool('putty', {
+        host,
+        user,
+        port,
+        sshkey,
+      });
+
+      if (!success) {
+        throw new Error('Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
+      }
     } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du lancement de PuTTY';
+      setError(errorMessage);
+      console.error('Erreur lors du lancement de PuTTY:', err);
     }
   };
 
-  return (
-    <div>
-      {/* <h1>Lancer Putty</h1> */}
-      <button onClick={execAppli} disabled={loading}>
-        {loading ? 'Lancement en cours...' : 'Lancer Putty'}
-      </button>
+  // Si on a les paramètres nécessaires, utiliser PuttyLauncher directement
+  if (host) {
+    return (
+      <PuttyLauncher
+        host={host}
+        user={user}
+        port={port}
+        sshkey={sshkey}
+        variant="outline"
+        size="sm"
+      />
+    );
+  }
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
+  // Sinon, afficher un bouton avec message d'information
+  return (
+    <div className="flex flex-col gap-2">
+      <Button 
+        onClick={execAppli}
+        variant="outline"
+        size="sm"
+        className="w-full sm:w-auto"
+        disabled
+      >
+        Lancer PuTTY
+      </Button>
+
+      {error && (
+        <p className="text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      
+      {!error && (
+        <p className="text-xs text-gray-500">
+          Sélectionnez un serveur dans l&apos;onglet &quot;Serveurs&quot; pour lancer PuTTY
+        </p>
+      )}
     </div>
   );
 };

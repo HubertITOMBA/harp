@@ -157,7 +157,7 @@ interface EnvInfoProps {
             <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4 relative w-full mb-5">
                   <Image src={`/ressources/${Envs.statutenv.icone}`} alt="" width={40} height={40} />
                     <Link href={Envs.url}>
-                        <h1 className="text-3xl font-semibold">{Envs.env}</h1>
+                        <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2 sm:mb-4">{Envs.env}</h1>
                     </Link>
                   
                   { Envs.anonym ==="N" ? "" : <Image src="/ressources/anonym.png" alt="" width={40} height={40} className="" />}

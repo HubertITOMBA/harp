@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
+import { buildMyLaunchUrl } from '@/lib/mylaunch'
+import { PuttyLauncher, PeopleSoftIDELauncher } from '@/components/ui/external-tool-launcher'
 
 export type Servs = {
     srv: string
@@ -22,7 +24,7 @@ export type Servs = {
     psuser: string
     domain: string
     statenvId: number
-    statenv: string
+    statutenv: { icone: string }
     descr: string
     icone: string
 }
@@ -107,6 +109,28 @@ export const columns: ColumnDef<Servs>[] = [
   accessorKey: 'psuser',
   header: 'psuser'
 },
+{
+  id: 'quickActions',
+  header: 'Connexion',
+  cell: ({ row }) => {
+    const base = row.original
+    return (
+      <div className="flex gap-2">
+        <PuttyLauncher
+          host={base.ip}
+          user={base.psuser}
+          size="sm"
+          variant="outline"
+        />
+        <PeopleSoftIDELauncher
+          server={base.srv}
+          size="sm"
+          variant="outline"
+        />
+      </div>
+    )
+  }
+},
  {
     id: 'actions',
     cell: ({ row }) => {
@@ -126,6 +150,28 @@ export const columns: ColumnDef<Servs>[] = [
               onClick={() => navigator.clipboard.writeText(base.srv)}
             >
               Copier Serveur
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                const url = buildMyLaunchUrl('putty', {
+                  host: base.ip,
+                  user: base.psuser || undefined,
+                })
+                window.location.href = url
+              }}
+            >
+              Ouvrir PuTTY (SSH)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const url = buildMyLaunchUrl('pside', {
+                  server: base.srv,
+                })
+                window.location.href = url
+              }}
+            >
+              Ouvrir PeopleSoft IDE
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>View customer</DropdownMenuItem>

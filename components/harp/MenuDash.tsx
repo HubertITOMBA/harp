@@ -34,13 +34,7 @@ interface RoleMenuProps {
   
 const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
 
-    // Vérifier si la table est vide
-    //  const count = await prisma.harpmenus.count();
-    //       if (count == 0) {
-    //         GenererLesMenus();
-    //     toast.info("La table harpmenus contient déjà des données. Importation ignorée.");
-    //   // return { info: "La table harpmenus contient déjà des données. Importation ignorée." };
-    //  } 
+    const droitsUtilisteur = DroitsUser;
    
   const optionMenu = await prisma.harpmenus.findMany(
     {
@@ -54,47 +48,45 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
     }
   );
 
-
-
   return (
-    <div className="mt-4 px-2 text-sm">
+    <div className="mt-4 px-2 text-xs">
      
-        {optionMenu.map((item)  =>  
-            <div className="flex gap-2 text-sm" key={item.menu}>
-                <Link href={`${item.href}`}
-                          className="flex items-center justify-center lg:justify-start gap-4 px-1 p-2 rounded-xl hover:bg-orange-300 transition-colors "
-                    >
-
-                          { item.icone !== "" ? 
-                          <Image src={`/ressources/${item.icone}`}alt="" width={20} height={20} className="" /> 
-                            : 
-                          <Image src={`/ressources/list.png`} alt="" width={20} height={20} className="rounded-full"/>
-                          } 
-                        <span className="hidden lg:block">{item.menu}</span> 
-                      
-                    </Link> 
-              </div>
-          )} 
+        {optionMenu.map((item) => {
+          // Afficher tous les menus sans restriction de rôles
+          // Tous les menus sont visibles pour les utilisateurs ayant accès au dashboard (PSADMIN ou PORTAL_ADMIN)
+          return (
+            <div className="flex gap-2" key={item.menu}>
+              <Link href={`${item.href}`}
+                    className="flex items-center justify-center lg:justify-start gap-2 text-xs px-1 p-2 rounded-xl hover:bg-orange-300 transition-colors "
+              >
+                {item.icone && item.icone !== "" && item.icone !== "N" ? (
+                  <Image src={`/ressources/${item.icone}`} alt="" width={16} height={16} className="" />
+                ) : (
+                  <Image src={`/ressources/list.png`} alt="" width={16} height={16} className="rounded-full"/>
+                )}
+                <span className="hidden lg:block text-xs">{item.menu}</span>
+              </Link>
+            </div>
+          );
+        })} 
 
 
         <div className="mt-10 flex flex-col gap-2">
-                    
             {menuItems.map(item =>{ 
                 if(item.visible.includes(role)){
                   return (
                     <Link 
                         href={item.href} 
                         key={item.label} 
-                        className="flex text-xl justify-left lg:justify-start gap-4 rounded-md hover:text-orange-500 transition-colors">
-                        <Image src={item.icon} alt='' width={20} height={20} />  
-                          <span className="hidden lg:block">{item.label}</span>
+                        className="flex text-xs justify-left lg:justify-start gap-2 rounded-md hover:text-orange-500 transition-colors">
+                        <Image src={item.icon} alt='' width={16} height={16} />  
+                          <span className="hidden lg:block text-xs">{item.label}</span>
                     </Link>
                   );
                   }
               })}
 
-        </div>  
-
+        </div>
     </div>
   )
 }

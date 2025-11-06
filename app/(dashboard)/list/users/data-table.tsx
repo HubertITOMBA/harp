@@ -80,20 +80,20 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between text-gray-500  font-semibold">
-     <div className="flex items-center py-4">
+     <div className="flex items-center justify-between text-gray-500 font-semibold">
+     <div className="flex items-center py-4 ">
         <Input
           placeholder="Filtrer par NetID..."
           value={(table.getColumn("netid")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("netid")?.setFilterValue(event.target.value)
           }
-          className="rounded-xl max-w-sm"
+          className="rounded-lg max-w-sm"
         />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl ml-auto p-2.5">
+            <Button variant="outline" className="rounded-lg ml-auto p-2.5">
               Colonnes
             </Button>
           </DropdownMenuTrigger>
@@ -121,14 +121,14 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
         <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -138,10 +138,10 @@ export function DataTable<TData, TValue>({
                   </TableHead>
                 )
               })}
-            </TableRow> 
-            ))}
+            </TableRow>
+          ))}
         </TableHeader>
-        <TableBody  className="divide-y divide-gray-200 bg-white">
+        <TableBody className="divide-y divide-gray-200 bg-white">
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow

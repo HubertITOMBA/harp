@@ -84,7 +84,7 @@ export function DataTable<TData, TValue>({
     {/* <Button variant="ghost" className="rounded-lg ml-auto p-2.5 bg-blue-500">
         <Link href='/list/envs/create'>Créer un environnement</Link>
         </Button> */}
-     <div className="flex items-center justify-between text-gray-500 ">
+     <div className="flex items-center justify-between text-gray-500 font-semibold">
      <div className="flex items-center py-4 ">
         <Input
           placeholder="Filtrer par environnement..."
@@ -129,13 +129,13 @@ export function DataTable<TData, TValue>({
       </div>
 
     <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
-      <Table className="min-w-full divide-y divide-gray-800">
-        <TableHeader className="text-white font-bold bg-harpOrange text-center">
+      <Table className="min-w-full divide-y divide-gray-200">
+        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="text-white font-bold">
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white font-bold bg-harpOrange text-center">
+                  <TableHead key={header.id} className="bg-harpOrange text-white text-center text-lg font-bold">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -154,7 +154,7 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight "
+                className="hover:bg-harpSkyLight transition-colors duration-200"
                 
               >
                 {row.getVisibleCells().map((cell) => (

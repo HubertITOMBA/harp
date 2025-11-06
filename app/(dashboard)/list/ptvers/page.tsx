@@ -10,9 +10,9 @@ const PtVersionListPage = async () => {
    const data = await db.psadm_ptools.findMany();
  
   return (
-     <section className="py-2">
-             <div className="container ">
-                 <h1 className="text-3xl font-semibold">PeopleSoft - PeopleTools Release Management</h1>
+     <section className="px-2 sm:px-4 py-2">
+             <div className="container mx-auto max-w-full">
+                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2 sm:mb-4">PeopleSoft - PeopleTools Release Management</h1>
                  <DataTable columns= {columns} data = {data} />
               </div>
          </section>

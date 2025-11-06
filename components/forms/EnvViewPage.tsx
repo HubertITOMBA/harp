@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { ServerConnectionButtons } from '@/components/ui/server-connection-buttons';
 
 
 interface EnvInfoProps {
@@ -155,7 +156,7 @@ interface EnvInfoProps {
        {/* <HarpEnvPage typenvid={params.id}/> */}
 
         
-            <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4  items-center relative w-full mb-5">
+            <div className="flex bg-card rounded-xl shadow-xl p-2 mt-0 gap-4  items-center relative w-full mb-5">
                   <Image src={`/ressources/ouvert.png`} alt="" width={40} height={40} />
                     <Link href={Envs.url}>
                         <h1 className="text-3xl font-semibold">{Envs.env}</h1>
@@ -174,7 +175,7 @@ interface EnvInfoProps {
         <div className="flex-2 w-ful">
             <div className=" flex gap-4">
               {/** TOP */}
-                <div className="w-1/2 bg-white rounded-xl shadow-xl mb-5 mt-2 py-2 px-2  flex-1 flex gap-4">
+                <div className="w-1/2 bg-card rounded-xl shadow-xl mb-5 mt-2 py-2 px-2  flex-1 flex gap-4">
                               
                     <div className="w-1/2 flex flex-col gap-4">
 
@@ -189,7 +190,7 @@ interface EnvInfoProps {
                             <h1 className="text-3xl font-semibold">{Envs.typenv}</h1>
                         </div> */}
                        
-                        <div className="w-1/2 flex flex-col gap-4 bg-white p-2 h-[auto]">
+                        <div className="w-1/2 flex flex-col gap-4 bg-card p-2 h-[auto]">
                              <div className="w-full flex items-center gap-2">
                                 <Label>Environnement  :</Label> <Label className="font-semibold text-sm">
                                   <h1 className="text-sm font-semibold">{Envs.typenv}</h1>
@@ -340,12 +341,23 @@ interface EnvInfoProps {
             <div className="space-y-4">
                 {serverRoles.map((role) => (
                     <div key={`${role.srv}-${role.typsrv}`} className="border p-4 rounded-lg">
-                        <h2 className="font-medium">Serveur: {role.srv}</h2>
-                        <p>Type: {role.typsrv}</p>
-                        <p>IP: {role.psadm_srv.ip}</p>
-                        <p>PS Home: {role.psadm_srv.pshome}</p>
-                        <p>OS: {role.psadm_srv.os}</p>
-                        <p>Status: {role.status}</p>
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <h2 className="font-medium">Serveur: {role.srv}</h2>
+                                <p>Type: {role.typsrv}</p>
+                                <p>IP: {role.psadm_srv.ip}</p>
+                                <p>PS Home: {role.psadm_srv.pshome}</p>
+                                <p>OS: {role.psadm_srv.os}</p>
+                                <p>Status: {role.status}</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <ServerConnectionButtons 
+                                  ip={role.psadm_srv.ip}
+                                  srv={role.srv}
+                                  psuser={role.psadm_srv.psuser}
+                                />
+                            </div>
+                        </div>
                     </div>
                 ))}
             </div>

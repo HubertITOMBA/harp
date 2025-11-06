@@ -4,10 +4,12 @@ import FooterLayout from '@/components/home/FooterLayout'
 import HarpBandeau from '@/components/home/HarpBandeau'
 import HeaderLayout from '@/components/home/HeaderLayout'
 import React from 'react'
+import { MobileMenuButton } from "@/components/ui/mobile-menu-button";
 
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
-
+import { getAllUserRoles } from "@/actions/get-all-user-roles";
+import { formatRolesForMenu, hasAnyRole } from "@/lib/user-roles";
 
 import Navbar from "@/components/home/Navbar";
 import MenuDash from "@/components/harp/MenuDash";
@@ -23,7 +25,57 @@ export default async function HarpLayout ( {
 }>) {
 
     const session = await auth();
-    const roles = session?.user?.customField || [];
+    
+    // Vérifier que l'utilisateur est connecté
+    if (!session?.user?.id) {
+      return (
+        <div className="h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Session expirée</h1>
+            <p className="text-muted-foreground mb-4">Veuillez vous reconnecter</p>
+            <Link href="/auth/signin" className="text-primary hover:underline">
+              Se connecter
+            </Link>
+          </div>
+        </div>
+      );
+    }
+    
+    // Récupérer tous les rôles fusionnés de l'utilisateur
+    // Fusionne : User.role (rôle principal) + harproles via harpuseroles
+    const allUserRolesArray = await getAllUserRoles();
+    
+    // Vérifier que l'utilisateur a au moins un des rôles requis pour accéder au dashboard
+    // Rôles requis : PSADMIN ou PORTAL_ADMIN
+    const requiredRoles = ["PSADMIN", "PORTAL_ADMIN"];
+    const hasRequiredRole = hasAnyRole(allUserRolesArray, requiredRoles);
+    
+     if (!hasRequiredRole) {
+      // Rediriger vers la page d'accueil ou afficher un message d'accès refusé
+      return (
+        <div className="h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-red-600">Accès refusé</h1>
+            <p className="text-muted-foreground mb-4">
+              Vous n'avez pas les permissions nécessaires pour accéder à cette section.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Rôles requis : PSADMIN ou PORTAL_ADMIN
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Vos rôles actuels : {allUserRolesArray.length > 0 ? allUserRolesArray.join(", ") : "Aucun"}
+            </p>
+            <Link href="/home" className="text-primary hover:underline">
+              Retour à l'accueil
+            </Link>
+          </div>
+        </div>
+      );
+    } // ## if (!hasRequiredRole) {
+    
+    // Formater pour compatibilité avec le système Menu existant
+    // Format attendu: "ROLE1", "ROLE2", "ROLE3"
+    const roles = formatRolesForMenu(allUserRolesArray);
 
     // Fonction pour compter les sessions actives
   //   const getActiveSessionCount = async () => {
@@ -42,27 +94,34 @@ export default async function HarpLayout ( {
   const activeSessionCount = 1;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col md:flex-row h-screen">
        <SessionProvider session={session}>
-       <div className="w-[14%] md:w[8%] lg:w-[16%] xl:w-[14%]p-4">
-       <Link href="/" >
-        <h1 className="text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-        <h2 className="mx-2 text-sm font-bold text-gray-500">Human Ressources <span className="text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
-          {/* <Link href="/" className="flex items-center justify-center gap-2"> */}
-            {/* <Image className="h-100 w-100 ml-2 mt-5  object-cover" src="/images/OPSE_logo.gif" width={250} height={50} alt="logo" />     */}
-         </Link>
-     
-        <MenuDash   DroitsUser = {roles} sessionCount={activeSessionCount} />
-        </div>
-        <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] overflow-scroll flex flex-col">
-        {/* <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-scroll flex flex-col">
-        <div className="w-[86%] md:w[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-scroll"> */}
-          <Navbar   DroitsUser = {roles}/>
-       
+          {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
+          <aside className="hidden md:block w-[14%] lg:w-[16%] xl:w-[14%] p-4 bg-white border-r border-gray-200">
+            <Link href="/" >
+              <h1 className="text-4xl md:text-6xl lg:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+              <h2 className="mx-2 text-xs md:text-sm font-bold text-gray-500">Human Ressources <span className="text-base md:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
+            </Link>
+            <MenuDash   DroitsUser = {roles} sessionCount={activeSessionCount} />
+          </aside>
+          
+          {/* Menu mobile avec hamburger */}
+          <div className="md:hidden">
+            <MobileMenuButton>
+              <Link href="/" className="block mb-4">
+                <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+                <h2 className="text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
+              </Link>
+              <MenuDash   DroitsUser = {roles} sessionCount={activeSessionCount} />
+            </MobileMenuButton>
+          </div>
+          
+          {/* Contenu principal */}
+          <div className="flex-1 w-full md:w-[86%] lg:w-[84%] xl:w-[86%] overflow-auto flex flex-col">
+            <Navbar   DroitsUser = {roles}/>
             { modal } 
             { children }
-       
-        </div>
+          </div>
  
         </SessionProvider>
     </div>

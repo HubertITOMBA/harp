@@ -10,7 +10,7 @@ const LinksListPage = async () => {
   const data = await db.psadm_link.findMany();
  
   return (
-     <section className="py-2">
+     <section className="px-4 py-2">
              <div className="container ">
                  <h1 className="text-3xl font-semibold">Divers liens</h1>
                  <DataTable columns= {columns} data = {data} />

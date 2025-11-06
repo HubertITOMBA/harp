@@ -4,16 +4,16 @@ import  prisma  from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
 //import { convertToPlainObject, formatError } from "../utils";
 import { revalidatePath } from 'next/cache';
-import { EnvSchema, updateEnvironment } from "@/schemas";
+import { insertEnvSchema, updateEnvSchema } from "@/schemas";
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { formatError } from "../utils";
 
 
 // Create Env
-export async function createEnv(data: z.infer<typeof EnvSchema>) {
+export async function createEnv(data: z.infer<typeof insertEnvSchema>) {
     try {
-      const envs = EnvSchema.parse(data);
+      const envs = insertEnvSchema.parse(data);
       await prisma.envsharp.create({ data: envs });
   
       revalidatePath('/list/envs');
@@ -28,18 +28,20 @@ export async function createEnv(data: z.infer<typeof EnvSchema>) {
   }
   
   // Update Env
-  export async function updateEnv(data: z.infer<typeof updateEnvironment>) {
+  export async function updateEnv(data: z.infer<typeof updateEnvSchema>) {
     try {
-      const envs = updateEnvironment.parse(data);
+      const envs = updateEnvSchema.parse(data);
       const envExists = await prisma.envsharp.findFirst({
-        where: { id: parseInt(envs.id) },
+        where: { id: envs.id },
       });
   
       if (!envExists) throw new Error('Environnement non trouvé !');
   
+      // Exclure l'id des données de mise à jour
+      const { id, ...updateData } = envs;
       await prisma.envsharp.update({
-        where: { id: parseInt(envs.id) },
-        data: envs,
+        where: { id },
+        data: updateData,
       });
   
       revalidatePath('/list/envs');

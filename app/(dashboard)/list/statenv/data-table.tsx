@@ -80,20 +80,21 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between ">
-     <div className="flex items-center py-4 ">
+     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-gray-500 font-semibold">
+     <div className="flex items-center py-2 sm:py-4 w-full sm:w-auto">
         <Input
           placeholder="Filtrer par environnement..."
           value={(table.getColumn("env")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("env")?.setFilterValue(event.target.value)
           }
-          className="rounded-xl max-w-sm"
+          className="rounded-lg max-w-sm w-full sm:w-auto"
         />
         </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-xl ml-auto">
+            <Button variant="outline" className="rounded-lg p-2.5 text-xs sm:text-sm">
               Colonnes
             </Button>
           </DropdownMenuTrigger>
@@ -121,14 +122,15 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
+    <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+      <div className="overflow-x-auto">
       <Table className="min-w-full divide-y divide-gray-200">
         <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -166,6 +168,7 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
 
     {/* <div className="flex items-center justify-end space-x-2 py-4">
@@ -187,13 +190,13 @@ export function DataTable<TData, TValue>({
         </Button>
     </div> */}
 
-      <div className="bg-white mt-5 flex items-center justify-between py-5 font-semibold rounded-xl shadow-xl">
-          <div className="ml-5 mt-2 flex-1 text-sm text-muted-foreground">
+      <div className="bg-white mt-5 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0 py-3 sm:py-5 font-semibold rounded-xl shadow-xl px-2 sm:px-4">
+          <div className="ml-0 sm:ml-5 mt-2 flex-1 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
             {table.getFilteredSelectedRowModel().rows.length} sur {" "}
             {table.getFilteredRowModel().rows.length} ligne(s) selectionée(s).
           </div>
 
-      <div className="flex items-center space-x-6 lg:space-x-8 ">
+      <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8 flex-wrap justify-center sm:justify-start">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-medium ">Lignes par page</p>
               <Select

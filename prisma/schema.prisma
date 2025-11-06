@@ -42,7 +42,7 @@ model psadm_dispo {
   psadm_statenv psadm_statenv @relation(fields: [statenv], references: [statenv], map: "psadm_dispo_ibfk_2")
   //  statutenv     statutenv     @relation(fields: [statenvId], references: [id], map: "statutenv_ibfk_1")
   // statutenv     statutenv     @relation(fields: [statenvId], references: [id])
- // statutenv     statutenv?    @relation(fields: [statutenvId], references: [id])
+  // statutenv     statutenv?    @relation(fields: [statutenvId], references: [id])
   statutenvId   Int?
 
   @@id([env, fromdate])
@@ -71,42 +71,42 @@ model psadm_droits {
 }
 
 model envsharp {
-  id              Int           @id @default(autoincrement())
-  env             String        @unique @db.VarChar(32)
-  aliasql         String?        @db.VarChar(32)
-  oraschema       String?        @db.Char(8)
-  orarelease      String?        @db.VarChar(32)
-  instanceId      Int?
-  url             String?       @db.VarChar(255)
-  appli           String?       @db.Char(2)
-  versionId       Int?
-  psversionId     Int?
-  ptversionId     Int?
-  psversion       String?       @db.VarChar(50)
-  ptversion       String?       @db.VarChar(50)
-  harprelease     String?       @db.VarChar(20)
-  pshome          String?       @db.VarChar(32)
-  volum           String?       @db.VarChar(60)
-  datmaj          DateTime?     @db.Timestamp(0)
-  gassi           String?       @db.VarChar(50)
-  rpg             String?       @db.VarChar(50)
-  msg             String?       @db.VarChar(255)
-  descr           String?       @db.VarChar(255)
-  anonym          String?       @db.Char(1)
-  edi             String?       @db.Char(1)
-  typenvid        Int?
-  statenvId       Int?          @default(8)          
-  releaseId       Int?
-  createddt       DateTime      @default(now()) @db.Timestamp(0)
-  harpenvinfo     harpenvinfo[]
-  harpmonitor     harpmonitor[]
-  harpenvdispo    harpenvdispo[]
-  statutenv       statutenv?        @relation(fields: [statenvId], references: [id])
-  releaseenv      releaseenv?       @relation(fields: [releaseId], references: [id])
-  harptypenv      harptypenv?       @relation(fields: [typenvid], references: [id])
-  harpinstance    harpinstance?     @relation(fields: [instanceId], references: [id])
-  psoftversion    psoftversion?     @relation(fields: [psversionId], references: [id])
-  ptoolsversion  ptoolsversion?     @relation(fields: [ptversionId], references: [id])
+  id            Int            @id @default(autoincrement())
+  env           String         @unique @db.VarChar(32)
+  aliasql       String?        @db.VarChar(32)
+  oraschema     String?        @db.Char(8)
+  orarelease    String?        @db.VarChar(32)
+  instanceId    Int?
+  url           String?        @db.VarChar(255)
+  appli         String?        @db.Char(2)
+  versionId     Int?
+  psversionId   Int?
+  ptversionId   Int?
+  psversion     String?        @db.VarChar(50)
+  ptversion     String?        @db.VarChar(50)
+  harprelease   String?        @db.VarChar(20)
+  pshome        String?        @db.VarChar(32)
+  volum         String?        @db.VarChar(60)
+  datmaj        DateTime?      @db.Timestamp(0)
+  gassi         String?        @db.VarChar(50)
+  rpg           String?        @db.VarChar(50)
+  msg           String?        @db.VarChar(255)
+  descr         String?        @db.VarChar(255)
+  anonym        String?        @db.Char(1)
+  edi           String?        @db.Char(1)
+  typenvid      Int?
+  statenvId     Int?           @default(8)
+  releaseId     Int?
+  createddt     DateTime       @default(now()) @db.Timestamp(0)
+  harpenvinfo   harpenvinfo[]
+  harpmonitor   harpmonitor[]
+  harpenvdispo  harpenvdispo[]
+  statutenv     statutenv?     @relation(fields: [statenvId], references: [id])
+  releaseenv    releaseenv?    @relation(fields: [releaseId], references: [id])
+  harptypenv    harptypenv?    @relation(fields: [typenvid], references: [id])
+  harpinstance  harpinstance?  @relation(fields: [instanceId], references: [id])
+  psoftversion  psoftversion?  @relation(fields: [psversionId], references: [id])
+  ptoolsversion ptoolsversion? @relation(fields: [ptversionId], references: [id])
 
   @@index([appli, psversion])
   @@index([harprelease])
@@ -122,16 +122,16 @@ model envsharp {
 }
 
 model harpora {
-  id              Int        @id @default(autoincrement())
-  envId           Int
-  instanceId      Int?
-  oracle_sid      String     @db.Char(8)
-  aliasql         String     @db.VarChar(32)
-  oraschema       String     @db.Char(8)
-  descr           String?    @db.VarChar(50)
-  orarelease      String?    @db.VarChar(32)
-  statenvId       Int?       @default(8)
-  createddt       DateTime   @default(now()) @db.Timestamp(0)
+  id         Int      @id @default(autoincrement())
+  envId      Int
+  instanceId Int?
+  oracle_sid String   @db.Char(8)
+  aliasql    String   @db.VarChar(32)
+  oraschema  String   @db.Char(8)
+  descr      String?  @db.VarChar(50)
+  orarelease String?  @db.VarChar(32)
+  statenvId  Int?     @default(8)
+  createddt  DateTime @default(now()) @db.Timestamp(0)
   //envsharp   envsharp   @relation(fields: [envId], references: [id], onDelete: Cascade)
   //statutenv  statutenv? @relation(fields: [statenvId], references: [id])
 
@@ -141,82 +141,75 @@ model harpora {
 }
 
 model harpenvdispo {
-  id              Int           @id @default(autoincrement())
-  envId           Int
-  statenvId       Int?           
-  fromdate        DateTime      @db.DateTime(0)
-  msg             String?       @db.VarChar(255)
-  envsharp        envsharp      @relation(fields: [envId], references: [id])
-  statutenv       statutenv?    @relation(fields: [statenvId], references: [id])
+  id        Int        @id @default(autoincrement())
+  envId     Int
+  statenvId Int?
+  fromdate  DateTime   @db.DateTime(0)
+  msg       String?    @db.VarChar(255)
+  envsharp  envsharp   @relation(fields: [envId], references: [id])
+  statutenv statutenv? @relation(fields: [statenvId], references: [id])
 
   @@index([envId, fromdate])
   @@index([statenvId])
-
 }
 
-
 model harpinstance {
-  id             Int              @id @default(autoincrement())
-  oracle_sid     String           @db.Char(8)
-  mode_base      ModeBase?        @default(STANDALONE) 
-  typebaseId     Int?
-  serverId       Int?
-  descr          String?          @db.VarChar(50)
-  envsharp       envsharp[]
-  harpserve      harpserve?       @relation(fields: [serverId], references: [id])
-  harptypebase   harptypebase?    @relation(fields: [typebaseId], references: [id])
+  id           Int           @id @default(autoincrement())
+  oracle_sid   String        @db.Char(8)
+  mode_base    ModeBase?     @default(STANDALONE)
+  typebaseId   Int?
+  serverId     Int?
+  descr        String?       @db.VarChar(50)
+  envsharp     envsharp[]
+  harpserve    harpserve?    @relation(fields: [serverId], references: [id])
+  harptypebase harptypebase? @relation(fields: [typebaseId], references: [id])
 
   @@unique([oracle_sid])
 }
 
 model harptypebase {
-  id              Int              @id @default(autoincrement())
-  type_base       String           @db.VarChar(4) 
-  descr           String?          @db.VarChar(50)
-  icone           String?          @db.VarChar(70)
-  harpinstance    harpinstance[]
+  id           Int            @id @default(autoincrement())
+  type_base    String         @db.VarChar(4)
+  descr        String?        @db.VarChar(50)
+  icone        String?        @db.VarChar(70)
+  harpinstance harpinstance[]
 
   @@unique([type_base])
 }
 
-
-
 model harpserve {
-  id              Int            @id @default(autoincrement())
-  srv             String         @db.VarChar(32)
-  site            SiteHarp?      @default(IDA)
-  ip              String         @db.VarChar(15)
-  pshome          String         @db.VarChar(32)
-  os              String         @db.VarChar(15)
-  psuser          String?        @db.Char(15)
-  domain          String?        @db.VarChar(10)
-  typsrv          String?        @db.VarChar(32)
-  statenvId       Int?           @default(0)
-  harpinstance    harpinstance[]
-  harpenvserv     harpenvserv[]
-  statutenv       statutenv?        @relation(fields: [statenvId], references: [id])
+  id           Int            @id @default(autoincrement())
+  srv          String         @db.VarChar(32)
+  site         SiteHarp?      @default(IDA)
+  ip           String         @db.VarChar(15)
+  pshome       String         @db.VarChar(32)
+  os           String         @db.VarChar(15)
+  psuser       String?        @db.Char(15)
+  domain       String?        @db.VarChar(10)
+  typsrv       String?        @db.VarChar(32)
+  statenvId    Int?           @default(0)
+  harpinstance harpinstance[]
+  harpenvserv  harpenvserv[]
+  statutenv    statutenv?     @relation(fields: [statenvId], references: [id])
 
   @@index([statenvId])
-  
 }
 
- 
 model harpenvserv {
-  id           Int           @id @default(autoincrement())
-  envId        Int?    
-  serverId     Int? 
-  typsrv       String?        @db.VarChar(32)
-  status       Int?          @default(0)
-  harpserve    harpserve?    @relation(fields: [serverId], references: [id])
-  statutenv    statutenv?    @relation(fields: [status], references: [id])
- // psadm_typsrv  psadm_typsrv  @relation(fields: [typsrv], references: [typsrv])
-  
+  id        Int        @id @default(autoincrement())
+  envId     Int?
+  serverId  Int?
+  typsrv    String?    @db.VarChar(32)
+  status    Int?       @default(0)
+  harpserve harpserve? @relation(fields: [serverId], references: [id])
+  statutenv statutenv? @relation(fields: [status], references: [id])
+  // psadm_typsrv  psadm_typsrv  @relation(fields: [typsrv], references: [typsrv])
+
   @@index([serverId])
   @@index([envId])
   @@index([status])
   @@index([typsrv])
 }
-
 
 model psoftversion {
   id          Int        @id @default(autoincrement())
@@ -230,14 +223,13 @@ model psoftversion {
 }
 
 model ptoolsversion {
-  id          Int        @id @default(autoincrement())
-  ptversion   String     @db.VarChar(50)
-  descr       String?    @db.VarChar(50)
-  envsharp    envsharp[]
- 
+  id        Int        @id @default(autoincrement())
+  ptversion String     @db.VarChar(50)
+  descr     String?    @db.VarChar(50)
+  envsharp  envsharp[]
+
   @@unique([ptversion])
 }
-
 
 model harptypenv {
   id       Int        @id @default(autoincrement())
@@ -245,22 +237,21 @@ model harptypenv {
   href     String?    @db.VarChar(32)
   descr    String?    @db.VarChar(50)
   envsharp envsharp[]
- 
 }
 
 model statutenv {
-  id          Int           @id @default(autoincrement())
-  statenv     String        @unique @db.VarChar(32)
-  descr       String?       @db.VarChar(70)
-  icone       String?       @db.VarChar(70)
-  envsharp    envsharp[]
+  id           Int            @id @default(autoincrement())
+  statenv      String         @unique @db.VarChar(32)
+  descr        String?        @db.VarChar(70)
+  icone        String?        @db.VarChar(70)
+  envsharp     envsharp[]
   // harpora     harpora[]
-  harpserve   harpserve[]
-  harpenvserv harpenvserv[]
+  harpserve    harpserve[]
+  harpenvserv  harpenvserv[]
   harpenvdispo harpenvdispo[]
 
- // psadm_env   psadm_env[]
- // psadm_dispo psadm_dispo[]
+  // psadm_env   psadm_env[]
+  // psadm_dispo psadm_dispo[]
 }
 
 model harpenvinfo {
@@ -655,7 +646,7 @@ model psadm_tab {
   icone   String?  @db.VarChar(50)
   active  Int?     @default(1) @db.SmallInt
   descr   String?  @db.VarChar(50)
-  role    UserRole @default(TMA_LOCAL)
+  role    UserRole @default(USER)
 }
 
 model psadm_tools {
@@ -876,7 +867,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole       @default(TMA_LOCAL)
+  role          UserRole       @default(USER)
   netid         String?        @unique @db.VarChar(32)
   unxid         String?        @db.VarChar(32)
   oprid         String?        @db.VarChar(32)
@@ -944,7 +935,6 @@ model harpevent {
   status     String    @db.VarChar(255)
 }
 
-
 model Session {
   sessionToken String   @id
   userId       Int
@@ -995,18 +985,17 @@ enum ModeBase {
   PDB_STANDALONE
 }
 
-
 enum SiteHarp {
   GRE
   IDA
 }
 
 enum harpDomain {
-FHXENDR4
-IDA_Harp_C
-GRE_Harp_C
-FHXEND11
-FHXEND21
-FHXENP11
-FHXENP21
+  FHXENDR4
+  IDA_Harp_C
+  GRE_Harp_C
+  FHXEND11
+  FHXEND21
+  FHXENP11
+  FHXENP21
 }

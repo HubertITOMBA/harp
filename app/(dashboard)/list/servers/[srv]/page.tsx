@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { ServerConnectionButtons } from '@/components/ui/server-connection-buttons';
 
   
 const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
@@ -116,7 +117,7 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
       <div className="container p-2 gap-4 xl:flex-row w-full">
     
         
-            <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4 relative w-full mb-5">
+            <div className="flex bg-card rounded-xl shadow-xl p-2 mt-0 gap-4 relative w-full mb-5">
                   <Image src={`/ressources/ouvert.png`} alt="" width={40} height={40} />
                     <Link href={Servs.srv}>
                         <h1 className="text-3xl font-semibold uppercase">{Servs.srv}</h1>
@@ -130,7 +131,7 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
         <div className="flex-2  w-ful">
             <div className="flex flex-col gap-4">
               {/** TOP */}
-                <div className="flex bg-white rounded-xl shadow-xl mb-5 mt-2 py-2 px-2 gap-4">
+                <div className="flex bg-card rounded-xl shadow-xl mb-5 mt-2 py-2 px-2 gap-4">
                               
                        {/* <div className="w-1/2 bg-yellow-400 p-2 gap-2"> */}
                               <div className="w-full flex items-center gap-2">
@@ -155,8 +156,17 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
                               
                             
                        {/* </div> */}
-                                  
-                      
+                </div>
+                {/* Boutons de connexion */}
+                <div className="flex bg-card rounded-xl shadow-xl mb-5 mt-2 py-4 px-4 gap-4">
+                  <div className="w-full">
+                    <Label className="text-lg font-semibold mb-3 block">Connexion rapide</Label>
+                    <ServerConnectionButtons 
+                      ip={Servs.ip}
+                      srv={Servs.srv}
+                      psuser={Servs.psuser}
+                    />
+                  </div>
                 </div>
 
             </div>
@@ -166,10 +176,10 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
            <h1 className="text-xl font-semibold mb-4">{CountServRoles} Applications sur {srv}   {concatenatedApps}</h1>
             <div className="w-full flex gap-5">
                  
-                       <div className="w-2/3 bg-white rounded-xl shadow-xl overflow-hidden">
+                       <div className="w-2/3 bg-card rounded-xl shadow-xl overflow-hidden">
                               
                               <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50 ">
+                                <thead className="bg-muted/50">
                                   <tr className="bg-harpOrange text-white">
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Environnement</th>
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Type</th>
@@ -177,13 +187,13 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Status</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-border bg-card">
                                   {ServRoles.map((item, index) => (
                                     <tr key={index} className="hover:bg-harpSkyLight transition-colors duration-200">
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.env}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.typsrv}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.psadm_typsrv.descr}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.env}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.typsrv}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.psadm_typsrv.descr}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">
                                         {/* {item.status} */}
                                          { item.status === 1 ? 
                                          <Image src="/ressources/OK.png" alt="" width={20} height={20} className="items-end bg-transparent" /> : 
@@ -196,22 +206,22 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
                               </table>
                        </div>
 
-                       <div className="w-1/3 bg-white rounded-xl shadow-xl overflow-hidden">
+                       <div className="w-1/3 bg-card rounded-xl shadow-xl overflow-hidden">
                               
                               <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50 ">
+                                <thead className="bg-muted/50">
                                   <tr className="bg-harpOrange text-white">
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Application</th>
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Type</th>
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Type</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-border bg-card">
                                   {Apps.map((item, index) => (
                                     <tr key={Apps.typsrv} className="hover:bg-harpSkyLight transition-colors duration-200">
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.typsrv}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.typsrv}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item._count.srv}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.typsrv}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.typsrv}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item._count.srv}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -222,19 +232,19 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
                        {/* <div className="bg-white rounded-xl shadow-md overflow-hidden">
                               
                               <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50 ">
+                                <thead className="bg-muted/50">
                                   <tr className="bg-harpOrange text-white">
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Application</th>
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Type</th>
                                     <th className="px-2 py-2 text-left text-xl font-semibold text-white">Type</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-border bg-card">
                                   {AppDescr.map((item, index) => (
                                     <tr key={AppDescr.typsrv} className="hover:bg-harpSkyLight transition-colors duration-200">
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.descr}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.typsrv}</td>
-                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.descr}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.descr}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.typsrv}</td>
+                                      <td className="px-2 py-2 whitespace-nowrap text-xl text-foreground">{item.descr}</td>
                                     </tr>
                                   ))}
                                 </tbody>

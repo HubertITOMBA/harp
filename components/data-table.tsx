@@ -83,10 +83,10 @@ export function DataTable<TData, TValue>({
      <div className="flex items-center justify-between">
      <div className="flex items-center py-4">
         <Input
-          placeholder="Filtrer par nom..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          placeholder="Filtrer..."
+          value={(table.getColumn("harproles.role")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
+            table.getColumn("harproles.role")?.setFilterValue(event.target.value)
           }
           className="rounded-xl max-w-sm"
         />

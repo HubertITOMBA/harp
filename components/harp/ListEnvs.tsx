@@ -1,6 +1,6 @@
 
 //import EnvCard from '@/components/harp/EnvCard'
-import { Prisma, psadm_dispo, envsharp, envsharpinfo, psadm_logo, psadm_oracle, psadm_rolesrv, psadm_roleuser, psadm_srv, psadm_statenv, psadm_typenv } from "@prisma/client";
+import { Prisma, psadm_dispo, envsharp, psadm_logo, psadm_oracle, psadm_rolesrv, psadm_roleuser, psadm_srv, psadm_statenv, psadm_typenv } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/db";
 import Pagination from '@/components/harp/Pagination';
@@ -82,6 +82,46 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
          
       });  
 
+      // Récupérer les informations du premier serveur DB pour chaque environnement
+      const envsWithServers = await Promise.all(
+        DescEnvs.map(async (env) => {
+          // Récupérer le premier serveur DB, sinon le premier serveur disponible
+          const serverData = await prisma.harpenvserv.findFirst({
+            where: {
+              envId: env.id,
+              typsrv: "DB", // Préférer un serveur DB
+            },
+            select: {
+              harpserve: {
+                select: {
+                  ip: true,
+                  psuser: true,
+                }
+              }
+            }
+          });
+
+          // Si pas de serveur DB, prendre le premier serveur disponible
+          const fallbackServer = serverData || await prisma.harpenvserv.findFirst({
+            where: {
+              envId: env.id,
+            },
+            select: {
+              harpserve: {
+                select: {
+                  ip: true,
+                  psuser: true,
+                }
+              }
+            }
+          });
+
+          return {
+            ...env,
+            serverInfo: fallbackServer?.harpserve || null,
+          };
+        })
+      );
 
     const count = await prisma.envsharp.count(); 
 
@@ -116,7 +156,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
 
     return (
       <div className="container w-full bg-transarent">
-                <div className="flex flex-row p-2 justify-between items-center bg-yellow-100 hover:bg-orange-100">
+                <div className="flex flex-row p-2 justify-between items-center bg-muted/50 hover:bg-muted transition-colors">
                       <div><h1 className="ml-0 text-5xl font-bold text-left">{ envCount } - {count}   </h1></div>
                 </div>
           <div className="w-full h-auto rounded-3xl"  >
@@ -131,13 +171,15 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
               
 
 
-            { DescEnvs.map((envsharp) => (
+            { envsWithServers.map((envsharp) => (
                   <div className="h-auto w-full mb-3 bg-white rounded-xl shadow-xl justify-between hover:bg-orange-100 p-2 gapx-10" key={envsharp.id}>
                       <div className="mt-1 flex ml-3 items-center  gap-8 relative ">  
-                            <Image src={`/ressources/${envsharp.statutenv.icone}`} alt="" width={40} height={40} className=""/>
+                            {envsharp.statutenv?.icone && (
+                              <Image src={`/ressources/${envsharp.statutenv.icone}`} alt="" width={40} height={40} className=""/>
+                            )}
                             {envsharp.id} 
-                            <Link href={envsharp.url}   className="text-3xl font-semibold">{envsharp.env} </Link>
-                              {envsharp.statutenv.icone} 
+                            <Link href={envsharp.url || "#"}   className="text-3xl font-semibold">{envsharp.env} </Link>
+                              {envsharp.statutenv?.icone} 
                               { envsharp.anonym ==="N" ? "" : <Image src="/ressources/anonym.png" alt="" width={40} height={40} className="" />}
                               <h1 className="text-xl font-semibold items-center justify-center">{envsharp.descr} </h1> 
                               <h1 className="text-right text-5xl font-bold. items-center justify-end w-auto"></h1>
@@ -203,7 +245,10 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                                   <Label>Version Cobol :</Label>  <p className="font-semibold text-sm"> {envsharp.volum} </p><br />
                                               </div>
                                           </div>       
-                                          <LancerApplis />
+                                          <LancerApplis 
+                                            host={envsharp.serverInfo?.ip || undefined}
+                                            user={envsharp.serverInfo?.psuser || undefined}
+                                          />
                                       </div>             
                                   </div>
                               {/* </CardContent>
