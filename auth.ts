@@ -42,6 +42,14 @@ export const {
            //  session.user.customField =  await getUserRoles(parseInt(token.sub));
          }
 
+         if (token.netid && session.user) {
+            session.user.netid = token.netid as string;
+         }
+
+         if (token.pkeyfile && session.user) {
+            session.user.pkeyfile = token.pkeyfile as string;
+         }
+
         return  session;
        }, 
        
@@ -56,6 +64,8 @@ export const {
             const userRoles = await getUserRoles(parseInt(token.sub));
             console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
             token.role = userRoles;
+            token.netid = existingUser.netid || null;
+            token.pkeyfile = existingUser.pkeyfile || null;
 
             return token;   
          }    

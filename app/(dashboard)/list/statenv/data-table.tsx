@@ -121,6 +121,7 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+     </div>
 
     <div className="bg-white rounded-xl shadow-xl overflow-hidden">
       <div className="overflow-x-auto">
@@ -260,11 +261,8 @@ export function DataTable<TData, TValue>({
                 <ChevronsRight />
             </Button>
           </div>
- <div> 
-
       </div>
-    </div> 
-    </div> 
+      </div>
 
     </>
   )

@@ -3,7 +3,7 @@
  * Utilisé pour lancer des applications Windows locales depuis le navigateur
  */
 
-export type ExternalTool = 'putty' | 'pside' | 'ptsmt';
+export type ExternalTool = 'putty' | 'pside' | 'ptsmt' | 'sqldeveloper' | 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge';
 
 export interface PuttyParams {
   host: string;
@@ -26,10 +26,21 @@ export interface PeopleSoftParams {
 export function buildPuttyUrl(params: PuttyParams): string {
   const searchParams = new URLSearchParams();
   
-  if (params.host) searchParams.set('host', params.host);
-  if (params.user) searchParams.set('user', params.user);
-  if (params.port) searchParams.set('port', String(params.port));
-  if (params.sshkey) searchParams.set('sshkey', params.sshkey);
+  // Host est requis
+  if (!params.host || params.host.trim() === '') {
+    throw new Error('Le paramètre "host" est requis pour lancer PuTTY');
+  }
+  
+  searchParams.set('host', params.host.trim());
+  if (params.user && params.user.trim() !== '') {
+    searchParams.set('user', params.user.trim());
+  }
+  if (params.port) {
+    searchParams.set('port', String(params.port));
+  }
+  if (params.sshkey && params.sshkey.trim() !== '') {
+    searchParams.set('sshkey', params.sshkey.trim());
+  }
   
   return `mylaunch://putty?${searchParams.toString()}`;
 }
@@ -55,6 +66,20 @@ export function buildPeopleSoftUrl(
 }
 
 /**
+ * Construit une URL mylaunch:// pour lancer SQL Developer
+ */
+export function buildSQLDeveloperUrl(): string {
+  return `mylaunch://sqldeveloper`;
+}
+
+/**
+ * Construit une URL mylaunch:// pour lancer un outil simple (sans paramètres)
+ */
+export function buildSimpleToolUrl(tool: 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge'): string {
+  return `mylaunch://${tool}`;
+}
+
+/**
  * Fonction générique pour construire une URL mylaunch://
  */
 export function buildMyLaunchUrl(
@@ -67,6 +92,16 @@ export function buildMyLaunchUrl(
     case 'pside':
     case 'ptsmt':
       return buildPeopleSoftUrl(tool, params as PeopleSoftParams);
+    case 'sqldeveloper':
+      return buildSQLDeveloperUrl();
+    case 'psdmt':
+    case 'pscfg':
+    case 'sqlplus':
+    case 'filezilla':
+    case 'perl':
+    case 'winscp':
+    case 'winmerge':
+      return buildSimpleToolUrl(tool);
     default:
       throw new Error(`Outil non supporté: ${tool}`);
   }

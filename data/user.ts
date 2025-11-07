@@ -22,7 +22,11 @@ export const getUserByNetId = async (netid: string) => {
 
 export const getUserById = async (id: string) => {
   try {
-    const user = await db.user.findUnique({ where: { id } });
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return null;
+    }
+    const user = await db.user.findUnique({ where: { id: userId } });
 
     return user;
   } catch {

@@ -7,9 +7,11 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
@@ -17,6 +19,7 @@ import { UserSchema } from "@/schemas";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { updateProfile } from "@/actions/user-actions";
+import { Mail, User, Key, UserCircle } from 'lucide-react';
 
 
 const ProfileForm = () => {
@@ -58,24 +61,29 @@ const ProfileForm = () => {
     return ( 
         <Form {...form}>
         <form
-          className='flex flex-col gap-5'
+          className='space-y-6'
           onSubmit={form.handleSubmit(onSubmit)}
         >
-          <div className='flex flex-col gap-5'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <FormField
               control={form.control}
               name='email'
               render={({ field }) => (
-                <FormItem className='w-full'>
+                <FormItem className='space-y-2'>
+                  <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-orange-600" />
+                    Adresse email
+                  </FormLabel>
                   <FormControl>
                     <Input
                       disabled
                       placeholder='Email'
-                      className='input-field'
+                      className='w-full bg-gray-50'
                       {...field}
                     />
                   </FormControl>
                   <FormMessage />
+                  <p className="text-xs text-gray-500">L&apos;email ne peut pas être modifié</p>
                 </FormItem>
               )}
             />
@@ -83,11 +91,15 @@ const ProfileForm = () => {
               control={form.control}
               name='name'
               render={({ field }) => (
-                <FormItem className='w-full'>
+                <FormItem className='space-y-2'>
+                  <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <User className="h-4 w-4 text-orange-600" />
+                    Nom complet
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder='Nom'
-                      className='input-field'
+                      className='w-full'
                       {...field}
                     />
                   </FormControl>
@@ -97,21 +109,26 @@ const ProfileForm = () => {
             />
           </div>
 
-          <div className='flex flex-col gap-5'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <FormField
               control={form.control}
               name='netid'
               render={({ field }) => (
-                <FormItem className='w-full rounded-lg'>
+                <FormItem className='space-y-2'>
+                  <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Key className="h-4 w-4 text-orange-600" />
+                    NetID
+                  </FormLabel>
                   <FormControl>
                     <Input
                       disabled
                       placeholder='netid'
-                      className='input-field'
+                      className='w-full bg-gray-50'
                       {...field}
                     />
                   </FormControl>
                   <FormMessage />
+                  <p className="text-xs text-gray-500">Le NetID ne peut pas être modifié</p>
                 </FormItem>
               )}
             />
@@ -119,11 +136,15 @@ const ProfileForm = () => {
               control={form.control}
               name='prenom'
               render={({ field }) => (
-                <FormItem className='w-full rounded-xl'>
+                <FormItem className='space-y-2'>
+                  <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <UserCircle className="h-4 w-4 text-orange-600" />
+                    Prénom
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder='Prénom'
-                      className='input-field'
+                      className='w-full'
                       {...field}
                     />
                   </FormControl>
@@ -133,14 +154,16 @@ const ProfileForm = () => {
             />
           </div>    
 
-          <Button
-            type='submit'
-            size='lg'
-            className='button col-span-2 w-full'
-            disabled={form.formState.isSubmitting}
-          >
-            {form.formState.isSubmitting ? "Envoi en cours": "Mettre à jour le profil"}
-          </Button>
+          <div className="pt-4 border-t border-gray-200">
+            <Button
+              type='submit'
+              size='lg'
+              className='w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg'
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? "Envoi en cours..." : "Mettre à jour le profil"}
+            </Button>
+          </div>
         </form>
       </Form>
      );

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 9052",
+    "dev": "next dev --turbopack -p 3000",
     "build": "next build",
-    "start": "next start -p 9053",
+    "start": "next start -p 3000",
     "lint": "next lint"
   },
   "dependencies": {
@@ -33,7 +33,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
-    "exec": "^0.2.1",
     "fs": "^0.0.1-security",
     "input-otp": "^1.4.1",
     "json-as-xlsx": "^2.5.6",

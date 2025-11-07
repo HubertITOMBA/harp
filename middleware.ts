@@ -20,8 +20,14 @@ export default auth((req) => {
     console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
+    const isApiRoute = nextUrl.pathname.startsWith("/api/");
     const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
     const isAuthRoute = authRoutes.includes(nextUrl.pathname);
+
+    // Laisser passer toutes les routes API (sauf celles d'auth qui sont gérées par NextAuth)
+    if (isApiRoute && !isApiAuthRoute) {
+        return null;
+    }
 
     if (isApiAuthRoute) {
         return null;

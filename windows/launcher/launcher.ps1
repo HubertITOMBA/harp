@@ -59,14 +59,34 @@ try {
             Path = 'C:\\Program Files\\PuTTY\\putty.exe'
             BuildArgs = {
                 param($q)
-                $args = @()
-                if ($q.ContainsKey('host')) {
-                    $user = if ($q.ContainsKey('user') -and $q.user) { "$($q.user)@" } else { '' }
-                    $args += "$user$($q.host)"
+                $argList = @()
+                
+                # Port doit venir en premier pour PuTTY
+                if ($q.ContainsKey('port')) { 
+                    $argList += '-P'
+                    $argList += [string]$q.port
                 }
-                if ($q.ContainsKey('port')) { $args += ('-P'), $q.port }
-                if ($q.ContainsKey('sshkey')) { $args += ('-i'), $q.sshkey }
-                return ,$args
+                
+                # Clé SSH avant le host
+                if ($q.ContainsKey('sshkey')) { 
+                    $argList += '-i'
+                    $argList += [string]$q.sshkey
+                }
+                
+                # Host en dernier (avec user si fourni) - REQUIS pour PuTTY
+                if (-not $q.ContainsKey('host') -or [string]::IsNullOrWhiteSpace($q.host)) {
+                    throw "Le parametre 'host' est requis pour lancer PuTTY"
+                }
+                
+                $hostValue = [string]$q.host
+                if ($q.ContainsKey('user') -and $q.user -and -not [string]::IsNullOrWhiteSpace($q.user)) {
+                    $userValue = [string]$q.user
+                    $argList += "${userValue}@${hostValue}"
+                } else {
+                    $argList += $hostValue
+                }
+                
+                return $argList
             }
         }
         'pside' = @{ 
@@ -75,6 +95,38 @@ try {
         }
         'ptsmt' = @{ 
             Path = 'C:\\Program Files\\PeopleSoft\\ptsmt.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'sqldeveloper' = @{ 
+            Path = 'C:\\apps\\sqldeveloper\\sqldeveloper.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'psdmt' = @{ 
+            Path = 'C:\\Program Files\\PeopleSoft\\psdmt.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'pscfg' = @{ 
+            Path = 'C:\\Program Files\\PeopleSoft\\pscfg.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'sqlplus' = @{ 
+            Path = 'C:\\oracle\\product\\19.0.0\\dbhome_1\\bin\\sqlplus.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'filezilla' = @{ 
+            Path = 'C:\\Program Files\\FileZilla FTP Client\\filezilla.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'perl' = @{ 
+            Path = 'C:\\Perl64\\bin\\perl.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'winscp' = @{ 
+            Path = 'C:\\Program Files\\WinSCP\\WinSCP.exe'
+            BuildArgs = { param($q) @() }
+        }
+        'winmerge' = @{ 
+            Path = 'C:\\Program Files\\WinMerge\\WinMergeU.exe'
             BuildArgs = { param($q) @() }
         }
     }
@@ -93,30 +145,80 @@ try {
     Write-Host "Exécutable trouvé: OK" -ForegroundColor Green
 
     $buildArgs = $entry.BuildArgs
-    $args = & $buildArgs.Invoke($query)
-    Write-Host "Arguments construits: $($args -join ' ')" -ForegroundColor Yellow
+    # Utiliser .Invoke() directement sans & pour éviter l'interprétation comme commande
+    $argArray = $buildArgs.Invoke($query)
+    
+    # S'assurer que $argArray est un tableau plat (NE PAS utiliser $args qui est réservé)
+    $processArgs = @()
+    if ($null -ne $argArray) {
+        if ($argArray -is [System.Array]) {
+            foreach ($item in $argArray) {
+                if ($item -is [System.Array]) {
+                    $processArgs += $item
+                } else {
+                    $processArgs += $item
+                }
+            }
+        } else {
+            $processArgs += $argArray
+        }
+    }
+    
+    Write-Host "Arguments construits: $($processArgs -join ' ')" -ForegroundColor Yellow
+    Write-Host "Nombre d'arguments: $($processArgs.Count)" -ForegroundColor Yellow
+    foreach ($arg in $processArgs) {
+        Write-Host "  - Argument: '$arg' (type: $($arg.GetType().Name))" -ForegroundColor Gray
+    }
 
-    Write-Log "Launching: $exe $($args -join ' ')"
+    Write-Log "Launching: $exe $($processArgs -join ' ')"
 
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $exe
-    foreach ($a in $args) { $null = $startInfo.ArgumentList.Add($a) }
-    $startInfo.UseShellExecute = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $false
+    $startInfo.RedirectStandardError = $false
+    $startInfo.CreateNoWindow = $false
+    
+    # Construire la ligne de commande complète avec échappement correct
+    $argumentString = ""
+    foreach ($a in $processArgs) {
+        if ($null -ne $a -and $a -ne '') {
+            $argStr = [string]$a
+            # Toujours entourer de guillemets pour éviter les problèmes d'interprétation
+            $argumentString += " `"$argStr`""
+        }
+    }
+    $startInfo.Arguments = $argumentString.Trim()
+    
+    Write-Host "Commande complete: $exe $($startInfo.Arguments)" -ForegroundColor Cyan
 
     Write-Host "Lancement de l'application..." -ForegroundColor Green
-    $proc = [System.Diagnostics.Process]::Start($startInfo)
-    if (-not $proc) { 
-        throw "Échec du lancement: Process.Start a retourné null"
-    }
     
-    Write-Host "Application lancée avec succès (PID: $($proc.Id))" -ForegroundColor Green
-    Write-Log "Succès: Application lancée (PID: $($proc.Id))"
-    
-    # Attendre un peu pour voir si le processus démarre correctement
-    Start-Sleep -Milliseconds 500
-    if ($proc.HasExited) {
-        Write-Host "ATTENTION: Le processus s'est terminé immédiatement (Code de sortie: $($proc.ExitCode))" -ForegroundColor Yellow
-        Write-Log "ATTENTION: Processus terminé immédiatement (Code: $($proc.ExitCode))"
+    # Utiliser Start-Process au lieu de Process.Start pour un meilleur contrôle
+    try {
+        $proc = Start-Process -FilePath $exe -ArgumentList $processArgs -PassThru -NoNewWindow:$false
+        if (-not $proc) { 
+            throw "Échec du lancement: Start-Process a retourné null"
+        }
+        
+        Write-Host "Application lancée avec succès (PID: $($proc.Id))" -ForegroundColor Green
+        Write-Log "Succès: Application lancée (PID: $($proc.Id))"
+        
+        # Attendre un peu pour voir si le processus démarre correctement
+        Start-Sleep -Milliseconds 500
+        if ($proc.HasExited) {
+            Write-Host "ATTENTION: Le processus s'est terminé immédiatement (Code de sortie: $($proc.ExitCode))" -ForegroundColor Yellow
+            Write-Log "ATTENTION: Processus terminé immédiatement (Code: $($proc.ExitCode))"
+        }
+    } catch {
+        Write-Host "Erreur lors du lancement avec Start-Process: $_" -ForegroundColor Red
+        # Essayer avec Process.Start comme fallback
+        Write-Host "Tentative avec Process.Start..." -ForegroundColor Yellow
+        $proc = [System.Diagnostics.Process]::Start($startInfo)
+        if (-not $proc) { 
+            throw "Échec du lancement: Process.Start a retourné null"
+        }
+        Write-Host "Application lancée avec Process.Start (PID: $($proc.Id))" -ForegroundColor Green
     }
     
     exit 0

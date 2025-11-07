@@ -27,15 +27,28 @@ export const register = async (values: z.infer<typeof RegisterSchema>) => {
       return { error: " Le netID est déjà utilisé !"}
     }
 
-    await db.user.create({
-      data: {
-          netid,
-          email,
-          password: hashedPassword,
-          
+    try {
+      await db.user.create({
+        data: {
+            netid,
+            email,
+            password: hashedPassword,
+            
+        }
+       });
+    } catch (error) {
+      console.error("Erreur lors de la création de l'utilisateur:", error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes("not allowed to connect")) {
+          return { 
+            error: "❌ Erreur de connexion à la base de données : L'hôte n'est pas autorisé. Contactez l'administrateur pour autoriser l'accès à la base de données." 
+          };
+        }
       }
-     });
-   
+      
+      throw error;
+    }
    
    return { success: "Compte créé avec succès !"}
 

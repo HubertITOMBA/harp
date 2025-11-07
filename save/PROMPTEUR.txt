@@ -1,0 +1,13 @@
+Pour  LanceAppli.tsx, Acrtuellement je suis en mode dev, je teste le lancement de putty avec 
+le user  "hubert" et son mot de passe est "axel2014" le host= 192.168.1.49
+mais en production le user viendra du User.netid, la clé ssh viendra du User.pkeyfile,
+ le host viendra et le host viendra de harpserve.ip ou harpserve.srv et 
+ le lien pour lancer Putty sera sur la ligne de la colonne  harpserve.ip ou harpserve.srv
+ sur la page EnvSerRoles.tsx
+
+ Copy-Item "C:\TOOLS\devportal\harp\windows\launcher\launcher.ps1" -Destination "C:\apps\portail\launcher\launcher.ps1" -Force
+
+ remplacer sqldevelope.exe par sqldeveloper.exe
+ [2025-11-06 20:39:25.097] Launch request: mylaunch://sqldeveloper/
+[2025-11-06 20:39:25.160] ERREUR: ExÃ©cutable introuvable: C:\\apps\\sqldeveloper\\sqldevelope.exe
+ remplacer sqldevelope.exe par sqldeveloper.exe
