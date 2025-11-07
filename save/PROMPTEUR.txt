@@ -11,3 +11,11 @@ mais en production le user viendra du User.netid, la clé ssh viendra du User.pk
  [2025-11-06 20:39:25.097] Launch request: mylaunch://sqldeveloper/
 [2025-11-06 20:39:25.160] ERREUR: ExÃ©cutable introuvable: C:\\apps\\sqldeveloper\\sqldevelope.exe
  remplacer sqldevelope.exe par sqldeveloper.exe
+
+
+Je ne sias pas si pa remeière demande est terminé, mais je la redemande ici, 
+Comme on l'a fait à fait, la base esrt vide lors de la première exécution. Analyser cette page et 
+adapter puis exécuter séquentiellement, sans intervention de l'utilisateur, 
+les fonctions d'imports. Sela ne doit se faire qu'une fois.  L'utilisateur ne pourra se connecter qu'après.
+Afficher un messate pour lme faire patienter. Aprilquer la methode employé pour la migration des utilisateurs.
+Par défaut les tables vides seront la table user et toutes les tables commencant par harp.

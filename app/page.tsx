@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { LoginButton } from "@/components/auth/login-button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { MigrationInit } from "@/components/migration/MigrationInit"
 import { 
   Users, 
   Shield, 
@@ -22,6 +23,9 @@ export const metadata = {
     
 export default function Home() {
   return (
+    <>
+      {/* Initialisation automatique de la migration */}
+      <MigrationInit />
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-orange-50">
       {/* Hero Section */}
       <main className="relative overflow-hidden">
@@ -170,5 +174,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </>
   );
 };

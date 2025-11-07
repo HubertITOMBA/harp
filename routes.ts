@@ -7,6 +7,7 @@
 export const publicRoutes = [
     "/",
     "/test-login",
+    "/init",
     // "/lists",
     // "/harp/"
     

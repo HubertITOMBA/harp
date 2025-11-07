@@ -6,13 +6,14 @@ import {
     authRoutes,
     publicRoutes,
   } from "@/routes";
+import { isMigrationInProgress } from "@/lib/init-full-migration";
 
 
 
 
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export default auth(async (req) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;
 
@@ -23,6 +24,12 @@ export default auth((req) => {
     const isApiRoute = nextUrl.pathname.startsWith("/api/");
     const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
     const isAuthRoute = authRoutes.includes(nextUrl.pathname);
+    const isInitRoute = nextUrl.pathname === "/init";
+
+    // Si la migration est en cours, rediriger toutes les routes (sauf /init et les API) vers /init
+    if (isMigrationInProgress() && !isInitRoute && !isApiRoute && !isApiAuthRoute) {
+        return Response.redirect(new URL("/init", nextUrl));
+    }
 
     // Laisser passer toutes les routes API (sauf celles d'auth qui sont gérées par NextAuth)
     if (isApiRoute && !isApiAuthRoute) {

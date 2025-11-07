@@ -95,30 +95,44 @@ export const insertTypeBases = async () => {
     // Récupérer toutes les dispositions
     const dispositions = await prisma.psadm_dispo.findMany();
     
-    // Mettre à jour chaque disposition
-    const updates = dispositions.map(async (dispo) => {
-      const matchingStatutenv = statutenvs.find(
-        statut => statut.statenv === dispo.statenv
-      );
+    // Traiter les mises à jour par lots pour éviter d'épuiser le pool de connexions
+    const BATCH_SIZE = 50; // Traiter 50 mises à jour à la fois
+    let updatedCount = 0;
+    
+    for (let i = 0; i < dispositions.length; i += BATCH_SIZE) {
+      const batch = dispositions.slice(i, i + BATCH_SIZE);
       
-      if (matchingStatutenv) {
-        return prisma.psadm_dispo.update({
-          where: {
-            env_fromdate: {
-              env: dispo.env,
-              fromdate: dispo.fromdate
+      // Mettre à jour chaque disposition dans le lot
+      const updates = batch.map(async (dispo) => {
+        const matchingStatutenv = statutenvs.find(
+          statut => statut.statenv === dispo.statenv
+        );
+        
+        if (matchingStatutenv) {
+          return prisma.psadm_dispo.update({
+            where: {
+              env_fromdate: {
+                env: dispo.env,
+                fromdate: dispo.fromdate
+              }
+            },
+            data: {
+              statenvId: matchingStatutenv.id
             }
-          },
-          data: {
-            statenvId: matchingStatutenv.id
-          }
-        });
+          });
+        }
+      });
+
+      const result = await Promise.all(updates.filter(Boolean));
+      updatedCount += result.length;
+      
+      // Petit délai entre les lots pour laisser le pool de connexions se récupérer
+      if (i + BATCH_SIZE < dispositions.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
-    });
+    }
 
-    const result = await Promise.all(updates.filter(Boolean));
-
-    return { success: "La mise à jour de statut d'environnements terminée avec succès !" };
+    return { success: `La mise à jour de statut d'environnements terminée avec succès ! ${updatedCount} disposition(s) mise(s) à jour.` };
         
   } catch (error) {
     console.error("Erreur lors de la mise à jour du statut des environnements:", error);
@@ -198,7 +212,7 @@ export const GenererLesMenus = async () => {
         { display: 4, level: 3, menu:  'DEVOPS 2', href: '', descr: 'Environnements DEVOPS 2', icone: 'share-2.png', active: 1, role: 'TMA_LOCAL'},
         { display: 5, level: 3, menu:  'DEVOPS FUSION', href: '', descr: 'Environnements DEVOPS Fusion', icone: 'git-merge.png', active: 1, role: 'TMA_LOCAL'},
         { display: 19, level: 3, menu:  'POC92', href: '', descr: 'Environnements POC 9.2', icone: 'wallet-cards.png', active: 1, role: 'TMA_LOCAL'},
-        { display: 11, level: 3, menu:  'PRE-PRODUCTION', href: '', descr: '', icone: 'ferris-wheel.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 11, level: 3, menu:  'PRE-PRODUCTION', href: '', descr: '', icone: 'ferris-wheel.png', active: 1, role: 'PSADMIN'},
         { display: 12, level: 3, menu:  'PRODUCTION', href: '', descr: 'Environnements de production HARP', icone: 'server-cog.png', active: 1, role: 'TMA_LOCAL'},
         { display: 16, level: 3, menu:  'PSADMIN', href: '', descr: '', icone: 'speech.png', active: 1, role: 'TMA_LOCAL'},
         { display: 21, level: 3, menu:  'PUM-MAINTENANCE PS', href: '', descr: 'Maintenance Peoplesoft', icone: 'puzzle.png', active: 1, role: 'TMA_LOCAL'},
@@ -208,7 +222,7 @@ export const GenererLesMenus = async () => {
         { display: 13, level: 3, menu:  'SECOURS - DRP', href: '', descr: 'Environnements de secours DRP', icone: 'server-off.png', active: 1, role: 'TMA_LOCAL'},
         { display: 8, level: 3, menu:  'TMA', href: '', descr: 'Environnements DEVOPS', icone: 'dessert.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 1, menu:  'Accueil', href: '/home', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
-        { display: 11, level: 1, menu:  'Administration', href: '/admin', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
+        { display: 11, level: 1, menu:  'Administration', href: '/admin', descr: '', icone: '', active: 1, role: 'PSADMIN'},
         { display: 9, level: 1, menu:  'Base connaissances', href: 'http://portails.adsaft.ft.net:9070', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Environnements', href: '/list/envs', descr: '', icone: 'database.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'instances Oracle', href: '/list/instora', descr: '', icone: 'modeling.png', active: 1, role: 'TMA_LOCAL'},
@@ -1170,47 +1184,101 @@ export const migrateDataToEnvsharp = async () => {
 
 export const migrerLesUtilisateursNEW = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.user.count();
+    // Vérifier si la table User existe et si elle est vide
+    let count = 0;
+    try {
+      count = await prisma.user.count();
+    } catch (error) {
+      // Si la table n'existe pas, on doit d'abord exécuter les migrations Prisma
+      console.error('[Migration] La table User n\'existe pas encore. Veuillez exécuter: npx prisma migrate dev');
+      return { 
+        error: "La table User n'existe pas encore. Veuillez exécuter 'npx prisma migrate dev' ou 'npx prisma db push' pour créer les tables." 
+      };
+    }
     
     // if (count > 1) {
     //   return { info: "La table user contient déjà tous les utilisateurs Harp. Importation ignorée." };
     // }
 
-     // Réinitialiser l'auto-increment
-     await prisma.$executeRaw`ALTER TABLE user AUTO_INCREMENT = 1`;
+    // Réinitialiser l'auto-increment seulement si la table existe et contient des données
+    if (count > 0) {
+      try {
+        await prisma.$executeRaw`ALTER TABLE User AUTO_INCREMENT = 1`;
+      } catch (error) {
+        // Ignorer l'erreur si la table est vide ou si l'auto-increment ne peut pas être modifié
+        console.warn('[Migration] Impossible de réinitialiser l\'auto-increment, continuation...');
+      }
+    }
 
-    // Récupérer tous les utilisateurs de psadm_user
-    const psadmUsers = await prisma.psadm_user.findMany();
-    // const psadmUsers = await prisma.psadm_user.findMany({
-    //   select: {
-    //     netid: true,
-    //     unxid: true,
-    //     oprid: true,
-    //     nom: true,
-    //     prenom: true,
-    //     pkeyfile: true,
-    //     lastlogin: true,
-    //     email: true,
-    //     mdp: true,
-    //   }
-    // });
-    
+    // Récupérer tous les utilisateurs de psadm_user avec une requête SQL brute
+    // pour gérer les dates invalides (0000-00-00) qui causent des erreurs Prisma
+    const psadmUsersRaw = await prisma.$queryRaw<Array<{
+      netid: string;
+      unxid: string | null;
+      oprid: string | null;
+      nom: string | null;
+      prenom: string | null;
+      pkeyfile: string | null;
+      lastlogin: string | null;
+      email: string | null;
+      mdp: string;
+    }>>`
+      SELECT 
+        netid,
+        unxid,
+        oprid,
+        nom,
+        prenom,
+        pkeyfile,
+        CASE 
+          WHEN lastlogin IS NULL 
+             OR lastlogin = '0000-00-00 00:00:00' 
+             OR lastlogin = '0000-00-00'
+             OR DATE(lastlogin) = '0000-00-00'
+          THEN NULL 
+          ELSE lastlogin 
+        END as lastlogin,
+        email,
+        mdp
+      FROM psadm_user
+    `;
+
+    // Convertir les dates string en Date et filtrer les valeurs invalides
+    const usersToCreate = psadmUsersRaw.map(user => {
+      // Convertir lastlogin de string à Date si valide
+      let lastloginDate: Date | null = null;
+      if (user.lastlogin) {
+        try {
+          const date = new Date(user.lastlogin);
+          // Vérifier que la date est valide
+          if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+            lastloginDate = date;
+          }
+        } catch {
+          // Si la conversion échoue, garder null
+          lastloginDate = null;
+        }
+      }
+
+      return {
+        netid: user.netid || '',
+        unxid: user.unxid || null,
+        oprid: user.oprid || null,
+        name: user.nom && user.prenom 
+          ? `${user.nom} ${user.prenom}`.trim() 
+          : (user.nom || user.prenom || user.netid || ''),
+        nom: user.nom || null,
+        prenom: user.prenom || null,
+        pkeyfile: user.pkeyfile || null,
+        lastlogin: lastloginDate,
+        email: user.email || null,
+        password: user.mdp || null,
+      };
+    });
 
     // Pour chaque utilisateur dans psadm_user
     const createdUsers = await prisma.user.createMany({
-      data: psadmUsers.map(user => ({
-        netid: user.netid,
-        unxid: user.unxid,
-        oprid: user.oprid,
-        name: `${user.nom} ${user.prenom}`,
-        nom: user.nom,
-        prenom: user.prenom,
-        pkeyfile: user.pkeyfile,
-        lastlogin: user.lastlogin,
-        email: user.email,
-        password: user.mdp,
-      })),
+      data: usersToCreate,
       skipDuplicates: true // Ignore les doublons basés sur les champs uniques (netid)
     });
 
