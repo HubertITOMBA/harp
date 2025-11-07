@@ -1,295 +1,288 @@
- 
-
 import React from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import prisma from "@/lib/prisma";
-import HarpEnvPage from '@/components/harp/ListEnvs';
-import FormModal from '@/components/harp/FormModal';
 import { notFound } from 'next/navigation';
-import { psadm_env } from '@prisma/client';
-import EnvServRoles from '@/components/harp/EnvServRoles';
-import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  User, 
+  Mail, 
+  Key, 
+  Calendar, 
+  Shield, 
+  Hash, 
+  Lock, 
+  UserCircle,
+  Clock
+} from "lucide-react";
+import { RemoveRoleButton } from '@/components/user/RemoveRoleButton';
+import { UpdatePasswordDialogWrapper } from '@/components/user/UpdatePasswordDialogWrapper';
+import { AddRolesModalWrapper } from '@/components/user/AddRolesModalWrapper';
 
-
-  
- const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
- 
+const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
   const { netid } = await params;
 
-  const Users  = await prisma.psadm_user.findUnique({
-      where: { netid: netid },
-       
-     });  
+  const user = await prisma.psadm_user.findUnique({
+    where: { netid: netid },
+  });  
 
-     if (!Users) {
-      return notFound();
-    } 
-    const userRoles = await prisma.psadm_roleuser.findMany({
-      where: {
-        netid: netid,
-       },
-     }); 
+  if (!user) {
+    return notFound();
+  } 
 
-     const concatenatedRoles = userRoles.map(role => `"${role.role}"`).join(', ');
-     const concatRolesMenus = ["HUBERT","AXEL","NICOLAS"];
-     const droitPourMenus = [...new Set([...userRoles.map(role => role.role), ...concatRolesMenus])].join(', ');
-     const droitMenus = [...new Set([...userRoles.map(role => `"${role.role}"`), ...concatRolesMenus.map(role => `"${role}"`)])].join(', ');
-     
-   //  const enfInfos = await prisma.psadm_envinfo.findUnique({ where: { env: env } });  
-      
-        
-      // const OraInfos = await prisma.psadm_env.findUnique({
-      //   where: {
-      //     env: env
-      //   },
-      //   select: {
-      //     env: true,
-      //     site: true,
-      //     oracle_sid: true,
-      //     psadm_oracle: {
-      //       select: {
-      //         aliasql: true,
-      //         orarelease: true
-      //       }
-      //     }
-      //   }
-      // }); 
+  const userRoles = await prisma.psadm_roleuser.findMany({
+    where: {
+      netid: netid,
+    },
+    include: {
+      psadm_role: {
+        select: {
+          descr: true
+        }
+      }
+    },
+    orderBy: {
+      datmaj: 'desc'
+    }
+  });
 
-      
-    //     const dbServers = await prisma.psadm_rolesrv.findFirst({
-    //       where: {
-    //           typsrv: "DB",
-    //           env: env,
-    //           srv: {
-    //               equals: prisma.psadm_srv.srv // Note: ceci ne fonctionnera pas comme prévu
-    //           }
-    //       },
-    //       select: {
-    //           srv: true,
-    //           env: true,
-    //           typsrv: true,
-    //           psadm_srv: {
-    //               select: {
-    //                   srv: true,
-    //                   ip: true,
-    //                   pshome: true,
-    //                   psuser: true,
-    //                   domain: true
-    //               }
-    //           }
-    //       }
-    //   });
+  // Récupérer tous les rôles disponibles pour le modal
+  const allRoles = await prisma.psadm_role.findMany({
+    orderBy: {
+      role: 'asc'
+    }
+  });
 
-
-    //   const serverRoles = await prisma.psadm_rolesrv.findMany({
-    //     where: {
-    //       env: env
-    //     },
-    //     include: {
-    //         psadm_srv: true,
-    //         psadm_typsrv: true
-    //     }
-    // }); 
-
-
-    // const envMonitor = await prisma.psadm_monitor.findFirst({
-    //   where: {
-    //     env: env,
-    //     monitordt: {
-    //       equals: prisma.psadm_monitor.findFirst({
-    //         where: { env: env },
-    //         orderBy: { monitordt: 'desc' },
-    //         select: { monitordt: true }
-    //       }).monitordt
-    //     }
-    //   },
-    //   select: {
-    //     env: true,
-    //     monitordt: true,
-    //     dbstatus: true,
-    //     nbdom: true,
-    //     asstatus1: true,
-    //     asstatus2: true,
-    //     asstatus3: true,
-    //     asstatus4: true,
-    //     asstatus5: true,
-    //     lastasdt: true,
-    //     prcsunxstatus: true,
-    //     lastprcsunxdt: true,
-    //     prcsntstatus: true,
-    //     lastprcsntdt: true,
-    //     lastlogin: true,
-    //     lastlogindt: true
-    //   }
-    // });
-
-
-
-
+  const assignedRoleNames = userRoles.map(ur => ur.role);
+  const availableRoles = allRoles.filter(role => !assignedRoleNames.includes(role.role));
 
   return (
-      <div className="container p-2 gap-4 xl:flex-row w-full">
-      {/* <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">  */}
-
-      {/* <div className="bg-white rounded-xl w-full shadow-2xl"> */}
-
-       {/* <h1 className="text-xl font-semibold">Créer un nouvel environnement</h1>
-       <p>{EnvHarp?.env} </p>
-       {EnvHarp?.harprelease}    */}
-       {/* <HarpEnvPage typenvid={params.id}/> */}
-
-        
-            <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4  justify-left relative w-full mb-5">
-                  <Image src={`/ressources/avatar.png`} alt="" width={40} height={40} className="rounded-full"/>
-                    <Link href={Users.netid}>
-                        <h1 className="mt-2 text-3xl font-semibold uppercase">{Users.netid}</h1>
-                    </Link>
-                  
-                 <h2 className="text-2xl font-semibold mt-3">{Users.prenom} </h2> 
-                 <h2 className="text-2xl font-semibold mt-3">{Users.nom} </h2> 
-
-                 JE suis ici
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* En-tête avec avatar et nom */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <Image 
+                  src="/ressources/avatar.png" 
+                  alt={`Avatar de ${user.netid}`} 
+                  width={80} 
+                  height={80} 
+                  className="rounded-full border-4 border-orange-200"
+                />
+                <div className="absolute bottom-0 right-0 h-6 w-6 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
+                  {user.prenom} {user.nom}
+                </h1>
+                <p className="text-xl text-orange-600 font-semibold uppercase">
+                  {user.netid}
+                </p>
+                {user.oprid && (
+                  <Badge variant="secondary" className="mt-2 bg-gray-100 text-gray-700">
+                    <Hash className="h-3 w-3 mr-1" />
+                    OprId: {user.oprid}
+                  </Badge>
+                )}
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-
-
-
-
-       
-        <div className="flex-2  w-ful">
-            <div className="flex flex-col gap-4">
-              {/** TOP */}
-                <div className="flex bg-white rounded-xl shadow-xl mb-5 mt-2 py-2 px-2 gap-4">
-                              
-                       <div className="w-1/2 p-4 gap-2">
-
-                            <div className="w-full flex items-center gap-2">
-                                <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Email :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{Users.email}  </Label>  
-                            </div>
-
-                            <div className="w-full flex items-center gap-2">
-                                  <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Clé SSH  :</Label> 
-                                  <Label className="py-2 whitespace-nowrap text-2xl text-gray-900">{Users.pkeyfile}</Label>
-                            </div> 
-                            <div className="w-full flex items-center gap-2">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Mot de passe   :</Label> <Label className="whitespace-nowrap text-2xl text-gray-900">
-                                 {Users.mdp} 
-                              </Label>
-                             
-                              <button type="submit" className="px-2 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                Modifier
-                              </button>
-
-                            </div>
-
-                            <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Dernière connexion :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Users.lastlogin)}</Label>  
-                            </div>
-
-                            <div className="flex gap-4 items-center">
-                                 <Label className="py-2 whitespace-nowrap text-xl text-gray-500">OprId :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{Users.oprid}</Label>  
-                            </div>
-
-                            <div className="flex gap-4 items-center">
-                                <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Compte unix :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{Users.unxid}</Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Compte unix Expiration :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Users.expunx)}</Label>  
-                            </div>  
-
-                            {/* <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">Autorisé à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{concatenatedRoles}</Label>  
-                            </div>
-                            <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">MENUS Autorisé à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitPourMenus}</Label>  
-                            </div>
-                            <div className="flex gap-4 items-center">
-                              <Label className="py-2 whitespace-nowrap text-xl text-gray-500">MENUS à :</Label><Label className="whitespace-nowrap text-2xl text-gray-900">{droitMenus}</Label>  
-                            </div> */}
-
-                       </div>
-                                  
-                     
-                            
-                            
-                      
+        {/* Section Informations personnelles */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <User className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-white">Informations Personnelles</CardTitle>
+                <CardDescription className="text-orange-100">
+                  Détails du compte et identifiants
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Email */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-orange-600" />
+                  Adresse email
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
+                  {user.email || "N/A"}
                 </div>
+              </div>
 
+              {/* Clé SSH */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Key className="h-4 w-4 text-orange-600" />
+                  Clé SSH
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium font-mono text-sm">
+                  {user.pkeyfile || "N/A"}
+                </div>
+              </div>
+
+              {/* Mot de passe */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-orange-600" />
+                  Mot de passe
+                </Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
+                    ••••••••••
+                  </div>
+                  <UpdatePasswordDialogWrapper netid={user.netid} userEmail={user.email} />
+                </div>
+              </div>
+
+              {/* Dernière connexion */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-orange-600" />
+                  Dernière connexion
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
+                  {user.lastlogin 
+                    ? new Intl.DateTimeFormat("fr-FR", {
+                        dateStyle: 'short', 
+                        timeStyle: 'short'
+                      }).format(user.lastlogin)
+                    : "Jamais"}
+                </div>
+              </div>
+
+              {/* Compte Unix */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <UserCircle className="h-4 w-4 text-orange-600" />
+                  Compte Unix
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
+                  {user.unxid || "N/A"}
+                </div>
+              </div>
+
+              {/* Expiration compte Unix */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-orange-600" />
+                  Expiration compte Unix
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
+                  {user.expunx 
+                    ? new Intl.DateTimeFormat("fr-FR", {
+                        dateStyle: 'short', 
+                        timeStyle: 'short'
+                      }).format(user.expunx)
+                    : "N/A"}
+                </div>
+              </div>
             </div>
-        {/** BOTTOM */}
+          </CardContent>
+        </Card>
 
-           <h1 className="text-xl font-semibold mb-4">Roles de <span className='uppercase'>{netid}</span> </h1>
-            <div className="w-full flex gap-5">
-                 <div >
-                    {/* <h1 className="text-xl font-semibold mb-4">Roles de serveurs de l'environnement  {env}</h1> */}
-                    
-                     <div className="w-auto bg-white rounded-xl shadow-xl overflow-hidden">
-                                                  
-                                                  <table className="min-w-full divide-y divide-gray-200">
-                                                    <thead className="bg-gray-50 ">
-                                                      <tr className="bg-harpOrange text-white">
-                                                        <th className="px-2 py-2 text-left text-xl font-semibold text-white">Rôle</th>
-                                                        <th className="px-2 py-2 text-left text-xl font-semibold text-white">Role</th>
-                                                        <th className="px-2 py-2 text-left text-xl font-semibold text-white">Mis à jour</th>
-                                                        <th className="px-2 py-2 text-left text-xl font-semibold text-white"></th>
-                                                      </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-200 bg-white">
-                                                      {userRoles.map((item, index) => (
-                                                        <tr key={index} className="hover:bg-harpSkyLight transition-colors duration-200">
-                                                          <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.role}</td>
-                                                          <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">{item.rolep}</td>
-                                                          <td className="px-2 py-2 whitespace-nowrap text-xl text-gray-900">
-                                                                 {new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(item.datmaj)} 
-                                                          </td>
-                                                          <td> 
-                                                            <div className="gap-4">
-                                                              <button type="submit" className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                                                Modifier
-                                                              </button>
-                                                              <button type="submit" className="px-2 py-1 bg-green-500 text-white rounded hover:bg-blue-600">
-                                                                Ajouter
-                                                              </button>
-                                                              <button type="submit" className="px-2 py-1 bg-red-500 text-white rounded hover:bg-blue-600">
-                                                                Supprimer
-                                                              </button>
-                                                              </div>
-                                                          </td>
-                                                        </tr>
-                                                      ))}
-                                                    </tbody>
-                                                    
-                                                  </table>
-                                           </div>
-
-
-
-                 </div>
-                 <div >
-                    {/* <div className="flex gap-4"><p>Dernière requete SQL domaine AS: </p><h2 className='text-sm font-semibold'>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastasdt )}</h2></div>
-                    <div className="flex gap-4"><p>Dernier Heartbeat PRCS UNIX: </p><h2 className='text-sm font-semibold'>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastprcsunxdt)}</h2> </div>
-                    <div className="flex gap-4">
-                       <p>Dernière Connexion : </p> <h2 className='text-sm font-semibold'>{envMonitor?.lastlogin}</h2><p>à</p>    
-                       <h2 className='text-sm font-semibold'> {new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastlogindt )} </h2>
-                      
-                    </div> */}
-               </div>
-
-          </div>
+        {/* Section Rôles */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-white">
+                    Rôles de <span className="uppercase">{netid}</span>
+                  </CardTitle>
+                  <CardDescription className="text-gray-300">
+                    {userRoles.length} rôle(s) attribué(s)
+                  </CardDescription>
+                </div>
+              </div>
+              <AddRolesModalWrapper 
+                netid={netid}
+                availableRoles={availableRoles}
+                assignedRoles={assignedRoleNames}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Rôle
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Mis à jour
+                    </th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {userRoles.length > 0 ? (
+                    userRoles.map((role, index) => (
+                      <tr 
+                        key={index} 
+                        className="hover:bg-harpSkyLight transition-colors duration-200"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-gradient-to-r from-orange-100 to-orange-50 text-orange-800 border border-orange-200"
+                          >
+                            <Shield className="h-3 w-3 mr-1" />
+                            {role.role}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {role.psadm_role?.descr || "—"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Intl.DateTimeFormat("fr-FR", {
+                            dateStyle: 'short', 
+                            timeStyle: 'short'
+                          }).format(role.datmaj)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <RemoveRoleButton netid={netid} role={role.role} />
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <Shield className="h-12 w-12 text-gray-400" />
+                          <p className="text-gray-500 font-medium">Aucun rôle attribué</p>
+                          <p className="text-sm text-gray-400">Ajoutez un rôle pour commencer</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-
-      
-
     </div>
   )
 }
 
-
 export default UserSinglePage;
-
-
-
