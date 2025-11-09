@@ -23,6 +23,12 @@ export default {
                 
                     if (!user || !user.password) return null;
 
+                    // Vérifier si l'utilisateur est désactivé
+                    if (user.password.startsWith('DISABLED_')) {
+                        console.log(`Tentative de connexion pour l'utilisateur désactivé: ${netid}`);
+                        return null;
+                    }
+
                     const passwordsMatch = await bcrypt.compare( password, user.password,);
 
                     if (passwordsMatch) return user;  

@@ -93,9 +93,11 @@ export function AddMenuRoleForm({
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Ajouter un rôle au menu</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="space-y-0">
+          <DialogTitle className="bg-orange-500 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
+            Ajouter un rôle au menu
+          </DialogTitle>
+          <DialogDescription className="bg-orange-500 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
             Sélectionnez un rôle dans la liste pour l&apos;associer à ce menu.
           </DialogDescription>
         </DialogHeader>

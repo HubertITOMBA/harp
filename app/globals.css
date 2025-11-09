@@ -47,6 +47,16 @@ body,
   @apply font-bold text-xl lg:text-2xl;
 }
 
+/* Classe personnalisée pour les en-têtes de cartes avec gradient orange
+ * Pour changer la couleur facilement, modifiez uniquement les valeurs ci-dessous :
+ * Exemple: from-orange-400 to-orange-500 (plus clair)
+ *          from-blue-500 to-blue-600 (bleu)
+ *          from-purple-500 to-purple-600 (violet)
+ */
+.harp-card-header {
+  @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

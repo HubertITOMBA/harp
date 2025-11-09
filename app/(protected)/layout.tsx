@@ -63,7 +63,7 @@ export default async function HarpLayout ( {
        <SessionProvider session={session}>
           {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
           <aside className="hidden md:block w-[14%] lg:w-[16%] xl:w-[14%] p-4 bg-white border-r border-gray-200">
-            <Link href="/" >
+            <Link href="/home" >
               <h1 className="text-4xl md:text-6xl lg:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
               <h2 className="mx-2 text-xs md:text-sm font-bold text-gray-500">Human Ressources <span className="text-base md:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
             </Link>
@@ -73,7 +73,7 @@ export default async function HarpLayout ( {
           {/* Menu mobile avec hamburger */}
           <div className="md:hidden">
             <MobileMenuButton>
-              <Link href="/" className="block mb-4">
+              <Link href="/home" className="block mb-4">
                 <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
                 <h2 className="text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
               </Link>

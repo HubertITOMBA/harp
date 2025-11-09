@@ -67,13 +67,7 @@ export const UserButton = () => {
                Mon Profil
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem className="hover:bg-orange-300">Compte Unix :</DropdownMenuItem>
-          <DropdownMenuItem>Dernière connexion :</DropdownMenuItem>
-          <DropdownMenuItem>
-                <Link href='/user/orders' className='w-full hover:bg-orange-300 '>
-                Order History
-                </Link>
-          </DropdownMenuItem>
+         
 
           {user?.role === 'PORTAL_ADMIN' && (
                 <DropdownMenuItem>

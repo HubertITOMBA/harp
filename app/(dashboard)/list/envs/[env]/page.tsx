@@ -1,47 +1,38 @@
  
-
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import prisma from "@/lib/prisma";
-import HarpEnvPage from '@/components/harp/ListEnvs';
-import FormModal from '@/components/harp/FormModal';
 import { notFound } from 'next/navigation';
-import { psadm_env } from '@prisma/client';
 import EnvServRoles from '@/components/harp/EnvServRoles';
-import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Server, 
+  Database, 
+  Calendar, 
+  Clock,
+  FileText,
+  Key,
+  User,
+  Code,
+  MessageSquare,
+  Activity,
+  Shield,
+  ArrowLeft
+} from "lucide-react";
 
 
-interface EnvInfoProps {
-  id : number;
-};
-  
-    const EnvSinglePage = async ({ params }: { params: { id: number } }) => {
- // const EnvSinglePage = async ({ params: { env },}: { params: { env: string }; }) => {
- // const EnvSinglePage = async ({ env }: EnvInfoProps) => {
-   
- //  const envParam = await params.env;
-  const { id } = await params;
+const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
+  const { env } = await params;
 
-  
-  const Envs  = await prisma.envsharp.findUnique({
-      where: { id: id },
+  const Envs = await prisma.envsharp.findUnique({
+      where: { env: env },
         include: {
-          // _count: {
-          //   select: {
-              statutenv: true,
-              //psadm_rolesrv : true,    
-             // psadm_oracle : true,
-             // psadm_dispo: true,
-              //psadm_typenv: true,
-             // psadm_release: true,  
-            //  psadm_ptools: true,   
-            //  psadm_appli: true,
-          //   },
-          // },
+          statutenv: true,
+          harptypenv: true,
         },
      });  
 
@@ -50,31 +41,13 @@ interface EnvInfoProps {
     } 
 
      
-     const envInfos = await prisma.harpenvinfo.findUnique({ where: { envId: id } });  
-    
-   
-      const OraInfos = await prisma.envsharp.findUnique({
-        where: {
-          id: id
-        },
-        select: {
-          env: true,
-         // site: true,
-        //  oracle_sid: true,
-          // psadm_oracle: {
-          //   select: {
-          //     aliasql: true,
-          //     orarelease: true
-          //   }
-          // }
-        }
-      }); 
+     const envInfos = await prisma.harpenvinfo.findUnique({ where: { envId: Envs.id } });  
 
       
         const dbServers = await prisma.harpenvserv.findFirst({
           where: {
               typsrv: "DB",
-              envId: id,
+              envId: Envs.id,
               // serverId: {
               //     equals: prisma.harpserve. // Note: ceci ne fonctionnera pas comme prévu
               // }
@@ -95,28 +68,12 @@ interface EnvInfoProps {
           }
       });
 
-
-      const serverRoles = await prisma.psadm_rolesrv.findMany({
-        where: {
-          env: env
-        },
-        include: {
-            psadm_srv: true,
-            psadm_typsrv: true
-        }
-    }); 
-
-
     const envMonitor = await prisma.psadm_monitor.findFirst({
       where: {
         env: env,
-        monitordt: {
-          equals: prisma.psadm_monitor.findFirst({
-            where: { env: env },
-            orderBy: { monitordt: 'desc' },
-            select: { monitordt: true }
-          }).monitordt
-        }
+      },
+      orderBy: {
+        monitordt: 'desc'
       },
       select: {
         env: true,
@@ -143,173 +100,318 @@ interface EnvInfoProps {
 
 
   return (
-      <div className="container p-2 gap-4 xl:flex-row w-full">
-      {/* <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">  */}
-
-      {/* <div className="bg-white rounded-xl w-full shadow-2xl"> */}
-
-       {/* <h1 className="text-xl font-semibold">Créer un nouvel environnement</h1>
-       <p>{EnvHarp?.env} </p>
-       {EnvHarp?.harprelease}    */}
-       {/* <HarpEnvPage typenvid={params.id}/> */}
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Bouton retour */}
+        <div className="mb-4">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/envs">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
         
-            <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4 relative w-full mb-5">
-                  <Image src={`/ressources/${Envs.statutenv.icone}`} alt="" width={40} height={40} />
-                    <Link href={Envs.url}>
-                        <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2 sm:mb-4">{Envs.env}</h1>
-                    </Link>
-                  
-                  { Envs.anonym ==="N" ? "" : <Image src="/ressources/anonym.png" alt="" width={40} height={40} className="" />}
-                  { Envs.edi ==="N" ? "" : <Image src="/ressources/edi.png" alt="" width={200} height={40} className="items-end bg-transparent" />}
-                  <h2 className="text-xl font-semibold mt-2">{Envs.descr} </h2> 
-            </div>
-
-
-
-
-
-       
-        <div className="flex-2  w-ful">
-            <div className="flex flex-col gap-4">
-              {/** TOP */}
-                <div className="flex bg-white rounded-xl shadow-xl mb-5 mt-2 py-2 px-2 gap-4">
-                              
-                        <div className="w-1/2 p-2 gap-2">
-                              <div className="w-full flex items-center gap-2">
-                                  <Label>Environnement  :</Label> <Label className="font-semibold text-sm">
-                                    <h1 className="text-sm font-semibold">{Envs.typenv}</h1>
-                                  </Label>
-                              </div> 
-                              <div className="w-full flex items-center gap-2">
-                                  <Label>Application  :</Label> <Label className="font-semibold text-sm">
-                                    <h1 className="text-sm font-semibold">{Envs.appli}</h1>
-                                  </Label>
-                              </div> 
-                              <div className="w-full flex items-center gap-2">
-                              <Label>Version Harp  :</Label> <Label className="font-semibold text-sm">
-                              <h1 className="text-sm font-semibold">{Envs.harprelease}</h1>
-                              </Label>
-                              </div>
-                            
-                              <div className="w-full flex items-center gap-2">
-                              <Label>Istance Oracle  :</Label> <Label className="font-semibold text-sm">{Envs.oracle_sid}</Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                              <Label>Alias SQL *Net  :</Label> <Label className="font-semibold text-sm">{Envs.aliasql}</Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                              <Label>Schema Owner  :</Label> <Label className="font-semibold text-sm">{Envs.oraschema}</Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                             pr {/* <Label>Version Oracle  :</Label> <Label className="font-semibold text-sm">{OraInfos?.psadm_oracle.orarelease}</Label> */}
-                              </div> 
-                              <div className="w-full flex items-center gap-2">
-                                      <Label>PeopleSoft User  :</Label> <Label className="font-semibold text-sm">{dbServers?.psadm_srv.psuser} </Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                              <Label>PeopleSoft  :</Label> <Label className="font-semibold text-sm">{Envs.psversion}</Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                              <Label>PeopleTools  :</Label> <Label className="font-semibold text-sm">{Envs.ptversion}</Label>
-                              </div>
-                        </div>
-                                  
-                        <div className="w-1/2 gap-4 p-2 h-[auto]">
-                           
-                            <div className="w-full flex items-center gap-2">
-                                <Label>Dernière mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(Envs.datmaj)} </Label>  
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                <Label>Image production :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.datadt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                <Label>Dernier refresh :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.refreshdt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                            <Label>Dernier mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium',}).format(enfInfos?.modedt)} </Label>
-                            </div>
-                            <div className="flex gap-4 items-center">
-                              <Label>Dernier mis à jour :</Label><Label className="font-semibold text-sm">{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(enfInfos?.datmaj)} </Label>  
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                  <Label>password FT_EXPLOIT</Label><Label className="text-red-600 font-semibold text-sm "> 
-                                        { enfInfos?.pswd_ft_exploit === null ? "" : "Clique ici pour copier le mot de passe"}
-                                  </Label>
-                                  { enfInfos?.pswd_ft_exploit === null ? "" :  
-                                    <Button 
-                                        // onClick={() => navigator.clipboard.writeText(enfInfos.pswd_ft_exploit)} 
-                                        >
-                                        Copier le mot de passe
-                                    </Button>
-                                  }
-                            </div>
-                            <div className="flex gap-4 items-center">
-                                 {/**  href={`ssh://hubert@${item.psadm_srv.ip}:22`}  dbServers  */}
-                               <Label>Sudo Sudoer :</Label> <Label className='bg-harpOrange text-white rounded-lg'>
-                                  <Link href={`ssh://hubert@192.168.1.49:22`}> 
-                                  {enfInfos?.userunx}</Link>
-                            </Label> <Badge variant="destructive">{enfInfos?.userunx}</Badge>
-                            </div>
-                            <div className="w-full flex items-center gap-2">
-                                    <Label>DB serve  :</Label> <Label className="font-semibold text-sm">{dbServers?.psadm_srv.ip}</Label>
-                            </div>
-                            <div className="w-full flex items-center gap-2">
-                                    <Label>DB serve  :</Label> <Label className="font-semibold text-sm justify-center">{dbServers?.psadm_srv.pshome}/HARP_FILES </Label>
-                            </div>
-                            {/* <div className="w-full flex items-center gap-2">
-                                    <Label>Psoft User  :</Label> <Label className="font-semibold text-sm">{dbServers?.psadm_srv.psuser} </Label>
-                            </div> */}
-
-                              <div className="w-full flex items-center gap-2">
-                                    <Label>Message  :</Label> <Label className="font-semibold text-sm">{Envs.msg}</Label>
-                              </div>
-                              <div className="w-full flex items-center gap-2">
-                              <Label>Version Cobol  :</Label> <Label className="font-semibold text-sm">{Envs.volum}</Label>
-                              </div>
-                        </div>
+        {/* En-tête avec icône et nom */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4 flex-wrap lg:flex-nowrap">
+              <div className="relative shrink-0">
+                <Image 
+                  src={`/ressources/${Envs.statutenv?.icone || 'special.png'}`} 
+                  alt={`Statut ${Envs.env}`} 
+                  width={50} 
+                  height={50} 
+                  className="rounded-lg border-2 border-orange-200"
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                {Envs.url ? (
+                  <Link href={Envs.url} target="_blank" rel="noopener noreferrer" className="hover:text-orange-600 transition-colors">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-0.5">
+                      {Envs.env}
+                    </h1>
+                  </Link>
+                ) : (
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-0.5">
+                    {Envs.env}
+                  </h1>
+                )}
+                  {Envs.descr && (
+                   <p className="text-xs text-gray-800 mb-1.5">
+                      {Envs.descr}
+                    </p>
+                  )}
+                <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                  {Envs.anonym === "N" ? null : (
+                    <Image src="/ressources/anonym.png" alt="Anonymisé" width={20} height={20} />
+                  )}
+                  {Envs.edi === "N" ? null : (
+                    <Image src="/ressources/edi.png" alt="EDI" width={80} height={16} className="bg-transparent" />
+                  )}
                 </div>
-
+              </div>
             </div>
-        {/** BOTTOM */}
+          </CardContent>
+        </Card>
 
-           <h1 className="text-xl font-semibold mb-4">Roles de serveurs de l'environnement  {env}</h1>
-            <div className="w-full flex gap-5">
-                 <div >
-                    {/* <h1 className="text-xl font-semibold mb-4">Roles de serveurs de l'environnement  {env}</h1> */}
-                    <EnvServRoles id={Envs.id}/>
-                 </div>
-                 <div >
-                    <div className="flex gap-4"><p>Dernière requete SQL domaine AS: </p><h2 className='text-sm font-semibold'>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastasdt )}</h2></div>
-                    <div className="flex gap-4"><p>Dernier Heartbeat PRCS UNIX: </p><h2 className='text-sm font-semibold'>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastprcsunxdt)}</h2> </div>
-                    <div className="flex gap-4">
-                       <p>Dernière Connexion : </p> <h2 className='text-sm font-semibold'>{envMonitor?.lastlogin}</h2><p>à</p>    
-                       <h2 className='text-sm font-semibold'> {new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastlogindt )} </h2>
-                      
+
+
+        {/* Section Informations générales */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="harp-card-header">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Server className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl sm:text-2xl">Informations générales</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Shield className="h-3 w-3 text-orange-600" />
+                  Environnement
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.harptypenv?.descr || Envs.harptypenv?.typenv || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Code className="h-3 w-3 text-orange-600" />
+                  Application
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.appli || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <FileText className="h-3 w-3 text-orange-600" />
+                  Version Harp
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.harprelease || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Database className="h-3 w-3 text-orange-600" />
+                  Alias SQL *Net
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.aliasql || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Database className="h-3 w-3 text-orange-600" />
+                  Schema Owner
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.oraschema || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <User className="h-3 w-3 text-orange-600" />
+                  PeopleSoft User
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {dbServers?.harpserve?.psuser || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Server className="h-3 w-3 text-orange-600" />
+                  PeopleSoft
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.psversion || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Server className="h-3 w-3 text-orange-600" />
+                  PeopleTools
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.ptversion || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Calendar className="h-3 w-3 text-orange-600" />
+                  Dernière mise à jour
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.datmaj ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short'}).format(Envs.datmaj) : '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Clock className="h-3 w-3 text-orange-600" />
+                  Image production
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {envInfos?.datadt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium'}).format(envInfos.datadt) : '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Clock className="h-3 w-3 text-orange-600" />
+                  Dernier refresh
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {envInfos?.refreshdt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium'}).format(envInfos.refreshdt) : '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Clock className="h-3 w-3 text-orange-600" />
+                  Dernier mode
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {envInfos?.modedt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium'}).format(envInfos.modedt) : '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Key className="h-3 w-3 text-orange-600" />
+                  Password FT_EXPLOIT
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  {envInfos?.pswd_ft_exploit ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive" className="text-xs">Disponible</Badge>
+                      <Button size="sm" variant="outline" className="h-7 text-xs">
+                        Copier
+                      </Button>
                     </div>
-               </div>
+                  ) : (
+                    <span className="text-sm text-gray-500">-</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <User className="h-3 w-3 text-orange-600" />
+                  User Unix
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  {envInfos?.userunx ? (
+                    <Badge className="bg-orange-500 text-white">{envInfos.userunx}</Badge>
+                  ) : (
+                    <span className="text-sm text-gray-500">-</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Server className="h-3 w-3 text-orange-600" />
+                  DB Serveur IP
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {dbServers?.harpserve?.ip || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <FileText className="h-3 w-3 text-orange-600" />
+                  PS Home
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 font-mono">
+                  {dbServers?.harpserve?.pshome ? `${dbServers.harpserve.pshome}/HARP_FILES` : '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <MessageSquare className="h-3 w-3 text-orange-600" />
+                  Message
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.msg || '-'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Code className="h-3 w-3 text-orange-600" />
+                  Version Cobol
+                </Label>
+                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
+                  {Envs.volum || '-'}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          </div>
+        {/* Section Rôles de serveurs */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Shield className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl sm:text-2xl">Rôles de serveurs de l&apos;environnement {env}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-2">
+                <EnvServRoles id={Envs.id}/>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-orange-600" />
+                  Activité récente
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-600">Dernière requête SQL domaine AS</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {envMonitor?.lastasdt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short'}).format(envMonitor.lastasdt) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Activity className="h-4 w-4 text-gray-500" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-600">Dernier Heartbeat PRCS UNIX</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {envMonitor?.lastprcsunxdt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short'}).format(envMonitor.lastprcsunxdt) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-600">Dernière connexion</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {envMonitor?.lastlogin ? `${envMonitor.lastlogin} à ${envMonitor.lastlogindt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short'}).format(envMonitor.lastlogindt) : '-'}` : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Bouton retour en bas */}
+        <div className="mt-6 flex justify-start">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/envs">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
       </div>
-
-
-      {/* <div className="p-4">
-            <div className="space-y-4">
-                {serverRoles.map((role) => (
-                    <div key={`${role.srv}-${role.typsrv}`} className="border p-4 rounded-lg">
-                        <h2 className="font-medium">Serveur: {role.srv}</h2>
-                        <p>Type: {role.typsrv}</p>
-                        <p>IP: {role.psadm_srv.ip}</p>
-                        <p>PS Home: {role.psadm_srv.pshome}</p>
-                        <p>OS: {role.psadm_srv.os}</p>
-                        <p>Status: {role.status}</p>
-                    </div>
-                ))}
-            </div>
-      </div> */}
-
-      {/* </div> */}
-
     </div>
   )
 }

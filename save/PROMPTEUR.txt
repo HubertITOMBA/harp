@@ -19,3 +19,101 @@ adapter puis exécuter séquentiellement, sans intervention de l'utilisateur,
 les fonctions d'imports. Sela ne doit se faire qu'une fois.  L'utilisateur ne pourra se connecter qu'après.
 Afficher un messate pour lme faire patienter. Aprilquer la methode employé pour la migration des utilisateurs.
 Par défaut les tables vides seront la table user et toutes les tables commencant par harp.
+
+
+Tous les modals utilisent maintenant le même style orange avec DialogTrigger, comme demandé.
+ Les pages de création/édition via routing parallèle (@modal) peuvent être supprimées si vous le souhaitez, 
+ car elles ne sont plus utilisées.
+
+
+Appliquer  toutes les fonctionnalités , le style, le crud, le style et forme de la liste de /list/envs sur /list/servers
+
+
+Pour /list/histoenv/page.tsx, appliquer le style tout le style de /list/roles, puis ajoutes les actions voir et supprimer 
+
+Pour /list/instora/page.tsx, appliquer le style tout le style de /list/roles, puis ajoutes les actions voir, créer et editer 
+
+ Ajouter dans CreateTypeStatusDialog.tsx et dans EditTypeStatusDialog.tsx un bouton d'upload d'image à sauver dans public/icones
+
+
+  Modifier le bouton d'upload d'image dans CreateTypeStatusDialog.tsx et dans EditTypeStatusDialog.tsx.  un bouton d'upload d'image à sauver dans public/icones
+
+
+  Pour /list/menus/page.tsx, appliquer le style tout le style de /list/roles, puis ajoutes les actions voir, créer , editer et désactiver 
+
+  Verifier, analyer et corriger les forms ViewRoleDialog.tsx et ViewRoleContent.tsx car ils bloquent le navigateur, 
+  et par la même occasion, les compacter à 60 % car il remplissent l'écran
+
+  ajouter égalemant en haut de page, le bouton retour à la liste sur ViewRoleDialog.tsx 
+
+  Le bouton retour à la liste sur ViewRoleDialog.tsx ne fonctionne pas et bloque le navigateur
+
+
+
+dans la page importharp.ts implémenter une fonction pour importer les données de psadm_tools dans harptools pour les colonnes suivantes
+la fonction est à exécuter qu'une fois si la table harptools est vide. 
+
+Pour les pages  CreateToolsDialog.tsx et  EditToolsDialog.tsx ajouter un bouton Browser
+pour que l'utilisateur selection le fichier executable. Une fois que le ficheir selectionner
+extraire ou spliter le chemin pour le mettre dans le champ cmdpath pour l'executable ou le fichier 
+dans le champ cmd
+
+
+Adapter et utiliser cette fonction pour remplir cmdpath et cmd dans CreateToolsDialog.tsx et  EditToolsDialog.tsx 
+après le clic sur le bouton Browser
+function extractFilePathAndName(filePath: string): { path: string; name: string } {
+    const lastSlashIndex = filePath.lastIndexOf('/');
+    
+    // Vérifie si le dernier '/' existe
+    if (lastSlashIndex === -1) {
+        return { path: '', name: filePath }; // Pas de chemin, juste le nom du fichier
+    }
+
+    const path = filePath.substring(0, lastSlashIndex);
+    const name = filePath.substring(lastSlashIndex + 1);
+    
+    return { path, name };
+}
+
+Testons cette fonction
+function extractFilePathAndName(filePath: string): { path: string; name: string } {
+    const lastSlashIndex = filePath.lastIndexOf('/');
+    
+    // Vérifie si le dernier '/' existe
+    if (lastSlashIndex === -1) {
+        return { path: '', name: filePath }; // Pas de chemin, juste le nom du fichier
+    }
+
+    const path = filePath.substring(0, lastSlashIndex);
+    const name = filePath.substring(lastSlashIndex + 1);
+    
+    return { path, name };
+}
+
+=================================================
+Dans importharp.ts  implémenter une fonction pour injecter le resultat de cette requette 
+dans la table harpuseroles
+
+select a.id as userId, e.id as roleId
+from User a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e
+where  a.netid = b.netid 
+  and  a.netid = d.netid 
+  and  b.defpage = c.href
+  and  d.role = e.role
+order by d.role;
+
+Dans importharp.ts  implémenter une fonction pour injecter le resultat de cette requette 
+dans la table harpmenurole
+select e.id as roleId, f.id  as menuId, f.menu
+from User a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e, harpmenus f
+where  a.netid = b.netid 
+  and  a.netid = d.netid 
+  and  b.defpage = c.href
+  and  d.role = e.role
+  and  c.typenv = f.menu
+order by d.role;
+
+Dans CreateMenuDialog.tsx et EditMenuDialog.tsx, impossible de selectionner l'icone, le champs n'affiche pas les icones à selectionner
+La liste déroulant n'est pas opérationnelle sur les champs Role et Statut, merci de verifier, d'analyser et corriger. 
+
+ 

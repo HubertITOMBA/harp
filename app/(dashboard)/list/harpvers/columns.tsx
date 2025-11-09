@@ -1,24 +1,15 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { HarpVersActions } from '@/components/harpvers/HarpVersActions'
 
 export type HarpVersList = {
   harprelease: string
-  descr : string
+  descr: string
 }
-
 
 export const columns: ColumnDef<HarpVersList>[] = [
   {
@@ -43,7 +34,7 @@ export const columns: ColumnDef<HarpVersList>[] = [
     enableSorting: false,
     enableHiding: false,
   },
-{
+  {
     accessorKey: 'harprelease',
     header: ({ column }) => {
       return (
@@ -57,51 +48,27 @@ export const columns: ColumnDef<HarpVersList>[] = [
       )
     }
   },
- 
-{
-  accessorKey: 'descr',
-  header: ({ column }) => {
-    return (
-      <Button
-        variant='ghost'
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Description
-        <ArrowUpDown className='ml-2 h-4 w-4' />
-      </Button>
-    )
-  }
-},
-{
-    id: 'actions',
-    cell: ({ row }) => {
-      const base = row.original
-
+  {
+    accessorKey: 'descr',
+    header: ({ column }) => {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-             // onClick={() => navigator.clipboard.writeText(base.id)}
-            >
-              Copier Serveur
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/harpvers/${base.harprelease}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.harprelease}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Description
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
       )
+    }
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      const harpVers = row.original
+
+      return <HarpVersActions harpVers={harpVers} />
     }
   }
 ]

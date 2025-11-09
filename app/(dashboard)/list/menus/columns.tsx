@@ -1,30 +1,22 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { MenuActions } from '@/components/menu/MenuActions'
+import Image from 'next/image'
 
 export type MenuHarp = {
   id: number
   display: number
   level: number
-  tab: string
-  newhref: string
-  href: string
-  icone: string
+  menu: string
+  href: string | null
+  icone: string | null
   active: number
-  descr : string
-  role: string
+  descr: string | null
+  role: string | null
 }
 
 
@@ -53,7 +45,7 @@ export const columns: ColumnDef<MenuHarp>[] = [
   },
 
 
- {
+  {
     accessorKey: 'menu',
     header: ({ column }) => {
       return (
@@ -61,89 +53,81 @@ export const columns: ColumnDef<MenuHarp>[] = [
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Etiquette
+          Menu
           <ArrowUpDown className='ml-2 h-4 w-4' />
         </Button>
       )
     }
   },
- {
-  accessorKey:  'href',
-  header: 'Url'
-},
-{
-  accessorKey: 'icone',
-  header: 'Icône',
-  cell: ({ row }) => (
-    row.original.icone !== "" ? (
-      <img 
-        src={`/ressources/${row.original.icone}`} 
-        alt="" 
-        width={20} 
-        height={20} 
-        className="items-end bg-transparent"
-      />
-    ) : ( <img 
-      src={`/ressources/special.png`} 
-      alt="" 
-      width={20} 
-      height={20} 
-      className="items-end bg-transparent"
-    />)
-  )
-},
-{
-  accessorKey: 'descr',
-  header: 'Description'
- },
-{
-  accessorKey: 'role',
-  header: 'Autosiation'
-},
-{
-  accessorKey: 'display',
-  header: 'Ordre'
-},
-{
-  accessorKey: 'level',
-  header: 'Niveau'
-},
-{
-  accessorKey: 'active',
-  header: 'Statut'
-},
-
-
- {
-    id: 'actions',
-    cell: ({ row }) => {
-      const base = row.original
-
+  {
+    accessorKey: 'descr',
+    header: ({ column }) => {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-             // onClick={() => navigator.clipboard.writeText(base.id)}
-            >
-              Copier Serveur
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/menus/${base.id}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.id}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Description
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
       )
+    }
+  },
+  {
+    accessorKey: 'icone',
+    header: 'Icône',
+    cell: ({ row }) => (
+      row.original.icone && row.original.icone !== "" ? (
+        <Image 
+          src={`/ressources/${row.original.icone}`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent"
+        />
+      ) : (
+        <Image 
+          src={`/ressources/special.png`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent"
+        />
+      )
+    )
+  },
+  {
+    accessorKey: 'href',
+    header: 'URL'
+  },
+  {
+    accessorKey: 'role',
+    header: 'Rôle'
+  },
+  {
+    accessorKey: 'display',
+    header: 'Ordre'
+  },
+  {
+    accessorKey: 'level',
+    header: 'Niveau'
+  },
+  {
+    accessorKey: 'active',
+    header: 'Statut',
+    cell: ({ row }) => (
+      <span className={row.original.active === 1 ? "text-green-600" : "text-red-600"}>
+        {row.original.active === 1 ? "Actif" : "Inactif"}
+      </span>
+    )
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      const menu = row.original
+
+      return <MenuActions menu={menu} />
     }
   }
 ]

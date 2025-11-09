@@ -1,0 +1,403 @@
+"use client";
+
+import { useState, useTransition, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { FormDialog } from '@/components/ui/form-dialog';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Wrench, Pencil, FolderOpen } from "lucide-react";
+import { updateTools } from '@/actions/update-tools';
+import { toast } from 'react-toastify';
+
+interface EditToolsDialogProps {
+  tool: {
+    tool: string;
+    cmdpath: string;
+    cmd: string;
+    version: string;
+    descr: string;
+    tooltype: string;
+    cmdarg: string;
+    mode: string;
+    output: string;
+  };
+}
+
+export function EditToolsDialog({ tool }: EditToolsDialogProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cmdpath, setCmdpath] = useState<string>(tool.cmdpath || "");
+  const [cmd, setCmd] = useState<string>(tool.cmd || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+    closeDialog: () => void
+  ) => {
+    e.preventDefault();
+    setErrors({});
+    
+    const formData = new FormData(e.currentTarget);
+    
+    startTransition(async () => {
+      const result = await updateTools(tool.tool, formData);
+      
+      if (result.success) {
+        toast.success(result.message);
+        closeDialog();
+        router.refresh();
+      } else {
+        toast.error(result.error || "Erreur lors de la mise à jour de l'outil");
+        if (result.error) {
+          setErrors({ general: result.error });
+        }
+      }
+    });
+  };
+
+  const extractFilePathAndName = (filePath: string): { path: string; name: string } => {
+    const lastSlashIndex = filePath.lastIndexOf('/');
+    
+    // Vérifie si le dernier '/' existe
+    if (lastSlashIndex === -1) {
+      return { path: '', name: filePath }; // Pas de chemin, juste le nom du fichier
+    }
+
+    const path = filePath.substring(0, lastSlashIndex + 1); // Inclure le '/' final
+    const name = filePath.substring(lastSlashIndex + 1);
+    
+    return { path, name };
+  };
+
+  /**
+   * Fonction pour extraire le chemin réel d'un fichier
+   * Utilise plusieurs méthodes pour obtenir le chemin le plus précis possible
+   */
+  const extractRealFilePath = (file: File): { path: string; name: string } => {
+    const fileName = file.name;
+    
+    // Méthode 1: Utiliser webkitRelativePath si disponible (chemin réel relatif)
+    const fileWithPath = file as File & { webkitRelativePath?: string };
+    if (fileWithPath.webkitRelativePath) {
+      const relativePath = fileWithPath.webkitRelativePath;
+      console.log('webkitRelativePath trouvé:', relativePath); // Debug
+      // Normaliser les backslashes en slashes
+      const normalizedPath = relativePath.replace(/\\/g, '/');
+      const { path, name } = extractFilePathAndName(normalizedPath);
+      const nameWithoutExt = name.replace(/\.[^/.]+$/, "");
+      console.log('Chemin extrait:', path, 'Nom:', nameWithoutExt); // Debug
+      
+      // S'assurer que le chemin se termine par /
+      const finalPath = path && !path.endsWith('/') ? path + '/' : path;
+      
+      return {
+        path: finalPath || '',
+        name: nameWithoutExt
+      };
+    }
+    
+    // Méthode 2: Analyser le nom du fichier pour extraire des indices de chemin
+    // Si le nom contient déjà un chemin (ex: "C:/path/file.exe" ou "/usr/bin/file.sh")
+    if (fileName.includes('/') || fileName.includes('\\')) {
+      const normalizedPath = fileName.replace(/\\/g, '/');
+      const { path, name } = extractFilePathAndName(normalizedPath);
+      const nameWithoutExt = name.replace(/\.[^/.]+$/, "");
+      return {
+        path: path || '',
+        name: nameWithoutExt
+      };
+    }
+    
+    // Méthode 3: Utiliser une heuristique basée sur l'extension et le système
+    // pour déterminer le chemin le plus probable
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const isWindows = navigator.platform.toLowerCase().includes('win');
+    let probablePath = '';
+    
+    // Analyser l'extension pour déterminer le type de fichier
+    if (ext === 'exe' || ext === 'bat' || ext === 'cmd' || ext === 'msi' || ext === 'dll') {
+      // Windows executables - chercher dans les chemins Windows standards
+      probablePath = isWindows ? 'C:/Program Files/' : 'C:/Program Files/';
+    } else if (ext === 'sh' || ext === 'bin' || ext === 'run' || ext === 'so') {
+      // Linux/Unix executables - chemins Unix standards
+      probablePath = '/usr/bin/';
+    } else if (ext === 'py' || ext === 'pyw') {
+      // Python scripts
+      probablePath = isWindows ? 'C:/Python/' : '/usr/bin/';
+    } else if (ext === 'js' || ext === 'node' || ext === 'mjs') {
+      // Node.js scripts
+      probablePath = isWindows ? 'C:/Program Files/nodejs/' : '/usr/bin/';
+    } else if (ext === 'jar' || ext === 'war') {
+      // Java applications
+      probablePath = isWindows ? 'C:/Program Files/Java/' : '/usr/lib/java/';
+    } else if (ext === 'ps1') {
+      // PowerShell scripts
+      probablePath = 'C:/Windows/System32/WindowsPowerShell/v1.0/';
+    } else if (ext === 'vbs' || ext === 'wsf') {
+      // VBScript
+      probablePath = 'C:/Windows/System32/';
+    } else {
+      // Par défaut, selon le système
+      probablePath = isWindows ? 'C:/Program Files/' : '/usr/bin/';
+    }
+    
+    // Extraire le nom sans extension pour cmd
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+    
+    return {
+      path: probablePath,
+      name: nameWithoutExt
+    };
+  };
+
+  const handleBrowse = async () => {
+    // Essayer d'abord l'API File System Access si disponible (navigateurs modernes)
+    if ('showOpenFilePicker' in window) {
+      try {
+        const fileHandle = await (window as Window & { showOpenFilePicker?: (options?: { types?: Array<{ description?: string; accept?: Record<string, string[]> }> }) => Promise<FileSystemFileHandle[]> }).showOpenFilePicker?.({
+          types: [{
+            description: 'Fichiers exécutables',
+            accept: {
+              'application/*': ['.exe', '.bat', '.cmd', '.sh', '.bin', '.py', '.js']
+            }
+          }]
+        });
+        
+        if (fileHandle && fileHandle.length > 0) {
+          const file = await fileHandle[0].getFile();
+          // L'API File System Access ne donne pas directement le chemin complet
+          // mais on peut utiliser le nom du fichier
+          const { path, name } = extractRealFilePath(file);
+          setCmd(name);
+          setCmdpath(path);
+          toast.success(`Fichier sélectionné : ${file.name}`);
+          return;
+        }
+      } catch {
+        // L'utilisateur a annulé ou erreur - continuer avec l'input file classique
+        console.log('File System Access API non disponible ou annulé');
+      }
+    }
+    
+    // Fallback: utiliser l'input file classique
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Prendre le premier fichier sélectionné
+      const file = files[0];
+      
+      // Extraire le nom du fichier sans extension pour remplir cmd
+      const fileName = file.name;
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+      
+      // Remplir uniquement le champ cmd avec le nom du fichier sans extension
+      setCmd(nameWithoutExt);
+      
+      toast.success(`Fichier sélectionné : ${file.name}. Commande : ${nameWithoutExt}`);
+    }
+    
+    // Réinitialiser l'input file pour permettre de sélectionner le même fichier à nouveau
+    e.target.value = '';
+  };
+
+  return (
+    <FormDialog
+      trigger={
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-blue-300 hover:bg-blue-50"
+          title="Éditer"
+        >
+          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+        </Button>
+      }
+      title={`Modifier l'outil ${tool.tool.toUpperCase()}`}
+      description="Modifiez les informations de l'outil"
+      onSubmit={handleSubmit}
+      submitLabel="Enregistrer les modifications"
+      submitIcon={<Pencil className="h-4 w-4" />}
+      isPending={isPending}
+      maxWidth="2xl"
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Outil (lecture seule) */}
+        <div className="space-y-2">
+          <Label htmlFor="tool" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Outil
+          </Label>
+          <Input
+            id="tool"
+            value={tool.tool}
+            disabled
+            className="bg-gray-100 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Type d'outil */}
+        <div className="space-y-2">
+          <Label htmlFor="tooltype" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Type d&apos;outil <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="tooltype"
+            name="tooltype"
+            required
+            defaultValue={tool.tooltype}
+            className="bg-white"
+            placeholder="Ex: ADMIN"
+            maxLength={5}
+          />
+        </div>
+
+        {/* Chemin commande */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="cmdpath" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Chemin
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="cmdpath"
+              name="cmdpath"
+              value={cmdpath}
+              onChange={(e) => setCmdpath(e.target.value)}
+              className="bg-white flex-1"
+              placeholder="Ex: /usr/bin/ ou C:\\Program Files\\"
+              maxLength={255}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBrowse}
+              className="shrink-0 border-orange-300 hover:bg-orange-50"
+              title="Sélectionner un fichier pour remplir le champ Commande"
+            >
+              <FolderOpen className="h-4 w-4 mr-1" />
+              Parcourir
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+          </div>
+        </div>
+
+        {/* Commande */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="cmd" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Commande <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="cmd"
+            name="cmd"
+            value={cmd}
+            onChange={(e) => setCmd(e.target.value)}
+            required
+            className="bg-white"
+            placeholder="Ex: psadmin"
+            maxLength={255}
+          />
+        </div>
+
+        {/* Version */}
+        <div className="space-y-2">
+          <Label htmlFor="version" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Version
+          </Label>
+          <Input
+            id="version"
+            name="version"
+            defaultValue={tool.version}
+            className="bg-white"
+            placeholder="Ex: 1.0.0"
+            maxLength={10}
+          />
+        </div>
+
+        {/* Arguments */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="cmdarg" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Arguments
+          </Label>
+          <Input
+            id="cmdarg"
+            name="cmdarg"
+            defaultValue={tool.cmdarg}
+            className="bg-white"
+            placeholder="Ex: -u %USER%"
+            maxLength={255}
+          />
+        </div>
+
+        {/* Mode */}
+        <div className="space-y-2">
+          <Label htmlFor="mode" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Mode
+          </Label>
+          <Input
+            id="mode"
+            name="mode"
+            defaultValue={tool.mode}
+            className="bg-white"
+            placeholder="Ex: SYNC"
+            maxLength={10}
+          />
+        </div>
+
+        {/* Output */}
+        <div className="space-y-2">
+          <Label htmlFor="output" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Output
+          </Label>
+          <Input
+            id="output"
+            name="output"
+            defaultValue={tool.output}
+            className="bg-white"
+            placeholder="Ex: Y"
+            maxLength={1}
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="descr" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-orange-600" />
+            Description <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="descr"
+            name="descr"
+            required
+            defaultValue={tool.descr}
+            className="bg-white"
+            placeholder="Ex: Outil d'administration PeopleSoft"
+            maxLength={50}
+          />
+        </div>
+      </div>
+
+      {errors.general && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {errors.general}
+        </div>
+      )}
+    </FormDialog>
+  );
+}
+

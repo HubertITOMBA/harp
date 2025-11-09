@@ -3,6 +3,7 @@ import Image from 'next/image'
 import prisma from "@/lib/prisma";
 import { notFound } from 'next/navigation';
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -14,8 +15,10 @@ import {
   Hash, 
   Lock, 
   UserCircle,
-  Clock
+  Clock,
+  ArrowLeft
 } from "lucide-react";
+import Link from 'next/link';
 import { RemoveRoleButton } from '@/components/user/RemoveRoleButton';
 import { UpdatePasswordDialogWrapper } from '@/components/user/UpdatePasswordDialogWrapper';
 import { AddRolesModalWrapper } from '@/components/user/AddRolesModalWrapper';
@@ -60,6 +63,16 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Bouton retour */}
+        <div className="mb-4">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/users">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
+        
         {/* En-tête avec avatar et nom */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-6">
@@ -94,7 +107,7 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
 
         {/* Section Informations personnelles */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+          <CardHeader className="harp-card-header">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
                 <User className="h-6 w-6" />
@@ -280,6 +293,16 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
             </div>
           </CardContent>
         </Card>
+        
+        {/* Bouton retour en bas */}
+        <div className="mt-6 flex justify-start">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/users">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   )

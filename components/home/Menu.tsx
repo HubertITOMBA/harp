@@ -8,6 +8,7 @@ import { equal } from 'assert';
 import { HarpserSchema } from '@/schemas';
 import { getUserRoles } from '@/actions/menurigth';
 import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
+import { EnvLink } from './EnvLink';
  
 
 
@@ -141,24 +142,14 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
        }
        
        // Afficher l'icône seulement si le menu est visible (hasAccess = true)
+       // Utiliser EnvLink pour une navigation fiable avec revalidation
        return (
-         <Link
-           href={`/harp/envs/${i.display}`}
+         <EnvLink
            key={i.id}
-           className="flex items-center justify-center lg:justify-start gap-2 text-xs px-2 py-1 rounded-md hover:bg-orange-300"
-         >
-           {i.icone && i.icone !== "" && i.icone !== "N" ? (
-             <Image src={`/ressources/${i.icone}`} alt="" width={16} height={16} className="" />
-           ) : (
-             <Image src={`/ressources/list.png`} alt="" width={16} height={16} className="rounded-full" />
-           )}
-           <span className="hidden lg:block text-xs">{i.menu}</span>
-           {/* {process.env.NODE_ENV === 'development' && (
-             <span className="hidden lg:block text-red-500 font-semibold text-xs">
-               {menuRolesStr || "Aucun rôle requis"}
-             </span>
-           )} */}
-         </Link>
+           href={`/harp/envs/${i.display}`}
+           icon={i.icone}
+           label={i.menu}
+         />
        );
         })}
       {/* <p>Mes DROITS = { droitsUtilisteur }</p> */}

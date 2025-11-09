@@ -1,21 +1,10 @@
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
 import { UserButton } from "@/components/auth/user-button";
 import Link from "next/link";
-import { role } from '@/lib/data';
 import prisma from "@/lib/prisma";
 import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
 import { NavbarMobileMenu } from "./navbar-mobile-menu";
-
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
-import { logOut } from "@/actions/logout";
+import { HomeLink } from "./HomeLink";
 
 interface RoleMenuProps {
   DroitsUser : string ;
@@ -94,13 +83,13 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
     });
 
   return (
-    <nav className="backdrop-blur-lg sticky top-0 z-[999]">
-         <h1 className='my-4 md:my-10 text-xl md:text-2xl lg:text-3xl text-right font font-semibold text-orange-500 mb-1 px-2'>TMA HARP</h1> 
-         <div className='h-2 w-full p-1 bg-orange-500'>
+    <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-orange-200/50 shadow-sm">
+         <h1 className='my-2 md:my-4 text-xl md:text-2xl lg:text-3xl text-right font font-semibold text-orange-500 mb-1 px-2'>TMA HARP</h1> 
+         <div className='h-2 w-full bg-orange-500'>
          </div >
     
 
-    <div className="flex flex-col md:flex-row items-center justify-between p-2 gap-2">
+    <div className="flex flex-col md:flex-row items-center justify-between p-1.5 md:p-2 gap-2 bg-white/80">
       
         <div className="flex items-center gap-2 md:gap-5 justify-between md:justify-end w-full">
           {/* Menu mobile - dropdown */}
@@ -110,6 +99,8 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
           <div className="hidden md:flex w-full md:w-auto">
             <nav className="mx-auto flex max-w-7xl justify-between p-1 lg:px-4">
               <div className="flex items-center justify-between text-xs font-medium gap-2 md:gap-5">
+                {/* Lien vers la page d'accueil - Utilise un composant client pour navigation fiable */}
+                <HomeLink />
                 {optionMenu.map((item) => {
                   // Récupérer les rôles autorisés pour ce menu
                   const menuRolesArray = rolesArrayByMenuId.get(item.id) || [];

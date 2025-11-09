@@ -27,7 +27,7 @@ interface AddRolesModalProps {
   assignedRoles: string[];
 }
 
-export function AddRolesModal({ netid, availableRoles, assignedRoles }: AddRolesModalProps) {
+export function AddRolesModal({ netid, availableRoles }: AddRolesModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -107,21 +107,21 @@ export function AddRolesModal({ netid, availableRoles, assignedRoles }: AddRoles
           Ajouter un rôle
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-orange-600" />
+      <DialogContent className="sm:max-w-[500px] max-h-[75vh] overflow-hidden flex flex-col p-2 sm:p-3 !top-[20%] sm:!top-[15%] !translate-y-0">
+        <DialogHeader className="pb-1 space-y-0">
+          <DialogTitle className="flex items-center gap-1 text-xs sm:text-sm bg-orange-500 text-white px-2 py-1.5 rounded-t-md -mx-2 sm:-mx-3 -mt-2 sm:-mt-3">
+            <Shield className="h-3 w-3" />
             Ajouter des rôles
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-[10px] sm:text-[11px] bg-orange-500 text-white px-2 py-1 rounded-b-md -mx-2 sm:-mx-3 mb-1">
             Sélectionnez un ou plusieurs rôles à attribuer à <span className="font-semibold uppercase">{netid}</span>
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Sélection rapide */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b mb-3">
-            <Label className="text-xs sm:text-sm font-semibold text-gray-700">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 pb-1 border-b mb-1">
+            <Label className="text-[10px] sm:text-[11px] font-semibold text-gray-700">
               {selectedRoles.length} rôle(s) sélectionné(s) sur {availableRoles.length}
             </Label>
             <Button
@@ -129,34 +129,34 @@ export function AddRolesModal({ netid, availableRoles, assignedRoles }: AddRoles
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-xs sm:text-sm w-full sm:w-auto"
+              className="text-[10px] sm:text-[11px] w-full sm:w-auto h-5 sm:h-6 px-1.5 sm:px-2"
             >
               {selectedRoles.length === availableRoles.length ? "Tout désélectionner" : "Tout sélectionner"}
             </Button>
           </div>
 
           {/* Liste des rôles avec scroll */}
-          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-2">
+          <div className="space-y-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
             {availableRoles.map((role) => (
               <div
                 key={role.role}
-                className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                className="flex items-start space-x-1 p-1 rounded border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <Checkbox
                   id={role.role}
                   checked={selectedRoles.includes(role.role)}
                   onCheckedChange={() => handleRoleToggle(role.role)}
-                  className="mt-0.5 sm:mt-1"
+                  className="mt-0.5 h-3 w-3"
                 />
                 <div className="flex-1 min-w-0">
                   <Label
                     htmlFor={role.role}
-                    className="flex items-center gap-1.5 sm:gap-2 cursor-pointer font-semibold text-gray-900 text-sm sm:text-base"
+                    className="flex items-center gap-0.5 cursor-pointer font-semibold text-gray-900 text-[10px] sm:text-xs"
                   >
-                    <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
+                    <Shield className="h-2.5 w-2.5 text-orange-600 flex-shrink-0" />
                     <span className="truncate">{role.role}</span>
                   </Label>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 ml-5 sm:ml-6 line-clamp-2">
+                  <p className="text-[9px] sm:text-[10px] text-gray-600 mt-0.5 ml-3 line-clamp-1">
                     {role.descr}
                   </p>
                 </div>
@@ -165,28 +165,31 @@ export function AddRolesModal({ netid, availableRoles, assignedRoles }: AddRoles
           </div>
 
           {/* Boutons d'action */}
-          <DialogFooter className="gap-2 sm:gap-0 mt-4 pt-4 border-t">
+          <DialogFooter className="gap-1 mt-1.5 pt-1.5 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isPending}
+              size="sm"
+              className="h-6 sm:h-7 text-[10px] sm:text-xs px-2 sm:px-3"
             >
               Annuler
             </Button>
             <Button
               type="submit"
               disabled={isPending || selectedRoles.length === 0}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-orange-500 hover:bg-orange-600 text-white h-6 sm:h-7 text-[10px] sm:text-xs px-2 sm:px-3"
+              size="sm"
             >
               {isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Ajout en cours...
+                  <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+                  Ajout...
                 </>
               ) : (
                 <>
-                  <Shield className="h-4 w-4 mr-2" />
+                  <Shield className="h-2.5 w-2.5 mr-1" />
                   Ajouter {selectedRoles.length > 0 ? `${selectedRoles.length} ` : ''}rôle(s)
                 </>
               )}

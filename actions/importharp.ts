@@ -243,7 +243,7 @@ export const GenererLesMenus = async () => {
         { display: 3, level: 1, menu:  'Self-service', href: '', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Serveurs', href: '/list/servers', descr: '', icone: 'server.png', active: 1, role: 'TMA_LOCAL'},
         { display: 8, level: 1, menu:  'Statacm', href: 'http://statacm.adsaft.ft.net:8080', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
-        { display: 0, level: 2, menu:  'Statut env.', href: '/list/statenv', descr: '', icone: 'shieldcheck.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 0, level: 2, menu:  'Historique', href: '/list/histoenv', descr: '', icone: 'shieldcheck.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types d\'application', href: '/list/appli', descr: '', icone: 'puzzle.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types d\'environnement', href: '/list/menuenv', descr: '', icone: 'menuenv.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types de serveur', href: '/list/tpserv', descr: '', icone: 'server-cog.png', active: 1, role: 'TMA_LOCAL'},
@@ -1656,6 +1656,148 @@ export const importerLesEnvDispos = async () => {
   } catch (error) {
     console.error("Erreur lors de l'importation des dispositions d'environnements:", error);
     return { error: "Erreur lors de l'importation des dispositions d'environnements" };
+  }
+};
+
+export const importerLesTools = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harptools.count();
+    
+    if (count > 0) {
+      return { info: "La table harptools contient déjà des données. Importation ignorée." };
+    }
+
+    // Réinitialiser l'auto-increment
+    await prisma.$executeRaw`ALTER TABLE harptools AUTO_INCREMENT = 1`;
+
+    // Récupérer toutes les données de psadm_tools
+    const psadmTools = await prisma.psadm_tools.findMany({
+      orderBy: {
+        descr: 'asc',
+      },
+    });
+
+    if (psadmTools.length === 0) {
+      return { info: "La table psadm_tools est vide. Aucune donnée à importer." };
+    }
+
+    // Mapper les données de psadm_tools vers harptools
+    // Note: La colonne 'tool' n'est pas importée (laissée vide)
+    const importedData = await prisma.harptools.createMany({
+      data: psadmTools.map((tool) => ({
+        tool: "", // Colonne tool non importée, laissée vide
+        cmdpath: "", // Champ non présent dans psadm_tools, laissé vide
+        cmd: tool.cmd,
+        version: "", // Champ non présent dans psadm_tools, laissé vide
+        descr: tool.descr,
+        tooltype: tool.tooltype,
+        cmdarg: tool.cmdarg || "",
+        mode: tool.mode || "",
+        output: tool.output || "",
+      })),
+      skipDuplicates: true
+    });
+
+    return { success: `${importedData.count} outils importés avec succès depuis psadm_tools vers harptools !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des outils:", error);
+    return { error: "Erreur lors de l'importation des outils depuis psadm_tools" };
+  }
+};
+
+export const importerLesUserRoles = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpuseroles.count();
+    
+    if (count > 0) {
+      return { info: "La table harpuseroles contient déjà des données. Importation ignorée." };
+    }
+
+    // Exécuter la requête SQL pour récupérer les associations user-role
+    const results = await prisma.$queryRaw<Array<{
+      userId: number;
+      roleId: number;
+    }>>`
+      SELECT 
+        a.id as userId, 
+        e.id as roleId
+      FROM User a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e
+      WHERE a.netid = b.netid 
+        AND a.netid = d.netid 
+        AND b.defpage = c.href
+        AND d.role = e.role
+      ORDER BY d.role
+    `;
+
+    if (results.length === 0) {
+      return { info: "Aucune association utilisateur-rôle trouvée. Importation ignorée." };
+    }
+
+    // Insérer les résultats dans la table harpuseroles
+    const importedData = await prisma.harpuseroles.createMany({
+      data: results.map((row) => ({
+        userId: row.userId,
+        roleId: row.roleId,
+        // datmaj sera automatiquement défini par la valeur par défaut
+      })),
+      skipDuplicates: true // Ignore les doublons basés sur la clé primaire composite [userId, roleId]
+    });
+
+    return { success: `${importedData.count} associations utilisateur-rôle importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des associations utilisateur-rôle:", error);
+    return { error: "Erreur lors de l'importation des associations utilisateur-rôle" };
+  }
+};
+
+export const importerLesMenuRoles = async () => {
+  try {
+    // Vérifier si la table est vide
+    const count = await prisma.harpmenurole.count();
+    
+    if (count > 0) {
+      return { info: "La table harpmenurole contient déjà des données. Importation ignorée." };
+    }
+
+    // Exécuter la requête SQL pour récupérer les associations role-menu
+    const results = await prisma.$queryRaw<Array<{
+      roleId: number;
+      menuId: number;
+      menu: string;
+    }>>`
+      SELECT 
+        e.id as roleId, 
+        f.id as menuId, 
+        f.menu
+      FROM User a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e, harpmenus f
+      WHERE a.netid = b.netid 
+        AND a.netid = d.netid 
+        AND b.defpage = c.href
+        AND d.role = e.role
+        AND c.typenv = f.menu
+      ORDER BY d.role
+    `;
+
+    if (results.length === 0) {
+      return { info: "Aucune association rôle-menu trouvée. Importation ignorée." };
+    }
+
+    // Insérer les résultats dans la table harpmenurole
+    const importedData = await prisma.harpmenurole.createMany({
+      data: results.map((row) => ({
+        roleId: row.roleId,
+        menuId: row.menuId,
+        // datmaj sera automatiquement défini par la valeur par défaut
+      })),
+      skipDuplicates: true // Ignore les doublons basés sur la clé primaire composite [roleId, menuId]
+    });
+
+    return { success: `${importedData.count} associations rôle-menu importées avec succès !` };
+  } catch (error) {
+    console.error("Erreur lors de l'importation des associations rôle-menu:", error);
+    return { error: "Erreur lors de l'importation des associations rôle-menu" };
   }
 };
 

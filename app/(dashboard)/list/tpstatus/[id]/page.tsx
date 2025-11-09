@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 
 import fs from 'fs';
@@ -41,6 +42,15 @@ const getImageFiles = () => {
 
   return (
       <div className="container p-2 gap-4 xl:flex-row w-full">
+        {/* Bouton retour */}
+        <div className="mb-4">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/tpstatus">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
       
         
             <div className="flex bg-white rounded-xl shadow-xl p-2 mt-0 gap-4  justify-left relative w-full mb-5">
@@ -123,6 +133,16 @@ const getImageFiles = () => {
 
             </div>
         {/** BOTTOM */}
+        
+        {/* Bouton retour en bas */}
+        <div className="mt-6 flex justify-start">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/tpstatus">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
 
        </div>
 

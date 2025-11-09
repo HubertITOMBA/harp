@@ -38,7 +38,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState } from "react"
-import Link from "next/link"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -81,21 +80,20 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-gray-500 font-semibold">
-     <div className="flex items-center py-2 sm:py-4 w-full sm:w-auto">
+     <div className="flex items-center justify-between text-gray-500 font-semibold">
+     <div className="flex items-center py-4 ">
         <Input
           placeholder="Filtrer par serveur..."
           value={(table.getColumn("srv")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("srv")?.setFilterValue(event.target.value)
           }
-          className="rounded-lg max-w-sm w-full sm:w-auto"
+          className="rounded-lg max-w-sm"
         />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-lg p-2.5 text-xs sm:text-sm">
+            <Button variant="outline" className="rounded-lg ml-auto p-2.5">
               Colonnes
             </Button>
           </DropdownMenuTrigger>
@@ -107,7 +105,7 @@ export function DataTable<TData, TValue>({
               )
               .map((column) => {
                 return (
-                  <DropdownMenuCheckboxItem
+                  <DropdownMenuCheckboxItem  
                     key={column.id}
                     className="capitalize"
                     checked={column.getIsVisible()}
@@ -121,21 +119,16 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button className="rounded-lg p-2.5 text-xs sm:text-sm whitespace-nowrap">
-        <Link href='/list/servers/create'>Ajouter</Link>
-        </Button>
-        </div>
       </div>
 
-    <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-xs sm:text-sm font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="h-8 sm:h-9">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1 sm:py-1.5">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -154,11 +147,11 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200"
+                className="hover:bg-harpSkyLight transition-colors duration-200 h-8 sm:h-9"
                 
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className="py-1 sm:py-1.5">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -173,7 +166,6 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
-      </div>
     </div>
 
     {/* <div className="flex items-center justify-end space-x-2 py-4">
@@ -195,13 +187,13 @@ export function DataTable<TData, TValue>({
         </Button>
     </div> */}
 
-      <div className="bg-white mt-5 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0 py-3 sm:py-5 font-semibold rounded-xl shadow-xl px-2 sm:px-4">
-          <div className="ml-0 sm:ml-5 mt-2 flex-1 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+<div className="bg-white mt-5 flex items-center justify-between py-5 font-semibold rounded-xl shadow-xl">
+          <div className="ml-5 mt-2 flex-1 text-sm text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} sur {" "}
             {table.getFilteredRowModel().rows.length} ligne(s) selectionée(s).
           </div>
 
-      <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8 flex-wrap justify-center sm:justify-start">
+      <div className="flex items-center space-x-6 lg:space-x-8 ">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-medium ">Lignes par page</p>
               <Select

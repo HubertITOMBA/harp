@@ -1,6 +1,5 @@
 "use client"
 
-import { useRef } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -36,11 +35,9 @@ DropdownMenuContent,
 DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";  
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useState } from "react"
-import EnvForm from "@/components/admin/env-form";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -51,9 +48,6 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
-
-
-    const dialogRef = useRef<HTMLDialogElement | null>(null);
 
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
@@ -86,17 +80,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-    {/* <Button variant="ghost" className="rounded-lg ml-auto p-2.5 bg-blue-500">
-        <Link href='/list/envs/create'>Créer un environnement</Link>
-        
-        </Button> */}
-
-              <dialog ref ={dialogRef}>
-               Ouverture de Modal
-               <EnvForm type='Créer' />
-             </dialog>
-
-
      <div className="flex items-center justify-between text-gray-500 font-semibold">
      <div className="flex items-center py-4 ">
         <Input
@@ -136,22 +119,16 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button className="rounded-lg ml-auto p-2.5">
-        <Link href='/list/envs/create'>Créer un environnement</Link>
-        </Button>
-        <Button onClick={() => dialogRef.current?.showModal()} className="rounded-lg ml-auto p-2.5">
-        
-        </Button>
       </div>
 
     <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-xs sm:text-sm font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="h-8 sm:h-9">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1 sm:py-1.5">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -170,11 +147,11 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200"
+                className="hover:bg-harpSkyLight transition-colors duration-200 h-8 sm:h-9"
                 
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className="py-1 sm:py-1.5">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

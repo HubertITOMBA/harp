@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 
   
@@ -50,6 +51,15 @@ import { Button } from '@/components/ui/button';
 
   return (
       <div className="container p-2 gap-4 xl:flex-row w-full">
+        {/* Bouton retour */}
+        <div className="mb-4">
+          <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+            <Link href="/list/utilisateur">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Link>
+          </Button>
+        </div>
       {/* <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">  */}
 
       {/* <div className="bg-white rounded-xl w-full shadow-2xl"> */}
@@ -198,6 +208,16 @@ import { Button } from '@/components/ui/button';
                        <h2 className='text-sm font-semibold'> {new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(envMonitor?.lastlogindt )} </h2>
                       
                     </div> */}
+               </div>
+               
+               {/* Bouton retour en bas */}
+               <div className="mt-6 flex justify-start">
+                 <Button asChild variant="outline" className="bg-white hover:bg-gray-50">
+                   <Link href="/list/utilisateur">
+                     <ArrowLeft className="h-4 w-4 mr-2" />
+                     Retour à la liste
+                   </Link>
+                 </Button>
                </div>
 
           </div>

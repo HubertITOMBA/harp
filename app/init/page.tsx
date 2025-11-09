@@ -66,7 +66,7 @@ export default async function InitPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+        <CardHeader className="harp-card-header">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
               <Database className="h-6 w-6" />

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface MenuItem {
   id: number;
@@ -26,10 +27,19 @@ interface NavbarMobileMenuProps {
 
 export function NavbarMobileMenu({ menuItems }: NavbarMobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
 
   if (menuItems.length === 0) {
     return null;
   }
+
+  const handleHomeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsOpen(false);
+    // Forcer la navigation avec revalidation
+    router.push("/home");
+    router.refresh();
+  };
 
   return (
     <div className="md:hidden flex-shrink-0">
@@ -44,7 +54,16 @@ export function NavbarMobileMenu({ menuItems }: NavbarMobileMenuProps) {
             <span className="text-sm font-medium">Menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56 max-h-[80vh] overflow-y-auto z-[1000]">
+        <DropdownMenuContent align="start" className="w-56 max-h-[80vh] overflow-y-auto z-50">
+          {/* Lien vers la page d'accueil - Utilise navigation programmatique pour fiabilité */}
+          <DropdownMenuItem asChild>
+            <button
+              onClick={handleHomeClick}
+              className="flex items-center gap-3 w-full cursor-pointer text-left"
+            >
+              <span className="text-xs">Accueil</span>
+            </button>
+          </DropdownMenuItem>
           {menuItems.map((item) => (
             <DropdownMenuItem key={item.id} asChild>
               <Link

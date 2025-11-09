@@ -1,26 +1,17 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { TypeStatusActions } from '@/components/typstatus/TypeStatusActions'
 
 export type MenuHarp = {
   id: number
-  descr : string
-  icone: string
-  display: number
- }
-
+  statenv: string
+  descr: string | null
+  icone: string | null
+}
 
 export const columns: ColumnDef<MenuHarp>[] = [
   {
@@ -45,9 +36,7 @@ export const columns: ColumnDef<MenuHarp>[] = [
     enableSorting: false,
     enableHiding: false,
   },
-
-
- {
+  {
     accessorKey: 'statenv',
     header: ({ column }) => {
       return (
@@ -61,67 +50,50 @@ export const columns: ColumnDef<MenuHarp>[] = [
       )
     }
   },
-{
-  accessorKey: 'icone',
-  header: 'Icône',
-  cell: ({ row }) => (
-    row.original.icone !== "" ? (
-      <img 
-        src={`/ressources/${row.original.icone}`} 
-        alt="" 
-        width={20} 
-        height={20} 
-        className="items-end bg-transparent"
-      />
-    ) : ( <img 
-      src={`/ressources/list-plus.png`} 
-      alt="" 
-      width={20} 
-      height={20} 
-      className="items-end bg-transparent"
-    />)
-  )
-},
-{
-  accessorKey: 'descr',
-  header: 'Description'
-},
-{
-  accessorKey: 'display',
-  header: 'Ordre'
-},
-
-
- {
-    id: 'actions',
-    cell: ({ row }) => {
-      const base = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-             // onClick={() => navigator.clipboard.writeText(base.id)}
-            >
-              Copier Serveur
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/tpstatus/${base.id}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.id}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+  {
+    accessorKey: 'icone',
+    header: 'Icône',
+    cell: ({ row }) => (
+      row.original.icone ? (
+        <img 
+          src={`/ressources/${row.original.icone}`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent"
+        />
+      ) : ( 
+        <img 
+          src={`/ressources/list-plus.png`} 
+          alt="" 
+          width={20} 
+          height={20} 
+          className="items-end bg-transparent"
+        />
       )
+    )
+  },
+  {
+    accessorKey: 'descr',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Description
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    }
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      const typeStatus = row.original
+
+      return <TypeStatusActions typeStatus={typeStatus} />
     }
   }
 ]

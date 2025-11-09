@@ -1,26 +1,20 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { ToolsActions } from '@/components/tools/ToolsActions'
 
 export type ListTools = {
+  id: number
   tool: string
+  cmdpath: string
   cmd: string
+  version: string
   descr: string
   tooltype: string
   cmdarg: string
-  page: string
   mode: string
   output: string
 }
@@ -79,8 +73,16 @@ export const columns: ColumnDef<ListTools>[] = [
   },
 },
 {
+  accessorKey: 'cmdpath',
+  header: 'Chemin commande'
+},
+{
   accessorKey: 'cmd',
   header: 'Commande'  
+},
+{
+  accessorKey: 'version',
+  header: 'Version'
 },
 {
   accessorKey: 'cmdarg',
@@ -91,43 +93,20 @@ export const columns: ColumnDef<ListTools>[] = [
   header: 'Type'  
 },
 {
-  accessorKey: 'Mode',
-  header: 'mode'  
+  accessorKey: 'mode',
+  header: 'Mode'  
 },
 {
   accessorKey: 'output',
-  header: 'output'  
+  header: 'Output'  
 },
 {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row }) => {
-      const base = row.original
+      const tool = row.original
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(base.tool)}
-            >
-              Copier Outils
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/tools/${base.tool}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.tool}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+      return <ToolsActions tool={tool} />
     }
   }
 ]

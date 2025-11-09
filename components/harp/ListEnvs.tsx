@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tabs";
 import EnvServRoles from "./EnvServRoles";
 import { Badge } from "@/components/ui/badge";
+import { EnvSearchAndNavigation } from "./EnvSearchAndNavigation";
 import { 
   Database, 
   Server, 
@@ -140,11 +141,26 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
         </div>
       </div>
 
-      {/* Liste des environnements */}
-      <div className="space-y-4">
+      {/* Liste des environnements avec recherche et navigation */}
+      <EnvSearchAndNavigation 
+        envCount={envCount}
+        envsData={envsWithServers.map((env) => ({
+          id: env.id,
+          env: env.env,
+          descr: env.descr,
+          aliasql: env.aliasql,
+          oraschema: env.oraschema,
+          psversion: env.psversion,
+          ptversion: env.ptversion,
+          harprelease: env.harprelease,
+          statutenv: env.statutenv,
+          serverInfo: env.serverInfo,
+        }))}
+      >
         {envsWithServers.map((envsharp) => (
           <Card
             key={envsharp.id}
+            data-env-id={envsharp.id}
             className="w-full shadow-lg hover:shadow-xl transition-all duration-300 border-2 hover:border-harpOrange/30"
           >
             {/* En-tête de l'environnement */}
@@ -521,7 +537,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </EnvSearchAndNavigation>
 
       {/* Message si aucun environnement */}
       {envsWithServers.length === 0 && (

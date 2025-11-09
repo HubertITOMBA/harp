@@ -1,32 +1,27 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Eye, Pencil, ServerOff, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
-import { buildMyLaunchUrl } from '@/lib/mylaunch'
-import { PuttyLauncher, PeopleSoftIDELauncher } from '@/components/ui/external-tool-launcher'
+import { ServerActions } from '@/components/server/ServerActions';
 
 export type Servs = {
+    id: number
     srv: string
     ip: string
     pshome: string
     os: string
-    psuser: string
-    domain: string
-    statenvId: number
-    statutenv: { icone: string }
-    descr: string
-    icone: string
+    psuser: string | null
+    domain: string | null
+    statenvId: number | null
+    statutenv: {
+        id: number
+        statenv: string
+        descr: string | null
+        icone: string | null
+    } | null
 }
 
 export const columns: ColumnDef<Servs>[] = [
@@ -55,23 +50,18 @@ export const columns: ColumnDef<Servs>[] = [
   {
     accessorKey: 'icone',
     header: '',
-    cell: ({ row }) => (
-      row.original.icone !== "" ? (
+    cell: ({ row }) => {
+      const icon = row.original.statutenv?.icone;
+      return (
         <img 
-          src={`/ressources/${row.original.statutenv.icone}`} 
+          src={icon ? `/ressources/${icon}` : '/ressources/special.png'} 
           alt="" 
-          width={20} 
-          height={20} 
+          width={16} 
+          height={16} 
           className="items-end bg-transparent"
         />
-      ) : ( <img 
-        src={`/ressources/special.png`} 
-        alt="" 
-        width={20} 
-        height={20} 
-        className="items-end bg-transparent"
-      />)
-    )
+      );
+    }
   },
   {
     accessorKey: 'srv',
@@ -80,109 +70,59 @@ export const columns: ColumnDef<Servs>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Serveur
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
+    },
+    cell: ({ row }) => {
+      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('srv')}</div>
     }
   },
-
-
-{
-  accessorKey: 'ip',
-  header: 'Ip'
-},
-{
-  accessorKey: 'pshome',
-  header: 'PS Home'
-},
-{
-  accessorKey:  'os',
-  header: 'Os'
-},
-{
-  accessorKey: 'domain',
-  header: 'Domain'
-},
-{
-  accessorKey: 'psuser',
-  header: 'psuser'
-},
-{
-  id: 'quickActions',
-  header: 'Connexion',
-  cell: ({ row }) => {
-    const base = row.original
-    return (
-      <div className="flex gap-2">
-        <PuttyLauncher
-          host={base.ip}
-          user={base.psuser}
-          size="sm"
-          variant="outline"
-        />
-        <PeopleSoftIDELauncher
-          server={base.srv}
-          size="sm"
-          variant="outline"
-        />
-      </div>
-    )
-  }
-},
- {
-    id: 'actions',
+  {
+    accessorKey: 'ip',
+    header: 'IP',
     cell: ({ row }) => {
-      const base = row.original
+      return <div className="text-xs sm:text-sm">{row.getValue('ip') || '-'}</div>
+    }
+  },
+  {
+    accessorKey: 'pshome',
+    header: 'PS Home',
+    cell: ({ row }) => {
+      return <div className="text-xs sm:text-sm">{row.getValue('pshome') || '-'}</div>
+    }
+  },
+  {
+    accessorKey: 'os',
+    header: 'OS',
+    cell: ({ row }) => {
+      return <div className="text-xs sm:text-sm">{row.getValue('os') || '-'}</div>
+    }
+  },
+  {
+    accessorKey: 'domain',
+    header: 'Domain',
+    cell: ({ row }) => {
+      return <div className="text-xs sm:text-sm">{row.getValue('domain') || '-'}</div>
+    }
+  },
+  {
+    accessorKey: 'psuser',
+    header: 'PS User',
+    cell: ({ row }) => {
+      return <div className="text-xs sm:text-sm">{row.getValue('psuser') || '-'}</div>
+    }
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      const server = row.original
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(base.srv)}
-            >
-              Copier Serveur
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                const url = buildMyLaunchUrl('putty', {
-                  host: base.ip,
-                  user: base.psuser || undefined,
-                })
-                window.location.href = url
-              }}
-            >
-              Ouvrir PuTTY (SSH)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                const url = buildMyLaunchUrl('pside', {
-                  server: base.srv,
-                })
-                window.location.href = url
-              }}
-            >
-              Ouvrir PeopleSoft IDE
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/servers/${base.srv}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.srv}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+      return <ServerActions server={server} />
     }
   }
 ]

@@ -1,58 +1,28 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { ServRoleActions } from '@/components/servrole/ServRoleActions'
 
 export type ServRoleList = {
     srv: string
-    ip: string
     env: string
     typsrv: string
-    pshome: string
-    os: string
-    psuser: string
-    domain: string
-    descr: string
-    status: number
+    status: number | null
+    psadm_srv?: {
+      srv: string
+      ip: string
+      os: string
+      psuser: string | null
+      domain: string | null
+    }
+    psadm_typsrv?: {
+      typsrv: string
+      descr: string
+    }
 }
-
-
-
-
-// {
-//   header: "Serveur",
-//   accessor: "srv",
-//   className: "hidden lg:table-cell",
-// },
-// {
-//   header: "Environnement",
-//   accessor: "env",
-//   className: "hidden lg:table-cell",
-// },
-
-// {
-//   header: "Type",
-//   accessor: "typsrv",
-//   className: "hidden lg:table-cell",
-// },
-// {
-//   header: "Statut",
-//   accessor: "status",
-//   className: "hidden lg:table-cell",
-// },
-
-
 
 export const columns: ColumnDef<ServRoleList>[] = [
   {
@@ -99,14 +69,14 @@ export const columns: ColumnDef<ServRoleList>[] = [
       row.original.status === 1 ? (
         <img 
           src={`/ressources/OK.png`} 
-          alt="" 
+          alt="Actif" 
           width={20} 
           height={20} 
           className="items-end bg-transparent"
         />
       ) : ( <img 
         src={`/ressources/KO.png`} 
-        alt="" 
+        alt="Inactif" 
         width={20} 
         height={20} 
         className="items-end bg-transparent"
@@ -140,19 +110,11 @@ export const columns: ColumnDef<ServRoleList>[] = [
 
 {
   accessorKey: 'psadm_srv.ip',
-  header: 'Ip'
-},
-// {
-//   accessorKey: 'psadm_srv.pshome',
-//   header: 'PS Home'
-// },
-{
-  accessorKey:  'psadm_srv.os',
-  header: 'Os'
+  header: 'IP'
 },
 {
-  accessorKey: 'psadm_srv.psuser',
-  header: 'psuser'
+  accessorKey: 'psadm_srv.os',
+  header: 'OS'
 },
 {
   accessorKey: 'typsrv',
@@ -168,10 +130,9 @@ export const columns: ColumnDef<ServRoleList>[] = [
     )
   }
 },
-
 {
   accessorKey: 'psadm_typsrv.descr',
-  header: 'Dercription'
+  header: 'Description'
 },
 {
   accessorKey: 'env',
@@ -181,46 +142,19 @@ export const columns: ColumnDef<ServRoleList>[] = [
         variant='ghost'
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        Base
+        Environnement
         <ArrowUpDown className='ml-2 h-4 w-4' />
       </Button>
     )
   }
 },
 {
-  accessorKey: 'psadm_srv.domain',
-  header: 'Domain'
-},
- {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row }) => {
-      const base = row.original
+      const servRole = row.original
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(base.srv)}
-            >
-              Copier Serveur
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/list/servrole/${base.srv}`}> 
-               {/* <Link className="p-3 rounded-md bg-purple-300" href={`/list/students?teacherId=${"teacher2"}`}>Etudiants</Link> */}
-                Voir les details {base.srv}</Link>
-           </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+      return <ServRoleActions servRole={servRole} />
     }
   }
 ]

@@ -1,40 +1,47 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Eye, Pencil, ServerOff, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
+import { EnvActions } from '@/components/env/EnvActions';
 
+// Type basé sur le modèle Prisma envsharp
 export type Envs = {
-    id: Number
+    id: number
     env: string
-    site: string
-    typenv: string
-    url: string
-    oracle_sid: string
-    aliasql: string
-    oraschema: string
-    appli: string
-    psversion: string
-    ptversion: string
-    harprelease: string
-    volum: string
-    anonym: string
-    edi: string
-    typenvid: number
-    statenvId: number
-    statenv: string
-    descr: string
-    icone: string
+    aliasql: string | null
+    oraschema: string | null
+    orarelease: string | null
+    instanceId: number | null
+    url: string | null
+    appli: string | null
+    versionId: number | null
+    psversionId: number | null
+    ptversionId: number | null
+    psversion: string | null
+    ptversion: string | null
+    harprelease: string | null
+    pshome: string | null
+    volum: string | null
+    datmaj: Date | null
+    gassi: string | null
+    rpg: string | null
+    msg: string | null
+    descr: string | null
+    anonym: string | null
+    edi: string | null
+    typenvid: number | null
+    statenvId: number | null
+    releaseId: number | null
+    createddt: Date
+    statutenv: {
+        id: number
+        statenv: string
+        descr: string | null
+        icone: string | null
+    } | null
 }
 
 export const columns: ColumnDef<Envs>[] = [
@@ -63,23 +70,18 @@ export const columns: ColumnDef<Envs>[] = [
   {
     accessorKey: 'icone',
     header: '',
-    cell: ({ row }) => (
-      row.original.icone !== "" ? (
+    cell: ({ row }) => {
+      const icon = row.original.statutenv?.icone;
+      return (
         <img 
-          src={`/ressources/${row.original.statutenv.icone}`} 
+          src={icon ? `/ressources/${icon}` : '/ressources/special.png'} 
           alt="" 
-          width={20} 
-          height={20} 
+          width={16} 
+          height={16} 
           className="items-end bg-transparent"
         />
-      ) : ( <img 
-        src={`/ressources/special.png`} 
-        alt="" 
-        width={20} 
-        height={20} 
-        className="items-end bg-transparent"
-      />)
-    )
+      );
+    }
   },
   {
     accessorKey: 'env',
@@ -88,12 +90,15 @@ export const columns: ColumnDef<Envs>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="font-semibold text-white"
+          className="h-8 text-xs sm:text-sm"
         >
           Base
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
+    },
+    cell: ({ row }) => {
+      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('env')}</div>
     }
   },
 //   {
@@ -110,60 +115,62 @@ export const columns: ColumnDef<Envs>[] = [
 //   header: 'Url'
 // },
 {
-  accessorKey: 'oracle_sid',
-  header: 'Sid'
-  
+  accessorKey: 'aliasql',
+  header: 'Alias',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('aliasql') || '-'}</div>
+  }
 },
-// {
-//   accessorKey: 'aliasql',
-//   header: 'Alias'
-// },
 {
   accessorKey: 'oraschema',
-  header: 'Schema'
+  header: 'Schema',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('oraschema') || '-'}</div>
+  }
 },
-// {
-//   accessorKey: 'appli',
-//   header: 'Appli'
-// },
 {
   accessorKey: 'psversion',
-  header: 'PSoft'
+  header: 'PSoft',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('psversion') || '-'}</div>
+  }
 },
 {
-  accessorKey:  'ptversion',
-  header: 'Ptools'
+  accessorKey: 'ptversion',
+  header: 'Ptools',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('ptversion') || '-'}</div>
+  }
 },
 {
   accessorKey: 'harprelease',
-  header: 'Release'
-},
-{
-  accessorKey: 'volum',
-  header: 'Cobol'
+  header: 'Release',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('harprelease') || '-'}</div>
+  }
 },
 {
   accessorKey: 'anonym',
   header: 'Anonym',
-  cell: ({ row }) => (
-    row.original.icone === "N" ? (
+  cell: ({ row }) => {
+    const anonym = row.getValue('anonym') as string | null;
+    return anonym === "N" ? (
       <img 
-        src={`/ressources/anonym.png`} 
-        alt="" 
-        width={20} 
-        height={20} 
+        src="/ressources/anonym.png" 
+        alt="Anonymisé" 
+        width={16} 
+        height={16} 
         className="items-end bg-transparent"
       />
-    ) : null 
-  )
+    ) : null;
+  }
 },
 {
   accessorKey: 'edi',
-  header: 'Edi'
-},
-{
-  accessorKey: 'typenv',
-  header: 'Type'
+  header: 'EDI',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('edi') || '-'}</div>
+  }
 },
 // {
 //   accessorKey: 'statutenv.descr',
@@ -184,42 +191,11 @@ export const columns: ColumnDef<Envs>[] = [
 //   },
   {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row }) => {
-      const base = row.original
+      const env = row.original
 
-      return (
-        <DropdownMenu  >
-          <DropdownMenuTrigger asChild >
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="rounded-xl bg-harpOrange">
-            <DropdownMenuLabel className="rounded-md bg-harpSky border-none">Actions sur {base.env}</DropdownMenuLabel>
-            {/* <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(base.env)}
-            >
-              Copier Environnement
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>*/}
-            <DropdownMenuItem> 
-            <Link className="hover:text-white hover:font-bold" href={`/list/envs/${base.env}`}>Voir</Link>
-           </DropdownMenuItem>
-           {/* <DropdownMenuSeparator /> */}
-            <DropdownMenuItem>
-            <Link className="hover:text-white hover:font-bold" href={`/list/envs/edit/${parseInt(base.id)}`}>Modifier  = {base.env} = {base.id}</Link> 
-            </DropdownMenuItem>
-         
-            {/* <DropdownMenuSeparator /> */}
-            <DropdownMenuItem >
-            <Link className="hover:text-white hover:font-bold" href={`/list/envs/${base.env}`}>Supprimer</Link> 
-            </DropdownMenuItem>
-            <DropdownMenuItem></DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+      return <EnvActions env={env} />
     }
   }
 ]

@@ -73,9 +73,11 @@ function MenuRoleActions({ menuId, roleId, roleName, onDelete }: MenuRoleActions
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-            <AlertDialogDescription>
+          <AlertDialogHeader className="space-y-0">
+            <AlertDialogTitle className="bg-orange-500 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription className="bg-orange-500 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
               Êtes-vous sûr de vouloir supprimer le rôle <strong>{roleName}</strong> de ce menu ?
               Cette action est irréversible.
             </AlertDialogDescription>

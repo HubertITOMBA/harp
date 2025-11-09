@@ -2,51 +2,43 @@ import React from 'react'
 import { columns } from './columns'
 import { db } from "@/lib/db";
 import { DataTable } from './data-table';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Ghost } from 'lucide-react';
-
-
-
-
-// async function getUsers(): Promise<User[]> {
-//   const res = await fetch(
-//     'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users'
-//   )
-//   const data = await res.json()
-//   return data
-// }
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Server } from "lucide-react";
+import { CreateEnvDialog } from '@/components/env/CreateEnvDialog';
 
 export default async function EnvListPage () {
-
-  //const data = await getUsers()
-  //  const data = await db.psadm_env.findMany({
   const data = await db.envsharp.findMany({
     include: {
       statutenv: true,
     },
-   }
-    
-  );
+    orderBy: {
+      env: 'asc',
+    },
+  });
 
+  const envCount = data.length;
+  
   return (
-    <section className="px-2 sm:px-4 py-2">
-        <div className="container mx-auto max-w-full">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2 sm:mb-4">Tous les environnements</h1>
-            {/* <Button  type="button" className="rounded-xl ml-auto p-2.5">
-               <Link href='/list/envs/create'>Créer un environnement</Link>
-             </Button> */}
-   
-             <dialog >
-               Ouverture de Modal
-             </dialog>
-
-
-
-            <DataTable columns= {columns} data = {data} />
-          {/* <DataTable columns= {columns} data = {DescEnvts} /> */}
-        </div>
-    </section>
-  )
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="harp-card-header">
+            <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl lg:text-3xl font-bold">
+              <Server className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
+              Tous les environnements
+            </CardTitle>
+            <p className="text-orange-50 text-sm sm:text-base mt-2">
+              {envCount} environnement{envCount > 1 ? "s" : ""} enregistré{envCount > 1 ? "s" : ""}
+            </p>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="mb-4 flex justify-end">
+              <CreateEnvDialog />
+            </div>
+            <DataTable columns={columns} data={data} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }

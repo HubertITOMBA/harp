@@ -1,18 +1,11 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Eye, Pencil, UserX, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
+import { UserActions } from '@/components/user/UserActions';
 
 export type Users = {
     netid: string
@@ -59,11 +52,15 @@ export const columns: ColumnDef<Users>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Net ID
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
+    },
+    cell: ({ row }) => {
+      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('netid')}</div>
     }
   },
 // {
@@ -81,48 +78,44 @@ export const columns: ColumnDef<Users>[] = [
       <Button
         variant='ghost'
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-8 text-xs sm:text-sm"
       >
         Nom
-        <ArrowUpDown className='ml-2 h-4 w-4' />
+        <ArrowUpDown className='ml-2 h-3 w-3' />
       </Button>
     )
+  },
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('nom') || '-'}</div>
   }
 },
 {
   accessorKey: 'prenom',
-  header: 'Prénom'
+  header: 'Prénom',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('prenom') || '-'}</div>
+  }
 },
 // {
 //   accessorKey: 'pkeyfile',
 //   header: 'Pkeyfile'
 // },
 {
-  accessorKey: 'expunx',
-  header: 'Expunx',
-  cell: ({ row }) => {
-    const date = new Date(row.getValue('expunx'))
-    const formatted = Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(date)
-    return <div className='font-medium'>{formatted}</div>
-  }
-},
-{
-  accessorKey: 'expora',
-  header: 'expora'
-},
-{
   accessorKey:  'lastlogin',
   header: 'Dernière connexion',
   cell: ({ row }) => {
-          const date = new Date(row.getValue('lastlogin'))
-          // const formatted = date.toLocaleDateString()
-          const formatted = Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(date)
-          return <div className='font-medium'>{formatted}</div>
-        }
+    const date = row.getValue('lastlogin') as Date | null;
+    if (!date) return <div className="text-xs sm:text-sm text-gray-400">Jamais</div>;
+    const formatted = Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short'}).format(new Date(date));
+    return <div className='text-xs sm:text-sm'>{formatted}</div>
+  }
 },
 {
   accessorKey: 'email',
-  header: 'email'
-  
+  header: 'Email',
+  cell: ({ row }) => {
+    return <div className="text-xs sm:text-sm">{row.getValue('email') || '-'}</div>
+  }
 },
 
 // {  <td>{new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'short',}).format(lastlogin)}</td>
@@ -144,32 +137,11 @@ export const columns: ColumnDef<Users>[] = [
 //   },
   {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row }) => {
-      const base = row.original
+      const user = row.original
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className="bg-harpSkyLight">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(base.netid)}
-            >
-              Copier Environnement
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>
-                <Link href={`/list/users/${base.netid}`} > Voir <h1 className='uppercase font-semibold'>{base.netid}</h1></Link>
-              </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+      return <UserActions user={user} />
     }
   }
 ]

@@ -1,25 +1,31 @@
+import React from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Server, Plus } from "lucide-react";
+import { CreateEnvForm } from '@/components/env/CreateEnvForm';
 
-import EnvForm from '@/components/admin/env-form';
-import { Metadata } from 'next';
-
-
-export const metadata: Metadata = {
-  title: 'Créér Environnement',
-};
-
-const CreateEnvpage = () => {
-    return (
-      <div className='px-5'>
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center rounded-xl px-4'>
-           <div className="px-4 bg-white rounded-xl w-full max-w-md shadow-2xl">
-          <h2 className='h2-bold'>Créer un environnement</h2>
-            <div className=' px-5 my-8'>
-              <EnvForm type='Créer' />
+export default async function CreateEnvPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="harp-card-header">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Plus className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-white">Créer un nouvel environnement</CardTitle>
+                <CardDescription className="text-orange-100">
+                  Remplissez les informations pour créer un nouvel environnement
+                </CardDescription>
+              </div>
             </div>
-       </div>
-        </div>
-        </div>
-      );
+          </CardHeader>
+          <CardContent className="p-6">
+            <CreateEnvForm />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
- 
-export default CreateEnvpage;

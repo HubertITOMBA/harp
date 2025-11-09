@@ -18,9 +18,13 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   updateEnvsharpOrarelease,
   importerLesPToolsVersions,
   importerLesEnvDispos,
+  importerLesTools,
+  importerLesMenuRoles,
   insertTypeBases} from "@/actions/importharp";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Settings, Database, Server, Users, Package, RefreshCw, Link2, History, AlertTriangle, Wrench } from "lucide-react";
 import VerifierDoublons from '@/components/harp/VerifierDoublons';
 
   const handlestatutEnv = async () => {
@@ -287,7 +291,7 @@ const handleRealeseEnv = async () => {
   } catch (error) {
     toast.error("Une erreur est survenue lors de la mise à jour des releaseId de ENVSHARP !");
   }
-}
+} 
  
 
 const handleImporterHarpServe = async () => {
@@ -428,6 +432,23 @@ toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
 
 
 
+const handleLesTools = async () => {
+  try {
+
+const result = await  importerLesTools();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
+}
+}
+
 
 const handleLesTypeBases = async () => {
   try {
@@ -445,299 +466,338 @@ toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
 }
 }
 
+const handleLesMenuRole = async () => {
+  try {
+    const result = await  importerLesMenuRoles();
+if (result.error) {
+  toast.error(result.error);
+} else if (result.success) {
+  toast.success(result.success);
+ }
+ else if (result.info) {
+  toast.info(result.info);
+}
+} catch (error) {
+toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
+}
+}
+
 
  //=============================================   
 export default function Home() {
   return (
-    <main className="container w-full bg-transarent">
-        
-           <div className="flex-2  w-ful">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="harp-card-header">
+            <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl lg:text-3xl font-bold">
+              <Settings className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
+              Paramètres et Importations
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base mt-2">
+              Gestion des données et configurations du système HARP
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
-               <div className="w-1/4 flex-1 flex-row  p-4 items-center gap-8">
-                     <div>
-                      <Button 
-                              onClick={handleDefaultValues}
-                              variant="default"
-                              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                        >
-                            1 - Ajuster les valeurs nulles
-                        </Button>
-                      </div>
-                      
-                      <div>
-                      <Button 
-                              onClick={handleLesTypeBases}
-                              variant="default"
-                              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                        >
-                            1a - Ajouter les types de bases
-                        </Button>
-                      </div>
+        {/* Grid of action cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          {/* Initialisation */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Database className="h-5 w-5 text-blue-600" />
+                Initialisation
+              </CardTitle>
+              <CardDescription>Configuration initiale du système</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handleDefaultValues}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Ajuster les valeurs nulles
+              </Button>
+              <Button 
+                onClick={handleLesTypeBases}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Ajouter les types de bases
+              </Button>
+              <Button 
+                onClick={handleGenererMenus}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Générer les Menus
+              </Button>
+            </CardContent>
+          </Card>
 
-                      <div>
-                        <Button 
-                                onClick={handleGenererMenus}
-                                variant="default"
-                                className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                          >
-                              2 - Generer les Menus
-                          </Button>
-                      </div>
-                      <div>
-                          <Button 
-                              onClick={handlestatutEnv}
-                              variant="default"
-                              className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                        >
-                          3 - Les statuts d'environnement
-                        </Button>
-                        </div>
-                        <div>
-                            <Button 
-                                    onClick={handlePsoft}
-                                    variant="default"
-                                    className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                              >
-                                    4 - Importer les versions PeopleSoft
-                              </Button>  
-                        </div> 
-                         
-                        <div>
-                            <Button 
-                                    onClick={handlePTools}
-                                    variant="default"
-                                    className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                              >
-                                    401 - Importer les versions PeopleTools
-                              </Button>  
-                        </div> 
+          {/* Environnements */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <RefreshCw className="h-5 w-5 text-green-600" />
+                Environnements
+              </CardTitle>
+              <CardDescription>Gestion des environnements</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handlestatutEnv}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les statuts d&apos;environnement
+              </Button>
+              <Button 
+                onClick={handleTypeEnvs}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les types d&apos;environnements
+              </Button>
+              <Button 
+                onClick={handleLinksEnv}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Lier les Types d&apos;environnement
+              </Button>
+              <Button 
+                onClick={handleEnvsHarp}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les environnements HARP
+              </Button>
+              <Button 
+                onClick={handeleInstancesEnvs}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les instances d&apos;environnements
+              </Button>
+            </CardContent>
+          </Card>
 
-                        <div>
-                              <Button 
-                                  onClick={handleRelease}
-                                  variant="default"
-                                  className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                            >
-                              5 - Importer les Harp Release
-                            </Button>
-                        </div>  
-                        <div>
-                            <Button 
-                                    onClick={handleTypeEnvs}
-                                    variant="default"
-                                    className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                              >
-                                    6 - Les liens de types d'environnements
-                              </Button>  
-                        </div>
-                    
-                     <div>
-                    
-                     <Button 
-                            onClick={handleLinksEnv}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                          7- Lier les Types d'environnement
-                      </Button>
-                     </div>
+          {/* Versions */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Package className="h-5 w-5 text-purple-600" />
+                Versions
+              </CardTitle>
+              <CardDescription>Gestion des versions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handlePsoft}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les versions PeopleSoft
+              </Button>
+              <Button 
+                onClick={handlePTools}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les versions PeopleTools
+              </Button>
+              <Button 
+                onClick={handleRelease}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les Harp Release
+              </Button>
+              <Button 
+                onClick={handleRealeseEnv}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Lier les Environnements aux Harp releases
+              </Button>
+            </CardContent>
+          </Card>
 
-                       
-                     <div>
-                     <Button 
-                            onClick={handleImportRoles}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           8- Les roles
-                      </Button>
-                     </div>
+          {/* Serveurs */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Server className="h-5 w-5 text-orange-600" />
+                Serveurs
+              </CardTitle>
+              <CardDescription>Gestion des serveurs et instances</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handleImporterHarpServe}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les serveurs
+              </Button>
+              <Button 
+                onClick={handleImportINSTANCES}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les ORACLE_SID
+              </Button>
+              <Button 
+                onClick={handleMAjINSTANCES}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Mettre à jour les ORACLE_SID
+              </Button>
+              <Button 
+                onClick={handleLesEnvServeurs}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les ENVS Serveurs
+              </Button>
+              <Button 
+                onClick={handleMAjInstance_ID_ENVS}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Mettre à jour INSTANCES ID dans les ENVS Serveurs
+              </Button>
+              <Button 
+                onClick={handleOraRelease}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Mettre à jour Version ORACLE sur les ENVS
+              </Button>
+            </CardContent>
+          </Card>
 
-                     
-                     <div>
-                     <Button 
-                            onClick={handleImporterHarpServe}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           800- Importer les serveurs
-                      </Button>
-                     </div>
-                     
-
-                     
-                     <div>
-                     <Button 
-                            onClick={handleImportINSTANCES}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           801- Importer les ORACLE_SID
-                      </Button>
-                     </div> 
-
-                     
-
-                     <div>
-                     <Button 
-                            onClick={handleMAjINSTANCES}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           802- MAJ les ORACLE_SID
-                      </Button>
-                     </div> 
-                  
-
-                     <div>
-                     <Button 
-                            onClick={handleLesEnvServeurs}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           803-  importer Les ENVS Serveurs
-                      </Button>
-                     </div>  
-
-                     <div>
-                     <Button 
-                            onClick={handleMAjInstance_ID_ENVS}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           804-  Mis a jours INSTANCES ID dans Les ENVS Serveurs
-                      </Button>
-                     </div>  
-                     
-
-                     <div>
-                     <Button 
-                            onClick={handleOraRelease}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           805-  Mis a jours Version ORACLE sur Les ENVS
-                      </Button>
-                     </div>  
-
-                     <div>
-                     <Button 
-                            onClick={handleEnvsHarp}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                           9- Les Liens des Envs pour PRISMA
-                      </Button>  
-                     </div>
-                     <div>
-                     <Button 
-                            onClick={handeleInstancesEnvs}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                            10 - Les instances d'environnements
-                      </Button>  
-                     </div>
-
-                    
-
-                    
-
-                  </div>
-                  
-                  
-                    <div className="w-1/6 flex-1 p-4 items-center gap-8">
-                    
-                         
-    
-                          <div>
-                        <Button 
-                            onClick={handleImportHistoEnvs}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        1OO - Historique d'environnements 
-                      </Button>
-                      </div>          
-
-                        <div>
-                        <Button 
-                            onClick={handleStatutDisponible}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        11 - Disponibilités d'environnements 
-                      </Button>
-                      </div> 
-
-                      <div>
-                        <Button 
-                            onClick={handleLesEnvDispos}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        110 - Importer les InDisponibilités d'environnements 
-                      </Button>
-                      </div> 
-                      
+          {/* Utilisateurs */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Users className="h-5 w-5 text-indigo-600" />
+                Utilisateurs
+              </CardTitle>
+              <CardDescription>Gestion des utilisateurs et rôles</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handleImportRoles}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les rôles
+              </Button>
+              <Button 
+                onClick={handleImportUsers}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Migrer les utilisateurs vers PRISMA
+              </Button>
 
 
-                      <div>
-                      <Button 
-                            onClick={handleImportUsers}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        12 -  Migrer les utilisateurs vers PRISMA 
-                      </Button>
-                      </div>
-                      <div>
-                      <Button 
-                            onClick={handleImportUsers}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        13 -  Importer Utilisateurs 
-                      </Button>
-                      </div>
-                      <div>
-                      <Button 
-                            onClick={handleRoleUsers}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        14 - Importer les roles Utilisateurs 
-                      </Button>
-                      </div>
+              <Button 
+                onClick={handleLesMenuRole}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les accès aux Menus
+              </Button>
+              <Button 
+                onClick={handleRoleUsers}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les rôles Utilisateurs
+              </Button>
+            </CardContent>
+          </Card>
 
-                      <div>
-                      <Button 
-                            onClick={handleRealeseEnv}
-                            variant="default"
-                            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 mb-5"
-                      >
-                        15 - Lier les Environnement aux Harp releases 
-                      </Button>
-                      </div>
+          {/* Historique et Disponibilités */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <History className="h-5 w-5 text-amber-600" />
+                Historique &amp; Disponibilités
+              </CardTitle>
+              <CardDescription>Gestion de l&apos;historique et des disponibilités</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handleImportHistoEnvs}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer l&apos;historique d&apos;environnements
+              </Button>
+              <Button 
+                onClick={handleStatutDisponible}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Mettre à jour les disponibilités
+              </Button>
+              <Button 
+                onClick={handleLesEnvDispos}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les Indisponibilités d&apos;environnements
+              </Button>
+            </CardContent>
+          </Card>
 
-                   
-                        
+          {/* Outils */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Wrench className="h-5 w-5 text-red-600" />
+                Outils
+              </CardTitle>
+              <CardDescription>Gestion des outils système</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={handleLesTools}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les anciens chemins de tools
+              </Button>
+            </CardContent>
+          </Card>
 
-                      <div>
-                      <h1 className="text-2xl mb-4">Vérifier doublons SID</h1>
-                      <VerifierDoublons />
-                      </div>
+          {/* Vérifications */}
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                Vérifications
+              </CardTitle>
+              <CardDescription>Outils de vérification des données</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium mb-2">Vérifier doublons SID</h3>
+                <VerifierDoublons />
+              </div>
+            </CardContent>
+          </Card>
 
-
-                      
-  
-                  </div>
-                </div>
-           </div>
-        
-    </main>
+        </div>
+      </div>
+    </div>
   );
 };
-
-
