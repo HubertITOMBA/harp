@@ -399,39 +399,57 @@ export const importerLesHarproles = async () => {
 
 
 
+/**
+ * Importe les environnements de psadm_env vers envsharp
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export async function importListEnvs() {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.envsharp.count();
-    
-    if (count > 0) {
-      return { info: "La table envsharp contient déjà des données. Importation ignorée." };
-    }
-
-   
-    // Récupérer les données de psadm_env
+    // Récupérer toutes les données de psadm_env
+    // Note: env est la clé primaire, donc elle ne peut pas être null
     const envData = await prisma.psadm_env.findMany();
-    // const envData = await prisma.psadm_env.findMany({
-    //   where: {
-    //     env: { not: null } // S'assurer que env n'est pas null
-    //   }
-    // });
 
     if (!envData.length) {
       return { warning: "Aucune donnée trouvée dans psadm_env" };
     }
 
-     // Réinitialiser l'auto-increment
-     await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
+    // Récupérer les environnements déjà présents dans envsharp
+    const existingEnvs = await prisma.envsharp.findMany({
+      select: {
+        env: true
+      }
+    });
 
+    // Créer un Set des environnements existants pour une recherche rapide
+    const existingEnvSet = new Set(existingEnvs.map(e => e.env));
 
-    // Insérer les données dans envsharp
+    // Filtrer uniquement les environnements qui n'existent pas encore (delta)
+    const envsToImport = envData.filter(record => !existingEnvSet.has(record.env));
+
+    if (envsToImport.length === 0) {
+      return { 
+        info: "Tous les environnements sont déjà importés. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInPsadmEnv: envData.length,
+          totalInEnvsharp: existingEnvs.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingEnvs.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouveaux enregistrements
     const result = await prisma.envsharp.createMany({
-      data: envData.map(record => ({
+      data: envsToImport.map(record => ({
         env: record.env,
         aliasql: record.aliasql,
         oraschema: record.oraschema,
-       // orarelease: record.orarelease,
         url: record.url || null,
         appli: record.appli || null,
         psversion: record.psversion || null,
@@ -448,14 +466,16 @@ export async function importListEnvs() {
         typenvid: record.typenvid || null,
         statenvId: record.statenvId || null
       })),
-      skipDuplicates: true
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
     return { 
-      success: `${result.count} environnements Harp importés avec succès !`,
+      success: `${result.count} nouveau(x) environnement(s) Harp importé(s) avec succès !`,
       details: {
-        totalProcessed: envData.length,
-        imported: result.count
+        totalInPsadmEnv: envData.length,
+        totalInEnvsharp: existingEnvs.length + result.count,
+        imported: result.count,
+        skipped: envData.length - envsToImport.length
       }
     };
 
@@ -470,26 +490,23 @@ export async function importListEnvs() {
 
 
 
+/**
+ * Importe les instances Oracle de psadm_oracle vers harpora
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importInstanceOra = async () => {
   try {
-
-     // Vérifier si la table envsharp contient des données
+    // Vérifier si la table envsharp contient des données
     const countEnvsharp = await prisma.envsharp.count();
     
     if (countEnvsharp === 0) {
       return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
     }
-   
-     // Vérifier si la table est vide
-     const count = await prisma.harpora.count();
-    
-     if (count > 0) {
-       return { info: "La table harpora contient déjà toutes les instances d'environnements. Importation ignorée." };
-     }
 
-
-     // Récupérer les données avec un JOIN entre envsharp et psadm_oracle
-     const instances = await prisma.$queryRaw<Array<{
+    // Récupérer toutes les données avec un JOIN entre envsharp et psadm_oracle
+    const allInstances = await prisma.$queryRaw<Array<{
       envId: number;
       oracle_sid: string;
       aliasql: string;
@@ -507,24 +524,55 @@ export const importInstanceOra = async () => {
       FROM envsharp e
       JOIN psadm_oracle o ON e.env = o.aliasql 
       ORDER BY e.id ASC
-    `;  
+    `;
 
-    
-    if (instances.length === 0) {
-      return { info: "La table harpora ne contient aucun environnement. Importation ignorée." };
+    if (allInstances.length === 0) {
+      return { info: "Aucune instance Oracle trouvée à importer." };
     }
-    
 
-     // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
+    // Récupérer les instances déjà présentes dans harpora
+    const existingInstances = await prisma.harpora.findMany({
+      select: {
+        envId: true,
+        oracle_sid: true,
+        aliasql: true,
+        oraschema: true
+      }
+    });
 
+    // Créer un Set des instances existantes pour une recherche rapide
+    // Clé unique: envId + oracle_sid + aliasql + oraschema
+    const existingInstancesSet = new Set(
+      existingInstances.map(inst => 
+        `${inst.envId}-${inst.oracle_sid}-${inst.aliasql}-${inst.oraschema}`
+      )
+    );
 
-    // Récupérer les données depuis les tables existantes
-    const psadmData = await prisma.psadm_oracle.findMany();
+    // Filtrer uniquement les instances qui n'existent pas encore (delta)
+    const instancesToImport = allInstances.filter(instance => {
+      const key = `${instance.envId}-${instance.oracle_sid}-${instance.aliasql}-${instance.oraschema}`;
+      return !existingInstancesSet.has(key);
+    });
 
-    // Insérer les résultats dans la table harpora
+    if (instancesToImport.length === 0) {
+      return { 
+        info: "Toutes les instances Oracle sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allInstances.length,
+          totalInHarpora: existingInstances.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingInstances.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles instances
     const importedData = await prisma.harpora.createMany({
-      data: instances.map( instance => ({
+      data: instancesToImport.map(instance => ({
         envId: instance.envId,
         oracle_sid: instance.oracle_sid,
         aliasql: instance.aliasql,
@@ -532,13 +580,24 @@ export const importInstanceOra = async () => {
         descr: instance.descr,
         orarelease: instance.orarelease
       })),
-      skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${importedData.count} enregistrements importés avec succès !` };
+    return { 
+      success: `${importedData.count} nouvelle(s) instance(s) Oracle importée(s) avec succès !`,
+      details: {
+        totalInSource: allInstances.length,
+        totalInHarpora: existingInstances.length + importedData.count,
+        imported: importedData.count,
+        skipped: allInstances.length - instancesToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation d'instances d'environnements:", error);
-    return { error: "Erreur lors de l'importation  d'instances d'environnements." };
+    return { 
+      error: "Erreur lors de l'importation d'instances d'environnements",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -593,6 +652,12 @@ export const importInstanceOra = async () => {
 
  
 
+/**
+ * Importe les instances Oracle de psadm_oracle vers harpora (version alternative)
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerInstancesOracle = async () => {
   try {
     // Vérifier si la table envsharp contient des données
@@ -601,19 +666,16 @@ export const importerInstancesOracle = async () => {
     if (countEnvsharp === 0) {
       return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
     }
-   
-    // Vérifier si la table est vide
-    const count = await prisma.harpora.count();
-    
-    if (count > 0) {
-      return { info: "La table harpora contient déjà des données. Importation ignorée." };
-    }
 
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
-
-    // Récupérer les données depuis les tables existantes
-    const results = await prisma.$queryRaw`
+    // Récupérer toutes les données depuis les tables existantes
+    const allResults = await prisma.$queryRaw<Array<{
+      envId: number;
+      oracle_sid: string;
+      aliasql: string;
+      oraschema: string;
+      descr: string | null;
+      orarelease: string | null;
+    }>>`
       SELECT 
         e.id as envId,
         h.oracle_sid,
@@ -626,23 +688,77 @@ export const importerInstancesOracle = async () => {
       ORDER BY e.id ASC
     `;
 
-    // Insérer les résultats dans la table harpora
-    const importedData = await prisma.harpora.createMany({
-      data: results.map((row: any) => ({
-        envId: row.envId,
-        oracle_sid: row.oracle_sid,
-        aliasql: row.aliasql,
-        oraschema: row.oraschema,
-        descr: row.descr,
-        orarelease: row.orarelease
-      })),
-      skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
+    if (allResults.length === 0) {
+      return { info: "Aucune instance Oracle trouvée à importer." };
+    }
+
+    // Récupérer les instances déjà présentes dans harpora
+    const existingInstances = await prisma.harpora.findMany({
+      select: {
+        envId: true,
+        oracle_sid: true,
+        aliasql: true,
+        oraschema: true
+      }
     });
 
-    return { success: `${importedData.count} instances Oracle importées avec succès !` };
+    // Créer un Set des instances existantes pour une recherche rapide
+    const existingInstancesSet = new Set(
+      existingInstances.map(inst => 
+        `${inst.envId}-${inst.oracle_sid}-${inst.aliasql}-${inst.oraschema}`
+      )
+    );
+
+    // Filtrer uniquement les instances qui n'existent pas encore (delta)
+    const instancesToImport = allResults.filter(result => {
+      const key = `${result.envId}-${result.oracle_sid}-${result.aliasql}-${result.oraschema}`;
+      return !existingInstancesSet.has(key);
+    });
+
+    if (instancesToImport.length === 0) {
+      return { 
+        info: "Toutes les instances Oracle sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpora: existingInstances.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingInstances.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpora AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles instances
+    const importedData = await prisma.harpora.createMany({
+      data: instancesToImport.map(result => ({
+        envId: result.envId,
+        oracle_sid: result.oracle_sid,
+        aliasql: result.aliasql,
+        oraschema: result.oraschema,
+        descr: result.descr,
+        orarelease: result.orarelease
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) instance(s) Oracle importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpora: existingInstances.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - instancesToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des instances Oracle:", error);
-    return { error: "Erreur lors de l'importation des instances Oracle" };
+    return { 
+      error: "Erreur lors de l'importation des instances Oracle",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -705,42 +821,97 @@ export async function migrerLesUtilisateurs() {
   }
 };
  
+/**
+ * Migre les rôles utilisateurs de psadm_roleuser vers harpuseroles
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const migrerLesRolesUtilisateurs = async () => {
   try {
-
-     // Vérifier si la table est vide
-     const countuser = await prisma.user.count();
+    // Vérifier si la table user est vide
+    const countuser = await prisma.user.count();
     
-     if (countuser === 0) {
-       return { info: "La table user est vide. Vous devez 'abord importer les utilisateurs. Importation ignorée." };
-     }
-    // Vérifier si la table est vide
-    const count = await prisma.harpuseroles.count();
-    
-    if (count > 0) {
-      return { info: "La table harpuseroles contient déjà des données. Importation ignorée." };
+    if (countuser === 0) {
+      return { info: "La table user est vide. Vous devez d'abord importer les utilisateurs. Importation ignorée." };
     }
 
-    // Récupérer les données avec la requête fournie
-    const results = await prisma.$queryRaw`
+    // Récupérer toutes les données avec la requête fournie
+    const allResults = await prisma.$queryRaw<Array<{
+      userid: number;
+      roleid: number;
+      datmaj: Date | null;
+    }>>`
       SELECT u.id as userid, h.id as roleid, pr.datmaj 
       FROM User u, psadm_roleuser pr, harproles h  
       WHERE u.netid = pr.netid AND h.role = pr.role
     `;
 
-    // Insérer les résultats dans harpuseroles
-    const importedData = await prisma.harpuseroles.createMany({
-      data: results.map((row: any) => ({
-        userId: row.userid,
-        roleId: row.roleid,
-        datmaj: row.datmaj || new Date()
-      }))
+    if (allResults.length === 0) {
+      return { info: "Aucune association utilisateur-rôle trouvée à importer." };
+    }
+
+    // Récupérer les associations déjà présentes dans harpuseroles
+    const existingAssociations = await prisma.harpuseroles.findMany({
+      select: {
+        userId: true,
+        roleId: true
+      }
     });
 
-    return { success: `${importedData.count} rôles d'utilisateurs migrés avec succès !` };
+    // Créer un Set des associations existantes pour une recherche rapide
+    // Clé unique: userId + roleId (clé primaire composite)
+    const existingAssociationsSet = new Set(
+      existingAssociations.map(assoc => `${assoc.userId}-${assoc.roleId}`)
+    );
+
+    // Filtrer uniquement les associations qui n'existent pas encore (delta)
+    const associationsToImport = allResults.filter(result => {
+      const key = `${result.userid}-${result.roleid}`;
+      return !existingAssociationsSet.has(key);
+    });
+
+    if (associationsToImport.length === 0) {
+      return { 
+        info: "Toutes les associations utilisateur-rôle sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpuseroles: existingAssociations.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingAssociations.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpuseroles AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles associations
+    const importedData = await prisma.harpuseroles.createMany({
+      data: associationsToImport.map(result => ({
+        userId: result.userid,
+        roleId: result.roleid,
+        datmaj: result.datmaj || new Date()
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) association(s) utilisateur-rôle migrée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpuseroles: existingAssociations.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - associationsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de la migration des rôles utilisateurs:", error);
-    return { error: "Erreur lors de la migration des rôles utilisateurs" };
+    return { 
+      error: "Erreur lors de la migration des rôles utilisateurs",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -875,118 +1046,252 @@ export const verifierDoublonsOracleSid = async () => {
 
  
 
+/**
+ * Importe les versions PeopleSoft de psadm_version vers psoftversion
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesPsoftVersions = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.psoftversion.count();
-    
-    if (count > 0) {
-      return { info: "La table psoftversion contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE psoftversion AUTO_INCREMENT = 1`;
-
-    // Récupérer les données de psadm_version
-    const versions = await prisma.$queryRaw`
+    // Récupérer toutes les données de psadm_version
+    const allVersions = await prisma.$queryRaw<Array<{
+      psversion: string;
+      ptversion: string;
+      harprelease: string;
+      descr: string | null;
+    }>>`
       SELECT psversion, ptversion, harprelease, descr 
       FROM psadm_version
     `;
 
-    // Insérer les données dans psoftversion
+    if (allVersions.length === 0) {
+      return { info: "Aucune version PeopleSoft trouvée à importer." };
+    }
+
+    // Récupérer les versions déjà présentes dans psoftversion
+    const existingVersions = await prisma.psoftversion.findMany({
+      select: {
+        psversion: true,
+        ptversion: true,
+        harprelease: true
+      }
+    });
+
+    // Créer un Set des versions existantes pour une recherche rapide
+    // Clé unique: psversion + ptversion + harprelease
+    const existingVersionsSet = new Set(
+      existingVersions.map(ver => `${ver.psversion}-${ver.ptversion}-${ver.harprelease}`)
+    );
+
+    // Filtrer uniquement les versions qui n'existent pas encore (delta)
+    const versionsToImport = allVersions.filter(version => {
+      const key = `${version.psversion}-${version.ptversion}-${version.harprelease}`;
+      return !existingVersionsSet.has(key);
+    });
+
+    if (versionsToImport.length === 0) {
+      return { 
+        info: "Toutes les versions PeopleSoft sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allVersions.length,
+          totalInPsoftversion: existingVersions.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingVersions.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE psoftversion AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles versions
     const result = await prisma.psoftversion.createMany({
-      data: versions.map((version: any) => ({
+      data: versionsToImport.map(version => ({
         psversion: version.psversion,
         ptversion: version.ptversion,
         harprelease: version.harprelease,
         descr: version.descr
       })),
-      skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${result.count} versions PeopleSoft importées avec succès !` };
+    return { 
+      success: `${result.count} nouvelle(s) version(s) PeopleSoft importée(s) avec succès !`,
+      details: {
+        totalInSource: allVersions.length,
+        totalInPsoftversion: existingVersions.length + result.count,
+        imported: result.count,
+        skipped: allVersions.length - versionsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des versions PeopleSoft:", error);
-    return { error: "Erreur lors de l'importation des versions PeopleSoft" };
+    return { 
+      error: "Erreur lors de l'importation des versions PeopleSoft",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 }; 
 
+/**
+ * Importe les versions PeopleTools de psadm_ptools vers ptoolsversion
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesPToolsVersions = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.ptoolsversion.count();
-    
-    if (count > 0) {
-      return { info: "La table ptoolsversion contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE ptoolsversion AUTO_INCREMENT = 1`;
-
-    // Récupérer les données de psadm_version
-    const versions = await prisma.$queryRaw`
+    // Récupérer toutes les données de psadm_ptools
+    const allVersions = await prisma.$queryRaw<Array<{
+      ptversion: string;
+      descr: string | null;
+    }>>`
       SELECT ptversion, descr 
       FROM psadm_ptools
     `;
 
+    if (allVersions.length === 0) {
+      return { info: "Aucune version PeopleTools trouvée à importer." };
+    }
 
-    // Insérer les données dans psoftversion
+    // Récupérer les versions déjà présentes dans ptoolsversion
+    const existingVersions = await prisma.ptoolsversion.findMany({
+      select: {
+        ptversion: true
+      }
+    });
+
+    // Créer un Set des versions existantes pour une recherche rapide
+    // Clé unique: ptversion
+    const existingVersionsSet = new Set(existingVersions.map(ver => ver.ptversion));
+
+    // Filtrer uniquement les versions qui n'existent pas encore (delta)
+    const versionsToImport = allVersions.filter(version => 
+      !existingVersionsSet.has(version.ptversion)
+    );
+
+    if (versionsToImport.length === 0) {
+      return { 
+        info: "Toutes les versions PeopleTools sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allVersions.length,
+          totalInPtoolsversion: existingVersions.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingVersions.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE ptoolsversion AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles versions
     const result = await prisma.ptoolsversion.createMany({
-      data: versions.map((version: any) => ({
+      data: versionsToImport.map(version => ({
         ptversion: version.ptversion,
         descr: version.descr
       })),
-      skipDuplicates: true // Ignore les doublons grâce à la contrainte @@unique
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${result.count} versions PeopleTools importées avec succès !` };
+    return { 
+      success: `${result.count} nouvelle(s) version(s) PeopleTools importée(s) avec succès !`,
+      details: {
+        totalInSource: allVersions.length,
+        totalInPtoolsversion: existingVersions.length + result.count,
+        imported: result.count,
+        skipped: allVersions.length - versionsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des versions PeopleTools:", error);
-    return { error: "Erreur lors de l'importation des versions PeopleTools" };
+    return { 
+      error: "Erreur lors de l'importation des versions PeopleTools",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 }; 
 
 
+/**
+ * Migre les versions Harp de psadm_release vers releaseenv
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const migrateReleaseData = async () => {
   try {
-    // Vérifier si la table de destination est vide
-    const countReleaseEnv = await prisma.releaseenv.count();
-    
-    if (countReleaseEnv > 0) {
-      return { info: "La table releaseenv contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment de la table de destination
-    await prisma.$executeRaw`ALTER TABLE releaseenv AUTO_INCREMENT = 1`;
-
-    // Récupérer les données source
-    const releases = await prisma.psadm_release.findMany({
+    // Récupérer toutes les données source
+    const allReleases = await prisma.psadm_release.findMany({
       select: {
         harprelease: true,
         descr: true,
       },
     });
 
-    if (releases.length === 0) {
+    if (allReleases.length === 0) {
       return { info: "Aucune donnée à migrer depuis psadm_release." };
     }
 
-    // Insérer les données dans releaseenv
+    // Récupérer les releases déjà présentes dans releaseenv
+    const existingReleases = await prisma.releaseenv.findMany({
+      select: {
+        harprelease: true
+      }
+    });
+
+    // Créer un Set des releases existantes pour une recherche rapide
+    // Clé unique: harprelease
+    const existingReleasesSet = new Set(existingReleases.map(rel => rel.harprelease));
+
+    // Filtrer uniquement les releases qui n'existent pas encore (delta)
+    const releasesToImport = allReleases.filter(release => 
+      !existingReleasesSet.has(release.harprelease)
+    );
+
+    if (releasesToImport.length === 0) {
+      return { 
+        info: "Toutes les versions Harp sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allReleases.length,
+          totalInReleaseenv: existingReleases.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingReleases.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE releaseenv AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles releases
     const result = await prisma.releaseenv.createMany({
-      data: releases.map(release => ({
+      data: releasesToImport.map(release => ({
         harprelease: release.harprelease,
         descr: release.descr,
-      }))
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
     return { 
-      success: `Migration réussie : ${result.count} versions Harp migrées avec succès !`
+      success: `Migration réussie : ${result.count} nouvelle(s) version(s) Harp migrée(s) avec succès !`,
+      details: {
+        totalInSource: allReleases.length,
+        totalInReleaseenv: existingReleases.length + result.count,
+        imported: result.count,
+        skipped: allReleases.length - releasesToImport.length
+      }
     };
 
   } catch (error) {
     console.error('Erreur lors de la migration des versions Harp:', error);
     return { 
-      error: "Erreur lors de la migration des versions Harp" 
+      error: "Erreur lors de la migration des versions Harp",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
     };
   }
 };
@@ -994,20 +1299,16 @@ export const migrateReleaseData = async () => {
 
 // ... existing code ...
 
+/**
+ * Importe les types d'environnement de psadm_typenv vers harptypenv
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesTypesEnv = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harptypenv.count();
-    
-    if (count > 0) {
-      return { info: "La table harptypenv contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harptypenv AUTO_INCREMENT = 1`;
-
-    // Récupérer les données de psadm_typenv
-    const typenvData = await prisma.psadm_typenv.findMany({
+    // Récupérer toutes les données de psadm_typenv
+    const allTypenvData = await prisma.psadm_typenv.findMany({
       select: {
         display: true,
         typenv: true,
@@ -1015,19 +1316,67 @@ export const importerLesTypesEnv = async () => {
       }
     });
 
-    // Insérer les données dans harptypenv
-    await prisma.harptypenv.createMany({
-      data: typenvData.map(record => ({
+    if (allTypenvData.length === 0) {
+      return { info: "Aucun type d'environnement trouvé à importer." };
+    }
+
+    // Récupérer les types d'environnement déjà présents dans harptypenv
+    const existingTypenvs = await prisma.harptypenv.findMany({
+      select: {
+        typenv: true
+      }
+    });
+
+    // Créer un Set des types d'environnement existants pour une recherche rapide
+    // Clé unique: typenv
+    const existingTypenvsSet = new Set(existingTypenvs.map(te => te.typenv));
+
+    // Filtrer uniquement les types d'environnement qui n'existent pas encore (delta)
+    const typenvsToImport = allTypenvData.filter(record => 
+      !existingTypenvsSet.has(record.typenv)
+    );
+
+    if (typenvsToImport.length === 0) {
+      return { 
+        info: "Tous les types d'environnement sont déjà importés. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allTypenvData.length,
+          totalInHarptypenv: existingTypenvs.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingTypenvs.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harptypenv AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouveaux types d'environnement
+    const result = await prisma.harptypenv.createMany({
+      data: typenvsToImport.map(record => ({
         typenv: record.typenv,
         href: `/list/envs/${record.display}`,  // Génération du href basé sur display
         descr: record.descr
-      }))
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: "Les types d'environnement ont été importés avec succès !" };
+    return { 
+      success: `${result.count} nouveau(x) type(s) d'environnement importé(s) avec succès !`,
+      details: {
+        totalInSource: allTypenvData.length,
+        totalInHarptypenv: existingTypenvs.length + result.count,
+        imported: result.count,
+        skipped: allTypenvData.length - typenvsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des types d'environnement:", error);
-    return { error: "Erreur lors de l'importation des types d'environnement" };
+    return { 
+      error: "Erreur lors de l'importation des types d'environnement",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -1077,54 +1426,86 @@ export const updateReleaseEnvIds = async () => {
   }
 };
 
+/**
+ * Migre les serveurs de psadm_srv vers harpserve
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const migrateServers = async () => {
-   
   try {
-    // Vérifier si harpserve est vide
-    const harpserveCount = await prisma.harpserve.count()
-    
-    if (harpserveCount > 0) {
-       return { info: "La table harpserve n'est pas vide." };
-    }
-    
-    // Récupérer les données de psadm_env
-    const psadmSrvData = await prisma.psadm_srv.findMany()
+    // Récupérer toutes les données de psadm_srv
+    const allPsadmSrvData = await prisma.psadm_srv.findMany();
 
-
-    if (psadmSrvData.length === 0) {
+    if (allPsadmSrvData.length === 0) {
       return { info: "La table psadm_srv est vide." };
-   }
+    }
 
-     // Réinitialiser l'auto-increment
-     await prisma.$executeRaw`ALTER TABLE harpserve AUTO_INCREMENT = 1`;
+    // Récupérer les serveurs déjà présents dans harpserve
+    const existingServers = await prisma.harpserve.findMany({
+      select: {
+        srv: true
+      }
+    });
 
-     // Insérer les données dans harpserve
+    // Créer un Set des serveurs existants pour une recherche rapide
+    // Clé unique: srv
+    const existingServersSet = new Set(existingServers.map(srv => srv.srv));
+
+    // Filtrer uniquement les serveurs qui n'existent pas encore (delta)
+    const serversToImport = allPsadmSrvData.filter(record => 
+      !existingServersSet.has(record.srv)
+    );
+
+    if (serversToImport.length === 0) {
+      return { 
+        info: "Tous les serveurs sont déjà importés. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allPsadmSrvData.length,
+          totalInHarpserve: existingServers.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingServers.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpserve AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouveaux serveurs
     const result = await prisma.harpserve.createMany({
-      data: psadmSrvData.map(record => ({
+      data: serversToImport.map(record => ({
         srv: record.srv,
         ip: record.ip,
         pshome: record.pshome,
         os: record.os,
         psuser: record.psuser,
         domain: record.domain,
-        // typsrv: record.,
         statenvId: 8,
-        
-      }))
-    })
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
 
-    console.log(`Migration terminée. ${result.count} enregistrements insérés.`)
-    return { success: `${result.count} enregistrements insérés dans HARPSERV !` };
+    console.log(`Migration terminée. ${result.count} enregistrements insérés.`);
+    return { 
+      success: `${result.count} nouveau(x) serveur(s) inséré(s) dans HARPSERV !`,
+      details: {
+        totalInSource: allPsadmSrvData.length,
+        totalInHarpserve: existingServers.length + result.count,
+        imported: result.count,
+        skipped: allPsadmSrvData.length - serversToImport.length
+      }
+    };
 
   } catch (error) {
-    console.error('Erreur lors de la migration:', error)
-    return { error: "Erreur lors de l'import dans HARPSERV" };
-  // } finally {
-  //   await prisma.$disconnect()
+    console.error('Erreur lors de la migration:', error);
+    return { 
+      error: "Erreur lors de l'import dans HARPSERV",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
-
-
-}
+};
 
 export const migrateDataToEnvsharp = async () => {
  
@@ -1350,15 +1731,14 @@ export const OLD_importerLesEnvInfos = async () => {
 };
 
 
+/**
+ * Importe les informations d'environnement de psadm_envinfo vers harpenvinfo
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesEnvInfos = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpenvinfo.count();
-    
-    if (count > 0) {
-      return { info: "La table harpenvinfo contient déjà des données. Importation ignorée." };
-    }
-
     await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt is null`;
     await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt = 0`;
     await prisma.$executeRaw`UPDATE psadm_envinfo SET refreshdt = datmaj where refreshdt is null`;
@@ -1366,30 +1746,26 @@ export const importerLesEnvInfos = async () => {
     await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt is null`;
     await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt = 0`;
 
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpenvinfo AUTO_INCREMENT = 1`;
-
-    // Récupérer les environnements
-    const envs = await prisma.envsharp.findMany({
+    // Récupérer tous les environnements
+    const allEnvs = await prisma.envsharp.findMany({
       select: {
         id: true,
         env: true,
       }
     });
 
-    // Récupérer les informations d'environnement
-    const envInfos = await prisma.psadm_envinfo.findMany();
+    // Récupérer toutes les informations d'environnement
+    const allEnvInfos = await prisma.psadm_envinfo.findMany();
 
-    // Préparer les données pour l'import
-    const dataToImport = envs.map(env => {
-      const matchingInfo = envInfos.find(info => info.env === env.env);
+    // Préparer toutes les données pour l'import
+    const allDataToImport = allEnvs.map(env => {
+      const matchingInfo = allEnvInfos.find(info => info.env === env.env);
       if (!matchingInfo) return null;
 
       return {
         envId: env.id,
         datadt: matchingInfo.datadt || new Date(),
         modetp: matchingInfo.modetp,
-        // modedt: matchingInfo.modedt || new Date(),
         refreshdt: matchingInfo.refreshdt || new Date(),
         lastcheckstatus: matchingInfo.lastcheckstatus,
         lastcheckdt: matchingInfo.lastcheckdt || new Date(),
@@ -1399,18 +1775,65 @@ export const importerLesEnvInfos = async () => {
         userunx: matchingInfo.userunx,
         pswd_ft_exploit: matchingInfo.pswd_ft_exploit
       };
-    }).filter(Boolean);
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
 
-    // Insérer les données
-    const importedData = await prisma.harpenvinfo.createMany({
-      data: dataToImport,
-      skipDuplicates: true
+    if (allDataToImport.length === 0) {
+      return { info: "Aucune information d'environnement trouvée à importer." };
+    }
+
+    // Récupérer les informations déjà présentes dans harpenvinfo
+    const existingInfos = await prisma.harpenvinfo.findMany({
+      select: {
+        envId: true
+      }
     });
 
-    return { success: `${importedData.count} informations d'environnements importées avec succès !` };
+    // Créer un Set des envIds existants pour une recherche rapide
+    // Clé unique: envId
+    const existingEnvIdsSet = new Set(existingInfos.map(info => info.envId));
+
+    // Filtrer uniquement les informations qui n'existent pas encore (delta)
+    const infosToImport = allDataToImport.filter(data => 
+      !existingEnvIdsSet.has(data.envId)
+    );
+
+    if (infosToImport.length === 0) {
+      return { 
+        info: "Toutes les informations d'environnement sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allDataToImport.length,
+          totalInHarpenvinfo: existingInfos.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingInfos.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpenvinfo AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles informations
+    const importedData = await prisma.harpenvinfo.createMany({
+      data: infosToImport,
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) information(s) d'environnement importée(s) avec succès !`,
+      details: {
+        totalInSource: allDataToImport.length,
+        totalInHarpenvinfo: existingInfos.length + importedData.count,
+        imported: importedData.count,
+        skipped: allDataToImport.length - infosToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des informations d'environnements:", error);
-    return { error: "Erreur lors de l'importation des informations d'environnements" };
+    return { 
+      error: "Erreur lors de l'importation des informations d'environnements",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 // ... existing code ...
@@ -1418,19 +1841,18 @@ export const importerLesEnvInfos = async () => {
 
 
 // select distinct e.oracle_sid from psadm_env e;
+/**
+ * Importe les instances Oracle distinctes de psadm_env vers harpinstance
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerOraInstances = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpinstance.count();
-    
-    if (count > 0) {
-      return { info: "La table harpinstance contient déjà des données. Importation ignorée." };
-    }
-   
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpinstance AUTO_INCREMENT = 1`;
-
-    const results = await prisma.$queryRaw`
+    // Récupérer toutes les instances Oracle distinctes
+    const allResults = await prisma.$queryRaw<Array<{
+      oracle_sid: string;
+    }>>`
       SELECT DISTINCT
         oracle_sid
       FROM psadm_env  
@@ -1438,16 +1860,65 @@ export const importerOraInstances = async () => {
       ORDER BY oracle_sid
     `;
 
-    const importedData = await prisma.harpinstance.createMany({
-      data: results.map((row: any) => ({
-        oracle_sid: row.oracle_sid
-      }))
+    if (allResults.length === 0) {
+      return { info: "Aucune instance Oracle trouvée à importer." };
+    }
+
+    // Récupérer les instances déjà présentes dans harpinstance
+    const existingInstances = await prisma.harpinstance.findMany({
+      select: {
+        oracle_sid: true
+      }
     });
 
-    return { success: `${importedData.count} instances Oracle importées avec succès !` };
+    // Créer un Set des instances existantes pour une recherche rapide
+    // Clé unique: oracle_sid
+    const existingInstancesSet = new Set(existingInstances.map(inst => inst.oracle_sid));
+
+    // Filtrer uniquement les instances qui n'existent pas encore (delta)
+    const instancesToImport = allResults.filter(result => 
+      !existingInstancesSet.has(result.oracle_sid)
+    );
+
+    if (instancesToImport.length === 0) {
+      return { 
+        info: "Toutes les instances Oracle sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpinstance: existingInstances.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingInstances.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpinstance AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles instances
+    const importedData = await prisma.harpinstance.createMany({
+      data: instancesToImport.map(result => ({
+        oracle_sid: result.oracle_sid
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) instance(s) Oracle importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpinstance: existingInstances.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - instancesToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des instances Oracle:", error);
-    return { error: "Erreur lors de l'importation des instances Oracle" };
+    return { 
+      error: "Erreur lors de l'importation des instances Oracle",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -1492,22 +1963,25 @@ export const updateInstanceServerIds = async () => {
   }
 };
 // select * from psadm_rolesrv where env like '%HPR1'; 
+/**
+ * Importe les relations environnement-serveur de psadm_rolesrv vers harpenvserv
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesEnvServeurs = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpenvserv.count();
-    
-    if (count > 0) {
-      return { info: "La table harpenvserv contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
+    // Mettre à jour les statuts avant l'import
     await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status = 21`;
     await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status is null`;
-    await prisma.$executeRaw`ALTER TABLE harpenvserv AUTO_INCREMENT = 1`;
 
-    // Récupérer les données avec la requête
-    const results = await prisma.$queryRaw`
+    // Récupérer toutes les données avec la requête
+    const allResults = await prisma.$queryRaw<Array<{
+      envId: number;
+      serverId: number;
+      typsrv: string;
+      status: number;
+    }>>`
       SELECT 
         e.id as envId,
         s.id as serverId,
@@ -1518,21 +1992,73 @@ export const importerLesEnvServeurs = async () => {
       ORDER BY e.env
     `;
 
-    // Insérer les données dans harpenvserv
-    const importedData = await prisma.harpenvserv.createMany({
-      data: results.map((row: any) => ({
-        envId: row.envId,
-        serverId: row.serverId,
-        typsrv: row.typsrv,
-        status: row.status  // Utilise 8 comme valeur par défaut si statenvId est null
-      })),
-      skipDuplicates: true // Ignore les doublons basés sur les contraintes uniques
+    if (allResults.length === 0) {
+      return { info: "Aucune relation environnement-serveur trouvée à importer." };
+    }
+
+    // Récupérer les relations déjà présentes dans harpenvserv
+    const existingRelations = await prisma.harpenvserv.findMany({
+      select: {
+        envId: true,
+        serverId: true,
+        typsrv: true
+      }
     });
 
-    return { success: `${importedData.count} relations environnement-serveur importées avec succès !` };
+    // Créer un Set des relations existantes pour une recherche rapide
+    // Clé unique: envId + serverId + typsrv
+    const existingRelationsSet = new Set(
+      existingRelations.map(rel => `${rel.envId}-${rel.serverId}-${rel.typsrv}`)
+    );
+
+    // Filtrer uniquement les relations qui n'existent pas encore (delta)
+    const relationsToImport = allResults.filter(result => {
+      const key = `${result.envId}-${result.serverId}-${result.typsrv}`;
+      return !existingRelationsSet.has(key);
+    });
+
+    if (relationsToImport.length === 0) {
+      return { 
+        info: "Toutes les relations environnement-serveur sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpenvserv: existingRelations.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingRelations.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpenvserv AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles relations
+    const importedData = await prisma.harpenvserv.createMany({
+      data: relationsToImport.map(result => ({
+        envId: result.envId,
+        serverId: result.serverId,
+        typsrv: result.typsrv,
+        status: result.status
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) relation(s) environnement-serveur importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpenvserv: existingRelations.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - relationsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des relations environnement-serveur:", error);
-    return { error: "Erreur lors de l'importation des relations environnement-serveur" };
+    return { 
+      error: "Erreur lors de l'importation des relations environnement-serveur",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
@@ -1615,20 +2141,21 @@ export const updateEnvsharpOrarelease = async () => {
 
 // ... existing code ...
 
+/**
+ * Importe les dispositions d'environnement de psadm_dispo vers harpenvdispo
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesEnvDispos = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpenvdispo.count();
-    
-    if (count > 0) {
-      return { info: "La table harpenvdispo contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpenvdispo AUTO_INCREMENT = 1`;
-
-    // Récupérer les données avec la requête
-    const results = await prisma.$queryRaw`
+    // Récupérer toutes les données avec la requête
+    const allResults = await prisma.$queryRaw<Array<{
+      envId: number;
+      fromdate: Date;
+      msg: string | null;
+      statenvId: number | null;
+    }>>`
       SELECT 
         e.id as envId,
         d.fromdate,
@@ -1641,51 +2168,134 @@ export const importerLesEnvDispos = async () => {
       ORDER BY e.env, d.fromdate DESC
     `;
 
-    // Insérer les données dans harpenvdispo
-    const importedData = await prisma.harpenvdispo.createMany({
-      data: results.map((row: any) => ({
-        envId: row.envId,
-        fromdate: row.fromdate || new Date(),
-        msg: row.msg,
-        statenvId: row.statenvId || 8 // Utilise 8 (OUVERT) comme valeur par défaut si statenvId est null
-      })),
-      skipDuplicates: true // Ignore les doublons basés sur les contraintes uniques
+    if (allResults.length === 0) {
+      return { info: "Aucune disposition d'environnement trouvée à importer." };
+    }
+
+    // Récupérer les dispositions déjà présentes dans harpenvdispo
+    const existingDispos = await prisma.harpenvdispo.findMany({
+      select: {
+        envId: true,
+        fromdate: true
+      }
     });
 
-    return { success: `${importedData.count} dispositions d'environnements importées avec succès !` };
+    // Créer un Set des dispositions existantes pour une recherche rapide
+    // Clé unique: envId + fromdate
+    const existingDisposSet = new Set(
+      existingDispos.map(dispo => `${dispo.envId}-${dispo.fromdate.getTime()}`)
+    );
+
+    // Filtrer uniquement les dispositions qui n'existent pas encore (delta)
+    const disposToImport = allResults.filter(result => {
+      const key = `${result.envId}-${result.fromdate.getTime()}`;
+      return !existingDisposSet.has(key);
+    });
+
+    if (disposToImport.length === 0) {
+      return { 
+        info: "Toutes les dispositions d'environnement sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpenvdispo: existingDispos.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingDispos.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpenvdispo AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles dispositions
+    const importedData = await prisma.harpenvdispo.createMany({
+      data: disposToImport.map(result => ({
+        envId: result.envId,
+        fromdate: result.fromdate || new Date(),
+        msg: result.msg,
+        statenvId: result.statenvId || 8 // Utilise 8 (OUVERT) comme valeur par défaut si statenvId est null
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) disposition(s) d'environnement importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpenvdispo: existingDispos.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - disposToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des dispositions d'environnements:", error);
-    return { error: "Erreur lors de l'importation des dispositions d'environnements" };
+    return { 
+      error: "Erreur lors de l'importation des dispositions d'environnements",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
+/**
+ * Importe les outils de psadm_tools vers harptools
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesTools = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harptools.count();
-    
-    if (count > 0) {
-      return { info: "La table harptools contient déjà des données. Importation ignorée." };
-    }
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harptools AUTO_INCREMENT = 1`;
-
     // Récupérer toutes les données de psadm_tools
-    const psadmTools = await prisma.psadm_tools.findMany({
+    const allPsadmTools = await prisma.psadm_tools.findMany({
       orderBy: {
         descr: 'asc',
       },
     });
 
-    if (psadmTools.length === 0) {
+    if (allPsadmTools.length === 0) {
       return { info: "La table psadm_tools est vide. Aucune donnée à importer." };
     }
 
-    // Mapper les données de psadm_tools vers harptools
-    // Note: La colonne 'tool' n'est pas importée (laissée vide)
+    // Récupérer les outils déjà présents dans harptools
+    const existingTools = await prisma.harptools.findMany({
+      select: {
+        cmd: true,
+        tooltype: true,
+        descr: true
+      }
+    });
+
+    // Créer un Set des outils existants pour une recherche rapide
+    // Clé unique: cmd + tooltype + descr (pour identifier les outils uniques)
+    const existingToolsSet = new Set(
+      existingTools.map(tool => `${tool.cmd}-${tool.tooltype}-${tool.descr}`)
+    );
+
+    // Filtrer uniquement les outils qui n'existent pas encore (delta)
+    const toolsToImport = allPsadmTools.filter(tool => {
+      const key = `${tool.cmd}-${tool.tooltype}-${tool.descr}`;
+      return !existingToolsSet.has(key);
+    });
+
+    if (toolsToImport.length === 0) {
+      return { 
+        info: "Tous les outils sont déjà importés. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allPsadmTools.length,
+          totalInHarptools: existingTools.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingTools.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harptools AUTO_INCREMENT = 1`;
+    }
+
+    // Mapper les données de psadm_tools vers harptools et insérer uniquement les nouveaux outils
     const importedData = await prisma.harptools.createMany({
-      data: psadmTools.map((tool) => ({
+      data: toolsToImport.map((tool) => ({
         tool: "", // Colonne tool non importée, laissée vide
         cmdpath: "", // Champ non présent dans psadm_tools, laissé vide
         cmd: tool.cmd,
@@ -1696,27 +2306,37 @@ export const importerLesTools = async () => {
         mode: tool.mode || "",
         output: tool.output || "",
       })),
-      skipDuplicates: true
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${importedData.count} outils importés avec succès depuis psadm_tools vers harptools !` };
+    return { 
+      success: `${importedData.count} nouveau(x) outil(s) importé(s) avec succès depuis psadm_tools vers harptools !`,
+      details: {
+        totalInSource: allPsadmTools.length,
+        totalInHarptools: existingTools.length + importedData.count,
+        imported: importedData.count,
+        skipped: allPsadmTools.length - toolsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des outils:", error);
-    return { error: "Erreur lors de l'importation des outils depuis psadm_tools" };
+    return { 
+      error: "Erreur lors de l'importation des outils depuis psadm_tools",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
+/**
+ * Importe les associations utilisateur-rôle vers harpuseroles
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesUserRoles = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpuseroles.count();
-    
-    if (count > 0) {
-      return { info: "La table harpuseroles contient déjà des données. Importation ignorée." };
-    }
-
-    // Exécuter la requête SQL pour récupérer les associations user-role
-    const results = await prisma.$queryRaw<Array<{
+    // Exécuter la requête SQL pour récupérer toutes les associations user-role
+    const allResults = await prisma.$queryRaw<Array<{
       userId: number;
       roleId: number;
     }>>`
@@ -1731,38 +2351,84 @@ export const importerLesUserRoles = async () => {
       ORDER BY d.role
     `;
 
-    if (results.length === 0) {
-      return { info: "Aucune association utilisateur-rôle trouvée. Importation ignorée." };
+    if (allResults.length === 0) {
+      return { info: "Aucune association utilisateur-rôle trouvée à importer." };
     }
 
-    // Insérer les résultats dans la table harpuseroles
+    // Récupérer les associations déjà présentes dans harpuseroles
+    const existingAssociations = await prisma.harpuseroles.findMany({
+      select: {
+        userId: true,
+        roleId: true
+      }
+    });
+
+    // Créer un Set des associations existantes pour une recherche rapide
+    // Clé unique: userId + roleId (clé primaire composite)
+    const existingAssociationsSet = new Set(
+      existingAssociations.map(assoc => `${assoc.userId}-${assoc.roleId}`)
+    );
+
+    // Filtrer uniquement les associations qui n'existent pas encore (delta)
+    const associationsToImport = allResults.filter(result => {
+      const key = `${result.userId}-${result.roleId}`;
+      return !existingAssociationsSet.has(key);
+    });
+
+    if (associationsToImport.length === 0) {
+      return { 
+        info: "Toutes les associations utilisateur-rôle sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpuseroles: existingAssociations.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingAssociations.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpuseroles AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles associations
     const importedData = await prisma.harpuseroles.createMany({
-      data: results.map((row) => ({
+      data: associationsToImport.map((row) => ({
         userId: row.userId,
         roleId: row.roleId,
         // datmaj sera automatiquement défini par la valeur par défaut
       })),
-      skipDuplicates: true // Ignore les doublons basés sur la clé primaire composite [userId, roleId]
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${importedData.count} associations utilisateur-rôle importées avec succès !` };
+    return { 
+      success: `${importedData.count} nouvelle(s) association(s) utilisateur-rôle importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpuseroles: existingAssociations.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - associationsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des associations utilisateur-rôle:", error);
-    return { error: "Erreur lors de l'importation des associations utilisateur-rôle" };
+    return { 
+      error: "Erreur lors de l'importation des associations utilisateur-rôle",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 
+/**
+ * Importe les associations rôle-menu vers harpmenurole
+ * Détecte et importe uniquement les enregistrements manquants (delta)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
 export const importerLesMenuRoles = async () => {
   try {
-    // Vérifier si la table est vide
-    const count = await prisma.harpmenurole.count();
-    
-    if (count > 0) {
-      return { info: "La table harpmenurole contient déjà des données. Importation ignorée." };
-    }
-
-    // Exécuter la requête SQL pour récupérer les associations role-menu
-    const results = await prisma.$queryRaw<Array<{
+    // Exécuter la requête SQL pour récupérer toutes les associations role-menu
+    const allResults = await prisma.$queryRaw<Array<{
       roleId: number;
       menuId: number;
       menu: string;
@@ -1780,24 +2446,71 @@ export const importerLesMenuRoles = async () => {
       ORDER BY d.role
     `;
 
-    if (results.length === 0) {
-      return { info: "Aucune association rôle-menu trouvée. Importation ignorée." };
+    if (allResults.length === 0) {
+      return { info: "Aucune association rôle-menu trouvée à importer." };
     }
 
-    // Insérer les résultats dans la table harpmenurole
+    // Récupérer les associations déjà présentes dans harpmenurole
+    const existingAssociations = await prisma.harpmenurole.findMany({
+      select: {
+        roleId: true,
+        menuId: true
+      }
+    });
+
+    // Créer un Set des associations existantes pour une recherche rapide
+    // Clé unique: roleId + menuId (clé primaire composite)
+    const existingAssociationsSet = new Set(
+      existingAssociations.map(assoc => `${assoc.roleId}-${assoc.menuId}`)
+    );
+
+    // Filtrer uniquement les associations qui n'existent pas encore (delta)
+    const associationsToImport = allResults.filter(result => {
+      const key = `${result.roleId}-${result.menuId}`;
+      return !existingAssociationsSet.has(key);
+    });
+
+    if (associationsToImport.length === 0) {
+      return { 
+        info: "Toutes les associations rôle-menu sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpmenurole: existingAssociations.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingAssociations.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpmenurole AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles associations
     const importedData = await prisma.harpmenurole.createMany({
-      data: results.map((row) => ({
+      data: associationsToImport.map((row) => ({
         roleId: row.roleId,
         menuId: row.menuId,
         // datmaj sera automatiquement défini par la valeur par défaut
       })),
-      skipDuplicates: true // Ignore les doublons basés sur la clé primaire composite [roleId, menuId]
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
 
-    return { success: `${importedData.count} associations rôle-menu importées avec succès !` };
+    return { 
+      success: `${importedData.count} nouvelle(s) association(s) rôle-menu importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpmenurole: existingAssociations.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - associationsToImport.length
+      }
+    };
   } catch (error) {
     console.error("Erreur lors de l'importation des associations rôle-menu:", error);
-    return { error: "Erreur lors de l'importation des associations rôle-menu" };
+    return { 
+      error: "Erreur lors de l'importation des associations rôle-menu",
+      details: error instanceof Error ? error.message : "Erreur inconnue"
+    };
   }
 };
 

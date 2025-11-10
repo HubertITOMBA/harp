@@ -147,6 +147,7 @@ export function EditMenuDialog({ menu }: EditMenuDialogProps) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
 
+  // Charger les rôles psadm_role (pour le champ role du menu)
   useEffect(() => {
     async function fetchRoles() {
       try {

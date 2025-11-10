@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Menu as MenuIcon, Ban } from "lucide-react";
 import { ViewMenuDialog } from './ViewMenuDialog';
 import { EditMenuDialog } from './EditMenuDialog';
+import { MenuRolesDialog } from './MenuRolesDialog';
 import { toggleMenuStatus } from '@/actions/toggle-menu-status';
 import { toast } from 'react-toastify';
 
@@ -51,6 +52,7 @@ export function MenuActions({ menu }: MenuActionsProps) {
     <div className="flex items-center gap-1 sm:gap-2">
       <ViewMenuDialog menuId={menu.id} />
       <EditMenuDialog menu={menu} />
+      <MenuRolesDialog menuId={menu.id} menuName={menu.menu} />
       <Button
         variant="outline"
         size="sm"

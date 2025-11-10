@@ -1,3 +1,17 @@
+
+https://github.dxc.com
+
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.dxc.com/hitomba/portaltech.git
+git push -u origin main
+
+origin  https://github.com/HubertITOMBA/harp.git (fetch)
+origin  https://github.com/HubertITOMBA/harp.git (push)
+
+
 Pour  LanceAppli.tsx, Acrtuellement je suis en mode dev, je teste le lancement de putty avec 
 le user  "hubert" et son mot de passe est "axel2014" le host= 192.168.1.49
 mais en production le user viendra du User.netid, la clé ssh viendra du User.pkeyfile,

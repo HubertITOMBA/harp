@@ -49,3 +49,28 @@ export async function getAllRoles() {
   }
 }
 
+/**
+ * Récupère tous les rôles HARP (harproles) avec leurs IDs
+ * 
+ * @returns Un tableau de rôles HARP avec id, role et descr
+ */
+export async function getAllHarpRoles() {
+  try {
+    const roles = await db.harproles.findMany({
+      orderBy: {
+        role: 'asc',
+      },
+      select: {
+        id: true,
+        role: true,
+        descr: true,
+      },
+    });
+
+    return roles;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des rôles HARP:", error);
+    return [];
+  }
+}
+
