@@ -20,7 +20,8 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   importerLesEnvDispos,
   importerLesTools,
   importerLesMenuRoles,
-  insertTypeBases} from "@/actions/importharp";
+  insertTypeBases,
+  forceImportSpecificEnvs} from "@/actions/importharp";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -113,16 +114,47 @@ import VerifierDoublons from '@/components/harp/VerifierDoublons';
     try {
       const result = await importListEnvs();
      // const result = await migrateDataToEnvsharp();
-      if (result.error) {
+      if (result?.error) {
         toast.error(result.error);
-      } else if (result.success) {
+      } else if (result?.success) {
         toast.success(result.success);
        }
-       else if (result.info) {
+       else if (result?.info) {
         toast.info(result.info);
+      } else if (result?.warning) {
+        toast.warning(result.warning);
       }
     } catch (error) {
-      toast.error("Une erreur est survenue lors de l'importation des environnements Harp pour Prisma !");
+      console.error("Erreur lors de l'appel de importListEnvs:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Une erreur est survenue lors de l'importation des environnements Harp pour Prisma !";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleForceImportSpecificEnvs = async () => {
+    try {
+      const result = await forceImportSpecificEnvs();
+      if (result?.error) {
+        toast.error(result.error);
+      } else if (result?.success) {
+        toast.success(result.success);
+        // Afficher les détails si disponibles
+        if (result.details) {
+          console.log("Détails de l'import forcé:", result.details);
+        }
+      } else if (result?.info) {
+        toast.info(result.info);
+      } else if (result?.warning) {
+        toast.warning(result.warning);
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'appel de forceImportSpecificEnvs:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Une erreur est survenue lors de l'import forcé des environnements spécifiques !";
+      toast.error(errorMessage);
     }
   };
 
@@ -575,6 +607,13 @@ export default function Home() {
                 className="w-full justify-start"
               >
                 Importer les environnements HARP
+              </Button>
+              <Button 
+                onClick={handleForceImportSpecificEnvs}
+                variant="outline"
+                className="w-full justify-start border-orange-300 hover:bg-orange-50"
+              >
+                Forcer l&apos;import d&apos;environnements spécifiques
               </Button>
               <Button 
                 onClick={handeleInstancesEnvs}

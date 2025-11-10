@@ -8,13 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Users, Shield, Pencil } from "lucide-react";
 import { updateUserRoles } from '@/actions/update-useroles';
 import { toast } from 'react-toastify';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface EditUserRolesDialogProps {
   userRole: {
@@ -29,7 +22,6 @@ export function EditUserRolesDialog({ userRole }: EditUserRolesDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [selectedRolep, setSelectedRolep] = useState<string>(userRole.rolep);
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -39,7 +31,8 @@ export function EditUserRolesDialog({ userRole }: EditUserRolesDialogProps) {
     setErrors({});
     
     const formData = new FormData();
-    formData.append('rolep', selectedRolep);
+    // Le champ rolep n'existe plus dans harpuseroles, on envoie une valeur vide
+    formData.append('rolep', '');
     
     startTransition(async () => {
       const result = await updateUserRoles(userRole.netid, userRole.role, formData);
@@ -100,21 +93,14 @@ export function EditUserRolesDialog({ userRole }: EditUserRolesDialogProps) {
           </div>
         </div>
 
-        {/* Rôle principal */}
+        {/* Information sur la désactivation */}
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="rolep" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-orange-600" />
-            Rôle principal <span className="text-red-500">*</span>
-          </Label>
-          <Select value={selectedRolep} onValueChange={setSelectedRolep}>
-            <SelectTrigger className="bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Y">Oui</SelectItem>
-              <SelectItem value="N">Non</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <strong>Note :</strong> La fonctionnalité de modification du "rôle principal" n'est plus disponible avec les nouvelles tables HARP. 
+              La table <code className="text-xs bg-yellow-100 px-1 rounded">harpuseroles</code> ne contient pas ce champ.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -22,6 +22,9 @@ export const metadata = {
   title: 'Mon Profil',
 };
 
+// Marquer la route comme dynamique car elle utilise auth() qui utilise headers()
+export const dynamic = 'force-dynamic';
+
 /**
  * Page de profil utilisateur affichant les informations personnelles et les rôles
  */

@@ -7,17 +7,32 @@ import { Users } from "lucide-react";
 import { CreateUserRolesDialog } from '@/components/useroles/CreateUserRolesDialog';
 
 const UserRoleListPage = async () => {
-  const data = await db.psadm_roleuser.findMany({
+  // Récupérer les attributions de rôles depuis harpuseroles avec les relations
+  const userRolesData = await db.harpuseroles.findMany({
+    include: {
+      user: {
+        select: {
+          netid: true
+        }
+      },
+      harproles: {
+        select: {
+          role: true
+        }
+      }
+    },
     orderBy: {
       datmaj: 'desc'
-    },
-    select: {
-      netid: true,
-      role: true,
-      rolep: true,
-      datmaj: true,
-    },
+    }
   });
+
+  // Transformer les données pour correspondre au format attendu par les colonnes
+  const data = userRolesData.map(ur => ({
+    netid: ur.user.netid || "",
+    role: ur.harproles.role,
+    rolep: "N", // La table harpuseroles n'a pas de champ rolep, on met "N" par défaut
+    datmaj: ur.datmaj,
+  }));
 
   const userRoleCount = data.length;
  

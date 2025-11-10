@@ -129,5 +129,28 @@ order by d.role;
 
 Dans CreateMenuDialog.tsx et EditMenuDialog.tsx, impossible de selectionner l'icone, le champs n'affiche pas les icones à selectionner
 La liste déroulant n'est pas opérationnelle sur les champs Role et Statut, merci de verifier, d'analyser et corriger. 
+===================================
 
+
+merci de vérifier et corriger Pourquoi les Details des rôles HARP dans /user/profile/page.tsx  n'ont pas
+les mêmes données que dans list/users/[id]page.tsx  sous Rôle de {user.netid}. Ces deux pages doivent
+afficher les mêmes données car il s'agit d'un même user 
+
+
+select * from psadm_env where typenvid is null;
+select env,site from psadm_env where typenv = 'PUM-MAINTENANCE PS';
+select a.env, a.typenvid from envsharp a;
+select a.env, a.typenvid, b.typenv from envsharp a, psadm_env b 
+where a.env = b.site
+and b.typenv = 'PUM-MAINTENANCE PS'; 
+
+
+
+pourqoui la fonction function importListEnvs() n'importe pas dans envsharp
+les env dont la valeur est égale = ces bases : 'FHFDMO','FHFPUM','FHFST1','FHFST2','FHFST3','FHHDMO','FHHPUM','FHHST1','FHHST2''FHHST3','FHXPUM' 
+select a.env from psadm_env a where a.env in ('FHFDMO','FHFPUM','FHFST1','FHFST2','FHFST3','FHHDMO','FHHPUM','FHHST1','FHHST2''FHHST3','FHXPUM');
  
+Annuler la demande car je me suis trompé, il faut absolument exécuter la fonction lierTypeEnvs() qui rempli typenvid puis executer  importListEnvs()
+
+
+dans /list/roles/pages donner les droit à l'admin d'ajouter ou de retirer un utilisateur

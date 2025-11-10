@@ -11,6 +11,7 @@ interface ViewUserRolesContentProps {
     role: string;
     rolep: string;
     datmaj: Date;
+    // Support pour l'ancienne structure (psadm_*)
     psadm_user?: {
       netid: string;
       nom: string | null;
@@ -18,6 +19,17 @@ interface ViewUserRolesContentProps {
       email: string | null;
     };
     psadm_role?: {
+      role: string;
+      descr: string;
+    };
+    // Support pour la nouvelle structure (harp*)
+    user?: {
+      netid: string;
+      nom: string | null;
+      prenom: string | null;
+      email: string | null;
+    };
+    harprole?: {
       role: string;
       descr: string;
     };
@@ -47,9 +59,9 @@ export function ViewUserRolesContent({ userRole }: ViewUserRolesContentProps) {
               <div className="p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 shadow-sm text-xs font-medium text-slate-900 font-mono">
                 {userRole.netid}
               </div>
-              {userRole.psadm_user && (
+              {(userRole.psadm_user || userRole.user) && (
                 <div className="text-xs text-gray-600 mt-1">
-                  {userRole.psadm_user.prenom} {userRole.psadm_user.nom}
+                  {userRole.user?.prenom || userRole.psadm_user?.prenom} {userRole.user?.nom || userRole.psadm_user?.nom}
                 </div>
               )}
             </div>
@@ -61,9 +73,9 @@ export function ViewUserRolesContent({ userRole }: ViewUserRolesContentProps) {
               <div className="p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 shadow-sm text-xs font-medium text-slate-900 font-mono">
                 {userRole.role}
               </div>
-              {userRole.psadm_role && (
+              {(userRole.psadm_role || userRole.harprole) && (
                 <div className="text-xs text-gray-600 mt-1">
-                  {userRole.psadm_role.descr}
+                  {userRole.harprole?.descr || userRole.psadm_role?.descr}
                 </div>
               )}
             </div>
@@ -72,8 +84,9 @@ export function ViewUserRolesContent({ userRole }: ViewUserRolesContentProps) {
                 <Shield className="h-3 w-3 text-orange-600" />
                 Rôle principal
               </Label>
-              <div className="p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 shadow-sm text-xs font-medium text-slate-900">
-                {userRole.rolep === 'Y' ? 'Oui' : 'Non'}
+              <div className="p-2.5 bg-yellow-50 rounded-md rounded-tl-none border border-yellow-200 border-t-0 shadow-sm text-xs font-medium text-slate-900">
+                <span className="text-yellow-700">Non disponible</span>
+                <span className="text-xs text-yellow-600 block mt-1">(champ absent dans harpuseroles)</span>
               </div>
             </div>
             <div className="space-y-1">

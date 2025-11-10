@@ -7,42 +7,45 @@ import { z } from "zod";
 const CreateUserRolesSchema = z.object({
   netid: z.string().min(1, "Le NetID est requis").max(32),
   role: z.string().min(1, "Le rôle est requis").max(32),
-  rolep: z.string().length(1, "Le rôle principal doit être un caractère").default("Y"),
 });
 
+/**
+ * Crée une attribution de rôle HARP à un utilisateur
+ */
 export async function createUserRoles(formData: FormData) {
   try {
     const rawData = {
       netid: formData.get("netid") as string,
       role: formData.get("role") as string,
-      rolep: (formData.get("rolep") as string) || "Y",
     };
 
     const validatedData = CreateUserRolesSchema.parse(rawData);
 
-    // Vérifier que l'utilisateur existe
-    const user = await db.psadm_user.findUnique({
+    // Vérifier que l'utilisateur existe dans la table User
+    const user = await db.user.findUnique({
       where: { netid: validatedData.netid },
+      select: { id: true }
     });
 
     if (!user) {
       return { success: false, error: "Utilisateur non trouvé" };
     }
 
-    // Vérifier que le rôle existe
-    const role = await db.psadm_role.findUnique({
+    // Vérifier que le rôle existe dans harproles
+    const harprole = await db.harproles.findUnique({
       where: { role: validatedData.role },
+      select: { id: true }
     });
 
-    if (!role) {
+    if (!harprole) {
       return { success: false, error: "Rôle non trouvé" };
     }
 
     // Vérifier si l'attribution existe déjà
-    const existingUserRole = await db.psadm_roleuser.findFirst({
+    const existingUserRole = await db.harpuseroles.findFirst({
       where: {
-        netid: validatedData.netid,
-        role: validatedData.role,
+        userId: user.id,
+        roleId: harprole.id,
       },
     });
 
@@ -50,19 +53,18 @@ export async function createUserRoles(formData: FormData) {
       return { success: false, error: "Cette attribution de rôle existe déjà" };
     }
 
-    const newUserRole = await db.psadm_roleuser.create({
+    const newUserRole = await db.harpuseroles.create({
       data: {
-        netid: validatedData.netid,
-        role: validatedData.role,
-        rolep: validatedData.rolep,
+        userId: user.id,
+        roleId: harprole.id,
       },
     });
 
     return { 
       success: true, 
       message: `Le rôle ${validatedData.role} a été attribué à ${validatedData.netid} avec succès`,
-      netid: newUserRole.netid,
-      role: newUserRole.role
+      netid: validatedData.netid,
+      role: validatedData.role
     };
   } catch (error) {
     if (error instanceof z.ZodError) {

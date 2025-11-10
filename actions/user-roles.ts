@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 /**
- * Ajouter un ou plusieurs rôles à un utilisateur
+ * Ajouter un ou plusieurs rôles HARP à un utilisateur
  */
 export async function addUserRoles(netid: string, roles: string[]) {
   try {
@@ -15,9 +15,10 @@ export async function addUserRoles(netid: string, roles: string[]) {
       };
     }
 
-    // Vérifier que l'utilisateur existe
-    const user = await prisma.psadm_user.findUnique({
-      where: { netid: netid }
+    // Vérifier que l'utilisateur existe dans la table User
+    const user = await prisma.user.findUnique({
+      where: { netid: netid },
+      select: { id: true }
     });
 
     if (!user) {
@@ -27,11 +28,12 @@ export async function addUserRoles(netid: string, roles: string[]) {
       };
     }
 
-    // Vérifier que les rôles existent
-    const existingRoles = await prisma.psadm_role.findMany({
+    // Vérifier que les rôles existent dans harproles
+    const existingRoles = await prisma.harproles.findMany({
       where: {
         role: { in: roles }
-      }
+      },
+      select: { id: true, role: true }
     });
 
     if (existingRoles.length !== roles.length) {
@@ -42,17 +44,18 @@ export async function addUserRoles(netid: string, roles: string[]) {
     }
 
     // Récupérer les rôles déjà attribués
-    const existingUserRoles = await prisma.psadm_roleuser.findMany({
+    const existingUserRoles = await prisma.harpuseroles.findMany({
       where: {
-        netid: netid,
-        role: { in: roles }
-      }
+        userId: user.id,
+        roleId: { in: existingRoles.map(r => r.id) }
+      },
+      select: { roleId: true }
     });
 
-    const existingRoleNames = existingUserRoles.map(ur => ur.role);
-    const newRoles = roles.filter(role => !existingRoleNames.includes(role));
+    const existingRoleIds = new Set(existingUserRoles.map(ur => ur.roleId));
+    const rolesToAdd = existingRoles.filter(role => !existingRoleIds.has(role.id));
 
-    if (newRoles.length === 0) {
+    if (rolesToAdd.length === 0) {
       return { 
         success: false, 
         error: "Tous les rôles sélectionnés sont déjà attribués à cet utilisateur" 
@@ -60,12 +63,10 @@ export async function addUserRoles(netid: string, roles: string[]) {
     }
 
     // Ajouter les nouveaux rôles
-    const rolepValue = "Y"; // Valeur par défaut pour rolep
-    await prisma.psadm_roleuser.createMany({
-      data: newRoles.map(role => ({
-        netid: netid,
-        role: role,
-        rolep: rolepValue
+    await prisma.harpuseroles.createMany({
+      data: rolesToAdd.map(role => ({
+        userId: user.id,
+        roleId: role.id
       })),
       skipDuplicates: true
     });
@@ -74,7 +75,7 @@ export async function addUserRoles(netid: string, roles: string[]) {
     
     return { 
       success: true, 
-      message: `${newRoles.length} rôle(s) ajouté(s) avec succès` 
+      message: `${rolesToAdd.length} rôle(s) ajouté(s) avec succès` 
     };
   } catch (error) {
     console.error("Erreur lors de l'ajout des rôles:", error);
@@ -86,7 +87,7 @@ export async function addUserRoles(netid: string, roles: string[]) {
 }
 
 /**
- * Retirer un rôle d'un utilisateur
+ * Retirer un rôle HARP d'un utilisateur
  */
 export async function removeUserRole(netid: string, role: string) {
   try {
@@ -97,11 +98,37 @@ export async function removeUserRole(netid: string, role: string) {
       };
     }
 
-    // Vérifier que l'association existe et la supprimer
-    const deleted = await prisma.psadm_roleuser.deleteMany({
+    // Récupérer l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { netid: netid },
+      select: { id: true }
+    });
+
+    if (!user) {
+      return { 
+        success: false, 
+        error: "Utilisateur non trouvé" 
+      };
+    }
+
+    // Récupérer le rôle
+    const harprole = await prisma.harproles.findUnique({
+      where: { role: role },
+      select: { id: true }
+    });
+
+    if (!harprole) {
+      return { 
+        success: false, 
+        error: "Rôle non trouvé" 
+      };
+    }
+
+    // Supprimer l'association
+    const deleted = await prisma.harpuseroles.deleteMany({
       where: {
-        netid: netid,
-        role: role
+        userId: user.id,
+        roleId: harprole.id
       }
     });
 
@@ -128,13 +155,18 @@ export async function removeUserRole(netid: string, role: string) {
 }
 
 /**
- * Récupérer tous les rôles disponibles
+ * Récupérer tous les rôles HARP disponibles
  */
 export async function getAllAvailableRoles() {
   try {
-    const roles = await prisma.psadm_role.findMany({
+    const roles = await prisma.harproles.findMany({
       orderBy: {
         role: 'asc'
+      },
+      select: {
+        id: true,
+        role: true,
+        descr: true
       }
     });
 

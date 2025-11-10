@@ -4,6 +4,49 @@ import * as z from "zod";
 import { toast } from "react-toastify";
 import prisma  from "@/lib/prisma";
 
+/**
+ * Fonction utilitaire pour gérer les erreurs Prisma de manière cohérente
+ * 
+ * @param error - L'erreur capturée
+ * @param defaultMessage - Message d'erreur par défaut si l'erreur n'est pas reconnue
+ * @param context - Contexte supplémentaire pour le logging (nom de la fonction, etc.)
+ * @returns Un objet avec error et details pour être retourné par les Server Actions
+ */
+function handlePrismaError(
+  error: unknown,
+  defaultMessage: string,
+  context?: string
+): { error: string; details?: string } {
+  console.error(
+    context ? `${context}:` : "Erreur:",
+    error
+  );
+
+  // Gestion spécifique des erreurs Prisma
+  if (error && typeof error === 'object' && 'code' in error) {
+    const prismaError = error as { code?: string; message?: string; meta?: unknown };
+    
+    // Erreur de connexion à la base de données
+    if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+      return { 
+        error: "Impossible de se connecter à la base de données. Veuillez vérifier que le serveur de base de données est accessible.",
+        details: prismaError.message || "Erreur de connexion"
+      };
+    }
+    
+    // Autres erreurs Prisma
+    return { 
+      error: `${defaultMessage} (Erreur Prisma ${prismaError.code})`,
+      details: prismaError.message || "Erreur de base de données"
+    };
+  }
+  
+  // Gestion des erreurs génériques
+  return { 
+    error: defaultMessage,
+    details: error instanceof Error ? error.message : String(error) || "Erreur inconnue"
+  };
+}
 
 export const insertTypeBases = async () => {
    try {
@@ -33,7 +76,7 @@ export const insertTypeBases = async () => {
 
      return { success: "Les stypes de bases ont été ajoutés avec succès !" };
    } catch (error) {
-     return { error: "HARP Erreur lors de l'ajout de type de bases" };
+     return handlePrismaError(error, "HARP Erreur lors de l'ajout de type de bases", "insertTypeBases");
    }
     
  };
@@ -72,7 +115,7 @@ export const insertTypeBases = async () => {
 
     return { success: "Les statuts d'environnement ont été importés avec succès !" };
   } catch (error) {
-    return { error: "HARP Erreur lors de l'importation des statuts d'environnement" };
+    return handlePrismaError(error, "HARP Erreur lors de l'importation des statuts d'environnement", "importerLesStatus");
   }
    
 };
@@ -135,8 +178,7 @@ export const insertTypeBases = async () => {
     return { success: `La mise à jour de statut d'environnements terminée avec succès ! ${updatedCount} disposition(s) mise(s) à jour.` };
         
   } catch (error) {
-    console.error("Erreur lors de la mise à jour du statut des environnements:", error);
-    return { error: "Erreur lors de la mise à jour du statut des environnements" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour du statut des environnements", "updateDispoEnvIds");
   }
 }; 
 
@@ -183,8 +225,7 @@ export const insertTypeBases = async () => {
 
       return { success: "Mises à jour es valeur par defaut effectuées avec succès !" };
   } catch (error) {
-      console.error("Erreur lors des mises à jour des valeur par defaut !", error);
-      return { error: "Erreur lors des mises à jour des valeur par defaut !" };
+      return handlePrismaError(error, "Erreur lors des mises à jour des valeur par defaut !", "initDefaultValues");
   }
 };
 
@@ -208,9 +249,10 @@ export const GenererLesMenus = async () => {
       data: [
         { display: 7, level: 3, menu: 'DEVELOPPEMENT HOTFIX', href: '', descr: '', icone: 'pocket-knife.png', active: 1, role: 'TMA_LOCAL' },
         { display: 6, level: 3, menu: 'DEVELOPPEMENT PROJET', href: '', descr: '', icone: 'brain-cog.png', active: 1, role: 'TMA_LOCAL' },
-        { display: 3, level: 3, menu: 'DEVOPS 1', href: '', descr: 'Environnements DEVOPS 1', icone: 'workflow.png', active: 1, role: 'TMA_LOCAL' },
-        { display: 4, level: 3, menu:  'DEVOPS 2', href: '', descr: 'Environnements DEVOPS 2', icone: 'share-2.png', active: 1, role: 'TMA_LOCAL'},
-        { display: 5, level: 3, menu:  'DEVOPS FUSION', href: '', descr: 'Environnements DEVOPS Fusion', icone: 'git-merge.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 2, level: 3, menu: 'DEVOPS 1', href: '', descr: 'Environnements DEVOPS 1', icone: 'workflow.png', active: 1, role: 'TMA_LOCAL' },
+        { display: 3, level: 3, menu:  'DEVOPS 2', href: '', descr: 'Environnements DEVOPS 2', icone: 'share-2.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 4, level: 3, menu:  'DEVOPS FUSION', href: '', descr: 'Environnements DEVOPS Fusion', icone: 'git-merge.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 5, level: 3, menu:  'DEVOPS PACKAGING', href: '', descr: 'Environnements DEVOPS Packaging', icone: 'git-merge.png', active: 1, role: 'TMA_LOCAL'},
         { display: 19, level: 3, menu:  'POC92', href: '', descr: 'Environnements POC 9.2', icone: 'wallet-cards.png', active: 1, role: 'TMA_LOCAL'},
         { display: 11, level: 3, menu:  'PRE-PRODUCTION', href: '', descr: '', icone: 'ferris-wheel.png', active: 1, role: 'PSADMIN'},
         { display: 12, level: 3, menu:  'PRODUCTION', href: '', descr: 'Environnements de production HARP', icone: 'server-cog.png', active: 1, role: 'TMA_LOCAL'},
@@ -257,8 +299,7 @@ export const GenererLesMenus = async () => {
 
     return { success: "Tous les menus sont générés avec succès !" };
   } catch (error) {
-    console.error("Erreur lors de la génération des menus :", error);
-    return { error: "Erreur lors de la génération des menus !" };
+    return handlePrismaError(error, "Erreur lors de la génération des menus !", "GenererLesMenus");
   }
 };
 
@@ -280,7 +321,8 @@ export const lierTypeEnvs = async () => {
       { typenv: "PRODUCTION" },
       { typenv: "RECETTE" },
       { typenv: "QUALIFICATION" },
-      { typenv: "REFERENCE LIVRAISON" }
+      { typenv: "REFERENCE LIVRAISON" },
+      { typenv: "DEVOPS PACKAGING" }
     ];
 
     for (const update of updates) {
@@ -301,8 +343,7 @@ export const lierTypeEnvs = async () => {
 
     return { success: "les environnements sont liés aux menux avec succès !"};
   } catch (error) {
-    console.error("Erreur lors de la liaison des environnements aux menus :", error);
-    return { error: "Erreur lors de la mise à jour des environnements" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour des environnements", "lierTypeEnvs");
   }
 }; 
 
@@ -326,7 +367,8 @@ export const lierEnvauTypeEnv = async () => {
         { typenv: "PRODUCTION" },
         { typenv: "RECETTE" },
         { typenv: "QUALIFICATION" },
-        { typenv: "REFERENCE LIVRAISON" }
+        { typenv: "REFERENCE LIVRAISON" },
+        { typenv: "DEVOPS PACKAGING" }
       ];
   
       for (const update of updates) {
@@ -345,8 +387,7 @@ export const lierEnvauTypeEnv = async () => {
   
       return { success: "Mise à jour des typenvid effectuée avec succès" };
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des typenvid:", error);
-      return { error: "Erreur lors de la mise à jour des typenvid" };
+      return handlePrismaError(error, "Erreur lors de la mise à jour des typenvid", "lierEnvauTypeEnv");
     }
   };
 
@@ -391,8 +432,7 @@ export const importerLesHarproles = async () => {
 
     return { success: "Rôles importés avec succès !" };
   } catch (error) {
-    console.error("Erreur lors de l'importation :", error);
-    return { error: "Erreur lors de l'importation des rôles" };
+    return handlePrismaError(error, "Erreur lors de l'importation des rôles", "importerLesHarproles");
   }
 };
  
@@ -428,13 +468,30 @@ export async function importListEnvs() {
     // Filtrer uniquement les environnements qui n'existent pas encore (delta)
     const envsToImport = envData.filter(record => !existingEnvSet.has(record.env));
 
+    // Vérifier spécifiquement les environnements mentionnés par l'utilisateur
+    const specificEnvs = ['FHFDMO','FHFPUM','FHFST1','FHFST2','FHFST3','FHHDMO','FHHPUM','FHHST1','FHHST2','FHHST3','FHXPUM'];
+    const specificEnvsInSource = envData.filter(r => specificEnvs.includes(r.env));
+    const specificEnvsInDestination = existingEnvs.filter(e => specificEnvs.includes(e.env));
+    const specificEnvsToImport = envsToImport.filter(r => specificEnvs.includes(r.env));
+
+    // Log pour debug
+    console.log(`[importListEnvs] Environnements spécifiques - Source: ${specificEnvsInSource.length}, Destination: ${specificEnvsInDestination.length}, À importer: ${specificEnvsToImport.length}`);
+    if (specificEnvsInSource.length > 0 && specificEnvsToImport.length === 0) {
+      console.log(`[importListEnvs] ATTENTION: Les environnements spécifiques existent dans psadm_env mais sont déjà dans envsharp ou ne seront pas importés`);
+      console.log(`[importListEnvs] Environnements dans psadm_env:`, specificEnvsInSource.map(e => e.env));
+      console.log(`[importListEnvs] Environnements dans envsharp:`, specificEnvsInDestination.map(e => e.env));
+    }
+
     if (envsToImport.length === 0) {
       return { 
         info: "Tous les environnements sont déjà importés. Aucun nouveau enregistrement à importer.",
         details: {
           totalInPsadmEnv: envData.length,
           totalInEnvsharp: existingEnvs.length,
-          imported: 0
+          imported: 0,
+          specificEnvsInSource: specificEnvsInSource.length,
+          specificEnvsInDestination: specificEnvsInDestination.length,
+          specificEnvsToImport: specificEnvsToImport.length
         }
       };
     }
@@ -444,12 +501,18 @@ export async function importListEnvs() {
       await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
     }
 
-    // Insérer uniquement les nouveaux enregistrements
-    const result = await prisma.envsharp.createMany({
-      data: envsToImport.map(record => ({
+    // Préparer les données à importer avec validation
+    const dataToImport = envsToImport.map(record => {
+      // Vérifier que les champs requis sont présents
+      if (!record.env) {
+        console.error(`[importListEnvs] Environnement sans nom (env) ignoré:`, record);
+        return null;
+      }
+
+      return {
         env: record.env,
-        aliasql: record.aliasql,
-        oraschema: record.oraschema,
+        aliasql: record.aliasql || null,
+        oraschema: record.oraschema || null,
         url: record.url || null,
         appli: record.appli || null,
         psversion: record.psversion || null,
@@ -457,17 +520,36 @@ export async function importListEnvs() {
         harprelease: record.harprelease || null,
         volum: record.volum || null,
         datmaj: record.datmaj || new Date(),
-        gassi: record.gassi || "",
-        rpg: record.rpg || "",
+        gassi: record.gassi || null,
+        rpg: record.rpg || null,
         msg: record.msg || null,
-        descr: record.descr || null,
-        anonym: record.anonym || "",
-        edi: record.edi || "",
+        descr: record.descr || null, // Peut être null dans envsharp même si non-null dans psadm_env
+        anonym: record.anonym || null,
+        edi: record.edi || null,
         typenvid: record.typenvid || null,
         statenvId: record.statenvId || null
-      })),
+      };
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+    // Vérifier les environnements spécifiques dans les données à importer
+    const specificEnvsInDataToImport = dataToImport.filter(d => specificEnvs.includes(d.env));
+    if (specificEnvsInDataToImport.length > 0) {
+      console.log(`[importListEnvs] Environnements spécifiques à importer:`, specificEnvsInDataToImport.map(e => e.env));
+    }
+
+    // Insérer uniquement les nouveaux enregistrements
+    const result = await prisma.envsharp.createMany({
+      data: dataToImport,
       skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
+
+    // Vérifier si les environnements spécifiques ont été importés
+    // Note: On ne peut pas vérifier directement avec createMany, mais on sait qu'ils étaient dans dataToImport
+    const specificEnvsImportedCount = specificEnvsInDataToImport.length;
+    
+    if (specificEnvsInDataToImport.length > 0) {
+      console.log(`[importListEnvs] ${specificEnvsImportedCount} environnement(s) spécifique(s) dans les données à importer`);
+    }
 
     return { 
       success: `${result.count} nouveau(x) environnement(s) Harp importé(s) avec succès !`,
@@ -475,16 +557,186 @@ export async function importListEnvs() {
         totalInPsadmEnv: envData.length,
         totalInEnvsharp: existingEnvs.length + result.count,
         imported: result.count,
-        skipped: envData.length - envsToImport.length
+        skipped: envData.length - envsToImport.length,
+        specificEnvsInSource: specificEnvsInSource.length,
+        specificEnvsInDestination: specificEnvsInDestination.length,
+        specificEnvsToImport: specificEnvsToImport.length,
+        specificEnvsImported: specificEnvsImportedCount
       }
     };
 
   } catch (error) {
-    console.error("Erreur lors de l'importation des environnements Harp:", error);
+    return handlePrismaError(error, "Erreur lors de l'importation des environnements Harp", "importListEnvs");
+  }
+}
+
+/**
+ * Force l'import de certains environnements spécifiques depuis psadm_env vers envsharp
+ * Cette fonction supprime d'abord les environnements existants puis les réimporte
+ * 
+ * IMPORTANT: Il faut absolument exécuter lierTypeEnvs() avant cette fonction pour remplir
+ * le champ typenvid dans psadm_env, sinon les imports échoueront avec une erreur de contrainte
+ * de clé étrangère.
+ * 
+ * @param envNames - Tableau des noms d'environnements à forcer (optionnel, utilise la liste par défaut si non fourni)
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
+export async function forceImportSpecificEnvs(envNames?: string[]) {
+  try {
+    // Liste par défaut des environnements à forcer
+    const specificEnvs = envNames || ['FHFDMO','FHFPUM','FHFST1','FHFST2','FHFST3','FHHDMO','FHHPUM','FHHST1','FHHST2','FHHST3','FHXPUM'];
+    
+    console.log(`[forceImportSpecificEnvs] Début de l'import forcé pour ${specificEnvs.length} environnement(s):`, specificEnvs);
+
+    // Récupérer les données de ces environnements depuis psadm_env
+    const envData = await prisma.psadm_env.findMany({
+      where: {
+        env: {
+          in: specificEnvs
+        }
+      }
+    });
+
+    if (envData.length === 0) {
+      return { 
+        warning: "Aucun des environnements spécifiés n'a été trouvé dans psadm_env",
+        details: {
+          requested: specificEnvs.length,
+          found: 0,
+          imported: 0
+        }
+      };
+    }
+
+    console.log(`[forceImportSpecificEnvs] ${envData.length} environnement(s) trouvé(s) dans psadm_env:`, envData.map(e => e.env));
+
+    // Vérifier quels environnements existent déjà dans envsharp
+    const existingEnvs = await prisma.envsharp.findMany({
+      where: {
+        env: {
+          in: envData.map(e => e.env)
+        }
+      },
+      select: {
+        env: true
+      }
+    });
+
+    const existingEnvNames = existingEnvs.map(e => e.env);
+    console.log(`[forceImportSpecificEnvs] ${existingEnvNames.length} environnement(s) existant(s) dans envsharp:`, existingEnvNames);
+
+    // Supprimer les environnements existants pour forcer la réimportation
+    let deletedCount = 0;
+    if (existingEnvNames.length > 0) {
+      const deleteResult = await prisma.envsharp.deleteMany({
+        where: {
+          env: {
+            in: existingEnvNames
+          }
+        }
+      });
+      deletedCount = deleteResult.count;
+      console.log(`[forceImportSpecificEnvs] ${deletedCount} environnement(s) supprimé(s) de envsharp`);
+    }
+
+    // Préparer les données à importer
+    // Note: typenvid doit être rempli dans psadm_env par lierTypeEnvs() avant d'appeler cette fonction
+    const dataToImport = envData.map(record => {
+      if (!record.env) {
+        console.error(`[forceImportSpecificEnvs] Environnement sans nom (env) ignoré:`, record);
+        return null;
+      }
+
+      return {
+        env: record.env,
+        aliasql: record.aliasql || null,
+        oraschema: record.oraschema || null,
+        url: record.url || null,
+        appli: record.appli || null,
+        psversion: record.psversion || null,
+        ptversion: record.ptversion || null,
+        harprelease: record.harprelease || null,
+        volum: record.volum || null,
+        datmaj: record.datmaj || new Date(),
+        gassi: record.gassi || null,
+        rpg: record.rpg || null,
+        msg: record.msg || null,
+        descr: record.descr || null,
+        anonym: record.anonym || null,
+        edi: record.edi || null,
+        typenvid: record.typenvid || null, // Utilise typenvid de psadm_env (doit être rempli par lierTypeEnvs())
+        statenvId: record.statenvId || null
+      };
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+    console.log(`[forceImportSpecificEnvs] ${dataToImport.length} environnement(s) préparé(s) pour l'import`);
+    if (dataToImport.length > 0) {
+      console.log(`[forceImportSpecificEnvs] Exemple de données à importer:`, JSON.stringify(dataToImport[0], null, 2));
+    }
+
+    // Insérer les environnements un par un pour mieux identifier les erreurs
+    let importedCount = 0;
+    const errors: string[] = [];
+    
+    for (const data of dataToImport) {
+      try {
+        await prisma.envsharp.create({
+          data: data
+        });
+        importedCount++;
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(`${data.env}: ${errorMsg}`);
+        console.error(`[forceImportSpecificEnvs] Erreur lors de l'import de ${data.env}:`, error);
+      }
+    }
+
+    console.log(`[forceImportSpecificEnvs] ${importedCount} environnement(s) importé(s) avec succès`);
+    if (errors.length > 0) {
+      console.error(`[forceImportSpecificEnvs] ${errors.length} erreur(s) lors de l'import:`, errors);
+    }
+
+    if (importedCount === 0 && errors.length > 0) {
+      return {
+        error: `Aucun environnement n'a pu être importé. ${errors.length} erreur(s) rencontrée(s).`,
+        details: {
+          requested: specificEnvs.length,
+          foundInSource: envData.length,
+          deleted: deletedCount,
+          imported: importedCount,
+          errors: errors,
+          environments: envData.map(e => e.env)
+        }
+      };
+    }
+
+    if (importedCount < dataToImport.length) {
+      return {
+        warning: `${importedCount} environnement(s) importé(s) sur ${dataToImport.length} (${errors.length} erreur(s))`,
+        details: {
+          requested: specificEnvs.length,
+          foundInSource: envData.length,
+          deleted: deletedCount,
+          imported: importedCount,
+          errors: errors,
+          environments: envData.map(e => e.env)
+        }
+      };
+    }
+
     return { 
-      error: "Erreur lors de l'importation des environnements Harp",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
+      success: `${importedCount} environnement(s) spécifique(s) importé(s) avec succès (${deletedCount} supprimé(s) puis réimporté(s)) !`,
+      details: {
+        requested: specificEnvs.length,
+        foundInSource: envData.length,
+        deleted: deletedCount,
+        imported: importedCount,
+        environments: envData.map(e => e.env)
+      }
     };
+
+  } catch (error) {
+    return handlePrismaError(error, "Erreur lors de l'import forcé des environnements spécifiques", "forceImportSpecificEnvs");
   }
 }
 
@@ -593,11 +845,7 @@ export const importInstanceOra = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation d'instances d'environnements:", error);
-    return { 
-      error: "Erreur lors de l'importation d'instances d'environnements",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation d'instances d'environnements", "importInstanceOra");
   }
 };
 
@@ -754,11 +1002,7 @@ export const importerInstancesOracle = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des instances Oracle:", error);
-    return { 
-      error: "Erreur lors de l'importation des instances Oracle",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des instances Oracle", "importerInstancesOracle");
   }
 };
 
@@ -814,8 +1058,7 @@ export async function migrerLesUtilisateurs() {
    // return { success: `${psadmUsers.count} utilisateurmigrer vers Prisma avec succès !` };
     return { success: `Les utilisateurs sont migrés vers Prisma avec succès !` };
   } catch (error) {
-    console.error('Erreur lors de la migration des utilisateurs vers Prisma:', error)
-    return { error: "Erreur lors de la migration des utilisateurs vers Prisma." };
+    return handlePrismaError(error, "Erreur lors de la migration des utilisateurs vers Prisma.", "migrerLesUtilisateurs");
   } finally {
     await prisma.$disconnect()
   }
@@ -907,11 +1150,7 @@ export const migrerLesRolesUtilisateurs = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de la migration des rôles utilisateurs:", error);
-    return { 
-      error: "Erreur lors de la migration des rôles utilisateurs",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de la migration des rôles utilisateurs", "migrerLesRolesUtilisateurs");
   }
 };
 
@@ -973,8 +1212,7 @@ export const verifierDoublonsOracleSid1 = async () => {
     };
 
   } catch (error) {
-    console.error("Erreur lors de la vérification des doublons:", error);
-    return { error: "Erreur lors de la vérification des doublons sur oracle_sid" };
+    return handlePrismaError(error, "Erreur lors de la vérification des doublons sur oracle_sid", "verifierDoublonsOracleSid1");
   }
 };
 
@@ -1039,8 +1277,7 @@ export const verifierDoublonsOracleSid = async () => {
     };
 
   } catch (error) {
-    console.error("Erreur lors de la vérification des doublons:", error);
-    return { error: "Erreur lors de la vérification des doublons sur oracle_sid" };
+    return handlePrismaError(error, "Erreur lors de la vérification des doublons sur oracle_sid", "verifierDoublonsOracleSid");
   }
 };
 
@@ -1127,11 +1364,7 @@ export const importerLesPsoftVersions = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des versions PeopleSoft:", error);
-    return { 
-      error: "Erreur lors de l'importation des versions PeopleSoft",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des versions PeopleSoft", "importerLesPsoftVersions");
   }
 }; 
 
@@ -1207,11 +1440,7 @@ export const importerLesPToolsVersions = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des versions PeopleTools:", error);
-    return { 
-      error: "Erreur lors de l'importation des versions PeopleTools",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des versions PeopleTools", "importerLesPToolsVersions");
   }
 }; 
 
@@ -1288,11 +1517,7 @@ export const migrateReleaseData = async () => {
     };
 
   } catch (error) {
-    console.error('Erreur lors de la migration des versions Harp:', error);
-    return { 
-      error: "Erreur lors de la migration des versions Harp",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de la migration des versions Harp", "migrateReleaseData");
   }
 };
 
@@ -1372,11 +1597,7 @@ export const importerLesTypesEnv = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des types d'environnement:", error);
-    return { 
-      error: "Erreur lors de l'importation des types d'environnement",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des types d'environnement", "importerLesTypesEnv");
   }
 };
 
@@ -1421,8 +1642,7 @@ export const updateReleaseEnvIds = async () => {
     return { success: `${result.length} environnements mis à jour avec leur releaseId !` };
 
   } catch (error) {
-    console.error("Erreur lors de la mise à jour des releaseId:", error);
-    return { error: "Erreur lors de la mise à jour des releaseId de ENVSHARP" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour des releaseId de ENVSHARP", "updateReleaseEnvIds");
   }
 };
 
@@ -1499,11 +1719,7 @@ export const migrateServers = async () => {
     };
 
   } catch (error) {
-    console.error('Erreur lors de la migration:', error);
-    return { 
-      error: "Erreur lors de l'import dans HARPSERV",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'import dans HARPSERV", "migrateServers");
   }
 };
 
@@ -1554,8 +1770,7 @@ export const migrateDataToEnvsharp = async () => {
     return { success: `${result.count} enregistrements insérés dans ENVSHARP !` };
 
   } catch (error) {
-    console.error('Erreur lors de la migration:', error)
-    return { error: "Erreur lors de l'import dans ENVSHARP" };
+    return handlePrismaError(error, "Erreur lors de l'import dans ENVSHARP", "migrateDataToEnvsharp");
   // } finally {
   //   await prisma.$disconnect()
   }
@@ -1665,8 +1880,7 @@ export const migrerLesUtilisateursNEW = async () => {
 
     return { success: `${createdUsers.count} utilisateurs migrés vers Prisma avec succès !` };
   } catch (error) {
-    console.error('Erreur lors de la migration des utilisateurs vers Prisma:', error);
-    return { error: "Erreur lors de la migration des utilisateurs vers Prisma." };
+    return handlePrismaError(error, "Erreur lors de la migration des utilisateurs vers Prisma.", "migrerLesUtilisateursNEW");
   }
 }
 
@@ -1725,8 +1939,7 @@ export const OLD_importerLesEnvInfos = async () => {
 
     return { success: `${importedData.count} informations d'environnements importées avec succès !` };
   } catch (error) {
-    console.error("Erreur lors de l'importation des informations d'environnements:", error);
-    return { error: "Erreur lors de l'importation des informations d'environnements" };
+    return handlePrismaError(error, "Erreur lors de l'importation des informations d'environnements", "importerLesEnvInfos");
   }
 };
 
@@ -1829,11 +2042,7 @@ export const importerLesEnvInfos = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des informations d'environnements:", error);
-    return { 
-      error: "Erreur lors de l'importation des informations d'environnements",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des informations d'environnements", "importerOraInstances");
   }
 };
 // ... existing code ...
@@ -1914,11 +2123,7 @@ export const importerOraInstances = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des instances Oracle:", error);
-    return { 
-      error: "Erreur lors de l'importation des instances Oracle",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des instances Oracle", "importerOraInstances");
   }
 };
 
@@ -1958,8 +2163,7 @@ export const updateInstanceServerIds = async () => {
 
     return { success: `Les relations instance-serveur ont été mises à jour avec succès !` };
   } catch (error) {
-    console.error("Erreur lors de la mise à jour des relations instance-serveur:", error);
-    return { error: "Erreur lors de la mise à jour des relations instance-serveur" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour des relations instance-serveur", "updateInstanceServerIds");
   }
 };
 // select * from psadm_rolesrv where env like '%HPR1'; 
@@ -2054,11 +2258,7 @@ export const importerLesEnvServeurs = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des relations environnement-serveur:", error);
-    return { 
-      error: "Erreur lors de l'importation des relations environnement-serveur",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des relations environnement-serveur", "importerLesEnvServeurs");
   }
 };
 
@@ -2096,8 +2296,7 @@ export const updateEnvsharpInstanceIds = async () => {
 
     return { success: `Les relations environnement-instance ont été mises à jour avec succès !` };
   } catch (error) {
-    console.error("Erreur lors de la mise à jour des relations environnement-instance:", error);
-    return { error: "Erreur lors de la mise à jour des relations environnement-instance" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour des relations environnement-instance", "updateEnvsharpInstanceIds");
   }
 };
 
@@ -2132,8 +2331,7 @@ export const updateEnvsharpOrarelease = async () => {
     return { success: `${result.length} environnements mis à jour avec leur version Oracle !` };
 
   } catch (error) {
-    console.error("Erreur lors de la mise à jour des versions Oracle:", error);
-    return { error: "Erreur lors de la mise à jour des versions Oracle dans ENVSHARP" };
+    return handlePrismaError(error, "Erreur lors de la mise à jour des versions Oracle dans ENVSHARP", "updateEnvsharpOrarelease");
   }
 };
 
@@ -2229,11 +2427,7 @@ export const importerLesEnvDispos = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des dispositions d'environnements:", error);
-    return { 
-      error: "Erreur lors de l'importation des dispositions d'environnements",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des dispositions d'environnements", "importerLesEnvDispos");
   }
 };
 
@@ -2319,11 +2513,7 @@ export const importerLesTools = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des outils:", error);
-    return { 
-      error: "Erreur lors de l'importation des outils depuis psadm_tools",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des outils depuis psadm_tools", "importerLesTools");
   }
 };
 
@@ -2411,11 +2601,7 @@ export const importerLesUserRoles = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des associations utilisateur-rôle:", error);
-    return { 
-      error: "Erreur lors de l'importation des associations utilisateur-rôle",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des associations utilisateur-rôle", "importerLesUserRoles");
   }
 };
 
@@ -2506,11 +2692,7 @@ export const importerLesMenuRoles = async () => {
       }
     };
   } catch (error) {
-    console.error("Erreur lors de l'importation des associations rôle-menu:", error);
-    return { 
-      error: "Erreur lors de l'importation des associations rôle-menu",
-      details: error instanceof Error ? error.message : "Erreur inconnue"
-    };
+    return handlePrismaError(error, "Erreur lors de l'importation des associations rôle-menu", "importerLesMenuRoles");
   }
 };
 

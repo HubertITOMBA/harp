@@ -10,7 +10,6 @@ import {
   User, 
   Mail, 
   Key, 
-  Calendar, 
   Shield, 
   Hash, 
   Lock, 
@@ -26,38 +25,42 @@ import { AddRolesModalWrapper } from '@/components/user/AddRolesModalWrapper';
 const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
   const { netid } = await params;
 
-  const user = await prisma.psadm_user.findUnique({
+  // Récupérer l'utilisateur depuis la table User avec ses rôles HARP
+  const user = await prisma.user.findUnique({
     where: { netid: netid },
+    include: {
+      harpuseroles: {
+        include: {
+          harproles: {
+            select: {
+              id: true,
+              role: true,
+              descr: true,
+            },
+          },
+        },
+        orderBy: {
+          datmaj: 'desc',
+        },
+      },
+    },
   });  
 
   if (!user) {
     return notFound();
   } 
 
-  const userRoles = await prisma.psadm_roleuser.findMany({
-    where: {
-      netid: netid,
-    },
-    include: {
-      psadm_role: {
-        select: {
-          descr: true
-        }
-      }
-    },
-    orderBy: {
-      datmaj: 'desc'
-    }
-  });
+  // Les rôles sont maintenant dans user.harpuseroles
+  const userRoles = user.harpuseroles;
 
-  // Récupérer tous les rôles disponibles pour le modal
-  const allRoles = await prisma.psadm_role.findMany({
+  // Récupérer tous les rôles HARP disponibles pour le modal
+  const allRoles = await prisma.harproles.findMany({
     orderBy: {
       role: 'asc'
     }
   });
 
-  const assignedRoleNames = userRoles.map(ur => ur.role);
+  const assignedRoleNames = userRoles.map(ur => ur.harproles.role);
   const availableRoles = allRoles.filter(role => !assignedRoleNames.includes(role.role));
 
   return (
@@ -184,22 +187,6 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
                   {user.unxid || "N/A"}
                 </div>
               </div>
-
-              {/* Expiration compte Unix */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                  Expiration compte Unix
-                </Label>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-900 font-medium">
-                  {user.expunx 
-                    ? new Intl.DateTimeFormat("fr-FR", {
-                        dateStyle: 'short', 
-                        timeStyle: 'short'
-                      }).format(user.expunx)
-                    : "N/A"}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -249,9 +236,9 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {userRoles.length > 0 ? (
-                    userRoles.map((role, index) => (
+                    userRoles.map((userRole) => (
                       <tr 
-                        key={index} 
+                        key={`${userRole.userId}-${userRole.roleId}`} 
                         className="hover:bg-harpSkyLight transition-colors duration-200"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -260,20 +247,20 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
                             className="bg-gradient-to-r from-orange-100 to-orange-50 text-orange-800 border border-orange-200"
                           >
                             <Shield className="h-3 w-3 mr-1" />
-                            {role.role}
+                            {userRole.harproles.role}
                           </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {role.psadm_role?.descr || "—"}
+                          {userRole.harproles.descr || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Intl.DateTimeFormat("fr-FR", {
                             dateStyle: 'short', 
                             timeStyle: 'short'
-                          }).format(role.datmaj)}
+                          }).format(userRole.datmaj)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <RemoveRoleButton netid={netid} role={role.role} />
+                          <RemoveRoleButton netid={netid} role={userRole.harproles.role} />
                         </td>
                       </tr>
                     ))

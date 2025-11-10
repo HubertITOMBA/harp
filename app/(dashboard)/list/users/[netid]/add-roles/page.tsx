@@ -13,12 +13,22 @@ import { AddRolesForm } from '@/components/user/AddRolesForm';
 const AddRolesPage = async ({ params }: { params: { netid: string } }) => {
   const { netid } = await params;
 
-  const user = await prisma.psadm_user.findUnique({
+  // Récupérer l'utilisateur depuis la table User
+  const user = await prisma.user.findUnique({
     where: { netid: netid },
     select: {
       netid: true,
       prenom: true,
-      nom: true
+      nom: true,
+      harpuseroles: {
+        include: {
+          harproles: {
+            select: {
+              role: true
+            }
+          }
+        }
+      }
     }
   });  
 
@@ -26,24 +36,19 @@ const AddRolesPage = async ({ params }: { params: { netid: string } }) => {
     return notFound();
   }
 
-  // Récupérer tous les rôles disponibles
-  const allRoles = await prisma.psadm_role.findMany({
+  // Récupérer tous les rôles HARP disponibles
+  const allRoles = await prisma.harproles.findMany({
     orderBy: {
       role: 'asc'
-    }
-  });
-
-  // Récupérer les rôles déjà attribués
-  const userRoles = await prisma.psadm_roleuser.findMany({
-    where: {
-      netid: netid,
     },
     select: {
-      role: true
+      role: true,
+      descr: true
     }
   });
 
-  const assignedRoleNames = userRoles.map(ur => ur.role);
+  // Récupérer les rôles déjà attribués depuis harpuseroles
+  const assignedRoleNames = user.harpuseroles.map(ur => ur.harproles.role);
   const availableRoles = allRoles.filter(role => !assignedRoleNames.includes(role.role));
 
   return (
