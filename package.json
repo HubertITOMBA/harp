@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
     "build": "bash scripts/build.sh",
-    "build:internal": "NODE_OPTIONS=\"\" npx prisma generate && NODE_OPTIONS=\"\" next build",
+    "build:internal": "NODE_OPTIONS=\"\" npx prisma generate && NODE_OPTIONS=\"\" npx next build",
     "build:alt": "bash scripts/build-clean.sh",
+    "build:ultra": "bash scripts/build-ultra-clean.sh",
     "build:direct": "env -i PATH=\"$PATH\" HOME=\"$HOME\" USER=\"$USER\" PWD=\"$PWD\" SHELL=\"$SHELL\" TERM=\"${TERM:-xterm}\" NODE_OPTIONS=\"\" bash -c 'npx prisma generate && next build'",
     "start": "next start -p 3000",
     "lint": "next lint",

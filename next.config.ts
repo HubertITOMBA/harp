@@ -15,10 +15,12 @@ const nextConfig: NextConfig = {
     },
 
 
-    // experimental: {
-    //   workerThreads: false,
-    //   cpus: 1,
-    // }
+    experimental: {
+      // Désactiver les workers pour éviter les problèmes avec NODE_OPTIONS (Dynatrace)
+      workerThreads: false,
+      // Limiter à 1 CPU pour éviter les workers
+      cpus: 1,
+    },
 
 
 };

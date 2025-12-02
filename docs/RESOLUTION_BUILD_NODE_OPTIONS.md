@@ -57,6 +57,19 @@ Si les solutions précédentes ne fonctionnent pas :
 npm run build:alt
 ```
 
+### Option 4 : Build ultra-propre (Dernier recours)
+
+Si toutes les solutions précédentes échouent, utilisez le script ultra-propre qui :
+- Désactive complètement les workers Next.js
+- Utilise un wrapper node personnalisé
+- Force NODE_OPTIONS à être vide à tous les niveaux
+
+```bash
+npm run build:ultra
+```
+
+**Note** : Ce script est plus lent car il désactive les workers, mais il devrait fonctionner même si Dynatrace injecte NODE_OPTIONS.
+
 ## Diagnostic
 
 Pour diagnostiquer le problème, utilisez le script de diagnostic :
@@ -104,8 +117,44 @@ Pour éviter ce problème à l'avenir, vous pouvez :
 
 ## Scripts disponibles
 
-- `npm run build` : Build standard avec environnement vierge (recommandé)
+- `npm run build` : Build standard avec environnement vierge et workers désactivés (recommandé)
 - `npm run build:alt` : Build alternatif avec environnement complètement propre
+- `npm run build:ultra` : Build ultra-propre avec wrapper node personnalisé (dernier recours)
 - `npm run build:internal` : Build avec NODE_OPTIONS vide
 - `npm run build:direct` : Build direct avec environnement isolé
+
+## Configuration Next.js
+
+Le fichier `next.config.ts` a été modifié pour désactiver les workers :
+```typescript
+experimental: {
+  workerThreads: false,
+  cpus: 1,
+}
+```
+
+Cela empêche Next.js de créer des workers qui pourraient hériter de NODE_OPTIONS.
+
+## Si le problème persiste encore
+
+Si même avec toutes ces solutions le problème persiste, cela signifie que Dynatrace injecte NODE_OPTIONS directement dans les processus Node.js au niveau système. Dans ce cas :
+
+1. **Vérifier l'agent Dynatrace** :
+   ```bash
+   # Vérifier si l'agent Dynatrace est actif
+   ps aux | grep -i dynatrace
+   env | grep -i DT
+   ```
+
+2. **Désactiver temporairement Dynatrace pour le build** :
+   ```bash
+   # Arrêter l'agent (si possible)
+   sudo systemctl stop dynatrace-oneagent
+   npm run build:ultra
+   sudo systemctl start dynatrace-oneagent
+   ```
+
+3. **Utiliser un conteneur Docker isolé** pour le build
+
+4. **Contacter l'équipe infrastructure** pour configurer Dynatrace pour exclure le processus de build
 

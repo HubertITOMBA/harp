@@ -46,7 +46,11 @@ env -i \
         env -u NODE_OPTIONS npx prisma generate
         
         # Build Next.js avec NODE_OPTIONS explicitement non défini
-        echo "Build Next.js..."
+        # Désactiver les workers Next.js pour éviter l'héritage de NODE_OPTIONS
+        echo "Build Next.js (workers désactivés)..."
+        # Forcer NODE_OPTIONS à être vide et désactiver les workers
+        NEXT_PRIVATE_WORKER=0 \
+        NODE_OPTIONS='' \
         env -u NODE_OPTIONS npx next build
         
         echo "Build terminé avec succès!"
