@@ -5,6 +5,13 @@
 
 set -e  # Arrêter en cas d'erreur
 
+# Supprimer explicitement toutes les variables Dynatrace avant de créer l'environnement
+unset NODE_OPTIONS
+unset DT_DISABLE_INJECTION
+unset DT_NODE_AGENT
+unset DT_AGENT_NAME
+unset DT_AGENT_PATH
+
 # Sauvegarder les variables essentielles
 SAVED_PATH="$PATH"
 SAVED_HOME="$HOME"
@@ -14,7 +21,7 @@ SAVED_SHELL="${SHELL:-/bin/bash}"
 SAVED_TERM="${TERM:-xterm}"
 
 # Créer un environnement complètement vierge avec seulement les variables essentielles
-# et FORCER NODE_OPTIONS à être vide
+# et FORCER NODE_OPTIONS à être vide et non défini
 env -i \
     PATH="$SAVED_PATH" \
     HOME="$SAVED_HOME" \
@@ -22,23 +29,26 @@ env -i \
     PWD="$SAVED_PWD" \
     SHELL="$SAVED_SHELL" \
     TERM="$SAVED_TERM" \
-    NODE_OPTIONS="" \
     bash -c '
-        # Vérifier que NODE_OPTIONS est bien vide
-        if [ -n "$NODE_OPTIONS" ]; then
+        # Supprimer explicitement NODE_OPTIONS dans le sous-shell
+        unset NODE_OPTIONS
+        
+        # Vérifier que NODE_OPTIONS est bien vide/non défini
+        if [ -n "${NODE_OPTIONS:-}" ]; then
             echo "ERREUR: NODE_OPTIONS n'\''est pas vide: $NODE_OPTIONS"
             exit 1
         fi
         
-        echo "NODE_OPTIONS après nettoyage: [$NODE_OPTIONS]"
+        echo "NODE_OPTIONS après nettoyage: [${NODE_OPTIONS:-vide}]"
         
-        # Générer Prisma
+        # Générer Prisma avec NODE_OPTIONS explicitement non défini
         echo "Génération du client Prisma..."
-        NODE_OPTIONS="" npx prisma generate
+        env -u NODE_OPTIONS npx prisma generate
         
-        # Build Next.js
+        # Build Next.js avec NODE_OPTIONS explicitement non défini
+        # Utiliser --no-experimental-worker pour éviter les problèmes avec les workers
         echo "Build Next.js..."
-        NODE_OPTIONS="" next build
+        env -u NODE_OPTIONS next build
         
         echo "Build terminé avec succès!"
     '
