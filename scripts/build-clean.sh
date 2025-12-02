@@ -36,6 +36,6 @@ env -i \
         echo "NODE_OPTIONS: [${NODE_OPTIONS:-vide}]"
         
         # Exécuter avec NODE_OPTIONS explicitement non défini
-        env -u NODE_OPTIONS npx prisma generate && env -u NODE_OPTIONS next build
+        env -u NODE_OPTIONS npx prisma generate && env -u NODE_OPTIONS npx next build
     '
 

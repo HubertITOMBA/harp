@@ -46,7 +46,7 @@ echo "NODE_OPTIONS: [${NODE_OPTIONS:-vide}]"
 env -u NODE_OPTIONS npx prisma generate
 
 # 4. Build Next.js sans NODE_OPTIONS
-env -u NODE_OPTIONS next build
+env -u NODE_OPTIONS npx next build
 ```
 
 ### Option 3 : Script de build alternatif

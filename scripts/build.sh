@@ -46,9 +46,8 @@ env -i \
         env -u NODE_OPTIONS npx prisma generate
         
         # Build Next.js avec NODE_OPTIONS explicitement non défini
-        # Utiliser --no-experimental-worker pour éviter les problèmes avec les workers
         echo "Build Next.js..."
-        env -u NODE_OPTIONS next build
+        env -u NODE_OPTIONS npx next build
         
         echo "Build terminé avec succès!"
     '
