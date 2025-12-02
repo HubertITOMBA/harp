@@ -1,6 +1,6 @@
 import { getAllUserRoles } from "@/actions/get-all-user-roles";
 import { getUserProfile } from "@/lib/actions/profile-actions";
-import { LogOut, User, Mail, Key, Shield, Info } from "lucide-react";
+import { LogOut, User, Mail, Key, Shield, Info, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
 import { logOut } from "@/actions/logout";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 export const metadata = {
   title: 'Mon Profil',
@@ -53,6 +54,16 @@ const ProfilePage = async () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Link href="/harp/user/profile">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="w-full sm:w-auto border-blue-300 hover:bg-blue-50 hover:border-blue-400 text-blue-700"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Modifier le profil
+              </Button>
+            </Link>
             <ChangePasswordDialog />
             <form action={logOut}>
               <Button 
@@ -130,6 +141,22 @@ const ProfilePage = async () => {
                   </div>
                 </div>
               )}
+
+              {/* Clé SSH (pkeyfile) */}
+              <div className="space-y-1 md:col-span-2">
+                <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                  <Key className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                  Clé SSH (pkeyfile)
+                </Label>
+                <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm break-all">
+                  {user.pkeyfile || (
+                    <span className="text-gray-500 italic">Aucune clé SSH configurée</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1 px-2">
+                  Chemin vers votre clé SSH privée. Utilisée pour les connexions SSH (ex: Refresh Info).
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

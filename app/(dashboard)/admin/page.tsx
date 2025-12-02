@@ -30,7 +30,7 @@ export default async function AdminPage(){
 
 const summary = await  getAdminSummary();
 
-console.log("LES SOMMES DE PUIS ADMIN PAGE ==>> ", summary );
+// console.log("LES SOMMES DE PUIS ADMIN PAGE ==>> ", summary );
 
     return ( 
         <div className="p-4 flex gap-4 flex-col md:flex-row">

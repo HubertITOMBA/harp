@@ -1,3 +1,7 @@
+ /produits/portail_harp-tech/www/
+git config --global http.proxy http://proxy.adsaft.ft.net:8080
+git config --global https.proxy http://proxy.adsaft.ft.net:8080
+git clone https://github.dxc.com/hitomba/portaltech.git
 
 https://github.dxc.com
 
@@ -5,11 +9,31 @@ git init
 git add README.md
 git commit -m "first commit"
 git branch -M main
-git remote add origin https://github.dxc.com/hitomba/portaltech.git
+git remote add origin https://github.dxc.com/hitomba/portaltech.git  proxy.adsaft.ft.net / port 8080
 git push -u origin main
 
 origin  https://github.com/HubertITOMBA/harp.git (fetch)
 origin  https://github.com/HubertITOMBA/harp.git (push)
+
+git remote -v
+git status
+git push origin main
+git push portaltech main
+
+
+fxxwwpr01:psadm:/produits/portail_harp-tech/www> git clone https://github.dxc.com/hitomba/portaltech.git
+fxxwwpr01:psadm:/produits/portail_harp-tech/www> git clone https://github.dxc.com/hitomba/portaltech.git
+git clone https://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@github.dxc.com/hitomba/portaltech.git
+
+
+Cloning into 'portaltech'...
+Username for 'https://github.dxc.com': hitomba
+Password for 'https://hitomba@github.dxc.com':
+remote: Password authentication is not available for Git operations.
+remote: You must use a personal access token or SSH key.
+remote: See https://github.dxc.com/settings/tokens or https://github.dxc.com/settings/ssh
+fatal: unable to access 'https://github.dxc.com/hitomba/portaltech.git/': The requested URL returned error: 403
+fxxwwpr01:psadm:/produits/portail_harp-tech/www> git clone https://github.dxc.com/hitomba/portaltech.git
 
 
 Pour  LanceAppli.tsx, Acrtuellement je suis en mode dev, je teste le lancement de putty avec 
@@ -154,3 +178,25 @@ Annuler la demande car je me suis trompé, il faut absolument exécuter la fonct
 
 
 dans /list/roles/pages donner les droit à l'admin d'ajouter ou de retirer un utilisateur
+
+
+Depuis /list/useroles, dans le dialog Attribuer un Role à un utilisateur, la liste de utilisateur et lla liste de role à selectionner apparaissent 
+dérière le dialog, impossible d'effectuer la sélection
+
+
+
+Analyser cette logique et implémenter une fonction qui va se connecter sur la machine linux pour exécuter le script refresh_info.ksh
+cette fonction sera lancé par le link du menu de la navbar "Refresh Info"
+le script sera exécuté par le user connecté à l'appication 
+ HARPSHELL = /data/exploit/harpadm/outils/scripts
+ $HARPLOG = /data/exploit/harpadm/outils/logs
+ exec(' . ~/.profile ; $HARPSHELL/refresh_info.ksh > $HARPLOG/portail_refresh_info.log 2>&1 ', $out, $rc);
+
+
+
+ Dans le menu latéral  components/home/Menu.tsx, implémenter la possibilité j'ajuster la page lorsque l'écran est reduit pour n'afficher que 
+ les icônes, le logo Harp prends plus de place
+
+ Inversant la logique : menu réduit (icônes uniquement) sur md/lg, menu normal (icônes + texte) sur xl+. Vérification des composants concernés :
+
+ Sur écran xl menu taille normal (icônes + texte) et sur écran md/lg (icônes uniquement) logo centré

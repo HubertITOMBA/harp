@@ -17,8 +17,8 @@ export default auth(async (req) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;
 
-    console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
-    console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
+  //  console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
+ //   console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
     const isApiRoute = nextUrl.pathname.startsWith("/api/");

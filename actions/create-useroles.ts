@@ -32,7 +32,7 @@ export async function createUserRoles(formData: FormData) {
     }
 
     // Vérifier que le rôle existe dans harproles
-    const harprole = await db.harproles.findUnique({
+    const harprole = await db.harproles.findFirst({
       where: { role: validatedData.role },
       select: { id: true }
     });

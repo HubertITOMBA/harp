@@ -1,8 +1,4 @@
 import Link from "next/link";
-import Image from 'next/image'
-import FooterLayout from '@/components/home/FooterLayout'
-import HarpBandeau from '@/components/home/HarpBandeau'
-import HeaderLayout from '@/components/home/HeaderLayout'
 import React from 'react'
 import { MobileMenuButton } from "@/components/ui/mobile-menu-button";
 
@@ -57,7 +53,7 @@ export default async function HarpLayout ( {
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4 text-red-600">Accès refusé</h1>
             <p className="text-muted-foreground mb-4">
-              Vous n'avez pas les permissions nécessaires pour accéder à cette section.
+              Vous n&apos;avez pas les permissions nécessaires pour accéder à cette section.
             </p>
             <p className="text-sm text-gray-500 mb-4">
               Rôles requis : PSADMIN ou PORTAL_ADMIN
@@ -66,7 +62,7 @@ export default async function HarpLayout ( {
               Vos rôles actuels : {allUserRolesArray.length > 0 ? allUserRolesArray.join(", ") : "Aucun"}
             </p>
             <Link href="/home" className="text-primary hover:underline">
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </div>
         </div>
@@ -97,10 +93,10 @@ export default async function HarpLayout ( {
     <div className="flex flex-col md:flex-row h-screen">
        <SessionProvider session={session}>
           {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
-          <aside className="hidden md:block w-[14%] lg:w-[16%] xl:w-[14%] p-4 bg-white border-r border-gray-200">
-            <Link href="/" >
-              <h1 className="text-4xl md:text-6xl lg:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-              <h2 className="mx-2 text-xs md:text-sm font-bold text-gray-500">Human Ressources <span className="text-base md:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
+          <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
+            <Link href="/" className="flex flex-col items-center xl:items-start">
+              <h1 className="text-2xl md:text-3xl lg:text-3xl xl:text-6xl 2xl:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+              <h2 className="mx-1 md:mx-2 text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 hidden xl:block">Human Ressources <span className="text-sm md:text-base lg:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
             </Link>
             <MenuDash   DroitsUser = {roles} sessionCount={activeSessionCount} />
           </aside>
@@ -110,14 +106,14 @@ export default async function HarpLayout ( {
             <MobileMenuButton>
               <Link href="/" className="block mb-4">
                 <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-                <h2 className="text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
+                <h2 className="hidden text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
               </Link>
               <MenuDash   DroitsUser = {roles} sessionCount={activeSessionCount} />
             </MobileMenuButton>
           </div>
           
           {/* Contenu principal */}
-          <div className="flex-1 w-full md:w-[86%] lg:w-[84%] xl:w-[86%] overflow-auto flex flex-col">
+          <div className="flex-1 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] overflow-auto flex flex-col">
             <Navbar   DroitsUser = {roles}/>
             { modal } 
             { children }

@@ -112,7 +112,7 @@ export async function removeUserRole(netid: string, role: string) {
     }
 
     // Récupérer le rôle
-    const harprole = await prisma.harproles.findUnique({
+    const harprole = await prisma.harproles.findFirst({
       where: { role: role },
       select: { id: true }
     });

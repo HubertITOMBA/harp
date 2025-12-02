@@ -1,0 +1,24 @@
+#!/bin/ksh
+${DEBUGSHELL}
+#==============================================================================
+#@ SCRIPT:   refresh_info.ksh-test
+#==============================================================================
+#
+#@  PORTAIL TMA HARP : Utilise par refresh_info du portail pour recuperer les informations sur les
+#@  environnements depuis chaque serveur
+#
+#@ IMPACT PT_ORA_APP : 000
+#========================================================================================================
+#V Historique des versions
+#V 30/06/2023 : V1.0.0 : MOUNIER : DXC PROJET HARP  : Version Script TEST
+#========================================================================================================
+
+ssh psoft@$HOSTNAME ". ~/.profile > /dev/null 2>&1;$HARPSHELL/portail_get_info.ksh-test > $HARPLOG/portail_get_info.log-test 2>&1 "
+rc=$?
+if [ ${rc} -eq 0 ]; then
+   ssh psoft@$HOSTNAME ". ~/.profile > /dev/null 2>&1;$HARPSHELL/portail_upd_env.php-test > $HARPLOG/portail_upd_env.log-test  2>&1"
+   rc=$?
+   exit ${rc} 
+else
+   exit ${rc} 
+fi

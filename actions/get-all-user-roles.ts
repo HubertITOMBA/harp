@@ -63,7 +63,7 @@ export async function getAllUserRoles() {
     // Convertir le Set en array et retourner les rôles triés
     const allRoles = Array.from(rolesSet).sort();
     
-    console.log(`[getAllUserRoles] Rôles fusionnés pour userId ${userId}:`, allRoles);
+   // console.log(`[getAllUserRoles] Rôles fusionnés pour userId ${userId}:`, allRoles);
     
     return allRoles;
   } catch (error) {

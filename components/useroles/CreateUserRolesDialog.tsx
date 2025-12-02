@@ -9,13 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Shield, Plus } from "lucide-react";
 import { createUserRoles } from '@/actions/create-useroles';
 import { toast } from 'react-toastify';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 interface User {
   netid: string;
@@ -121,18 +115,18 @@ export function CreateUserRolesDialog() {
           {loading ? (
             <div className="p-2 text-sm text-gray-500">Chargement...</div>
           ) : (
-            <Select value={selectedNetid} onValueChange={setSelectedNetid} required>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Sélectionner un utilisateur" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.netid} value={user.netid}>
-                    {user.netid} - {user.prenom || ''} {user.nom || ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={users.map((user) => ({
+                value: user.netid,
+                label: `${user.netid} - ${user.prenom || ''} ${user.nom || ''}`.trim(),
+              }))}
+              value={selectedNetid}
+              onValueChange={setSelectedNetid}
+              placeholder="Sélectionner un utilisateur"
+              searchPlaceholder="Rechercher un utilisateur..."
+              emptyMessage="Aucun utilisateur trouvé."
+              required
+            />
           )}
         </div>
 
@@ -145,18 +139,18 @@ export function CreateUserRolesDialog() {
           {loading ? (
             <div className="p-2 text-sm text-gray-500">Chargement...</div>
           ) : (
-            <Select value={selectedRole} onValueChange={setSelectedRole} required>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Sélectionner un rôle" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map((role) => (
-                  <SelectItem key={role.role} value={role.role}>
-                    {role.role} - {role.descr}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={roles.map((role) => ({
+                value: role.role,
+                label: `${role.role} - ${role.descr}`,
+              }))}
+              value={selectedRole}
+              onValueChange={setSelectedRole}
+              placeholder="Sélectionner un rôle"
+              searchPlaceholder="Rechercher un rôle..."
+              emptyMessage="Aucun rôle trouvé."
+              required
+            />
           )}
         </div>
 
@@ -166,15 +160,17 @@ export function CreateUserRolesDialog() {
             <Shield className="h-4 w-4 text-orange-600" />
             Rôle principal
           </Label>
-          <Select value={selectedRolep} onValueChange={setSelectedRolep}>
-            <SelectTrigger className="bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Y">Oui</SelectItem>
-              <SelectItem value="N">Non</SelectItem>
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={[
+              { value: "Y", label: "Oui" },
+              { value: "N", label: "Non" },
+            ]}
+            value={selectedRolep}
+            onValueChange={setSelectedRolep}
+            placeholder="Sélectionner..."
+            searchPlaceholder="Rechercher..."
+            emptyMessage="Aucun résultat."
+          />
         </div>
       </div>
 

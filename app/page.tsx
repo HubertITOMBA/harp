@@ -168,7 +168,7 @@ export default function Home() {
           </div>
           <div className="border-t border-gray-700 pt-8">
             <p className="text-gray-400">
-              © 2024 TMA HARP. Tous droits réservés.
+              © 2025 TECH - TMA HARP. Tous droits réservés.
             </p>
           </div>
         </div>

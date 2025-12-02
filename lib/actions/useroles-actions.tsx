@@ -23,7 +23,7 @@ export async function getUserRolesById(netid: string, role: string) {
   }
 
   // Récupérer le rôle
-  const harprole = await db.harproles.findUnique({
+  const harprole = await db.harproles.findFirst({
     where: { role },
     select: {
       id: true,

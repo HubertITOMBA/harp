@@ -25,7 +25,7 @@ export const {
       //  },
 
        async session ({ token, session}) {
-        console.log("ASYNC TOKEN SESSION DANS auth.ts ==> ", {LOG_Session_TOKEN: token, session });
+       // console.log("ASYNC TOKEN SESSION DANS auth.ts ==> ", {LOG_Session_TOKEN: token, session });
 
         if (token.sub && session.user) {
             session.user.id = token.sub;
@@ -34,7 +34,7 @@ export const {
          }
 
          session.user.customField =  await getUserRoles(parseInt(session.user.id));
-         console.log("DANS auth.ts ==> ", {Session_CUSTOM_TOKEN_USER_ROLE : session.user.customField });
+        // console.log("DANS auth.ts ==> ", {Session_CUSTOM_TOKEN_USER_ROLE : session.user.customField });
 
          if (token.role && session.user) {
             session.user.role = token.role;
@@ -54,7 +54,7 @@ export const {
        }, 
        
        async jwt({ token, user, profile } ) {
-            console.log("LE TOKEN USER PROFILE DANS auth.ts ==> ",{token, user, profile});
+           // console.log("LE TOKEN USER PROFILE DANS auth.ts ==> ",{token, user, profile});
             if(!token.sub)  return token;
 
             const existingUser = await getUserById(token.sub);
@@ -62,7 +62,7 @@ export const {
             if (!existingUser) return token;
  
             const userRoles = await getUserRoles(parseInt(token.sub));
-            console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
+           // console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
             token.role = userRoles;
             token.netid = existingUser.netid || null;
             token.pkeyfile = existingUser.pkeyfile || null;

@@ -116,7 +116,7 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
   const userRolesArray = parseRolesFromString(droitsUtilisteur);
 
   return (
-    <div className="mt-4 px-2 text-xs">
+    <div className="mt-2 md:mt-3 lg:mt-3 xl:mt-4 px-1 md:px-1 lg:px-1 xl:px-2 text-xs">
       {/* Connexion en cours : {sessionCount} 
       ENVIRONNEMENTS */}
              

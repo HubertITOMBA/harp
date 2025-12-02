@@ -1,8 +1,5 @@
 
-import type { Metadata } from "next";
-
 import Link from "next/link";
-import Image from 'next/image'
 import React from 'react'
 import Menu from "@/components/home/Menu";
 import Navbar from "@/components/home/Navbar";
@@ -40,7 +37,7 @@ export default async function HarpLayout ( {
      );
    }
    
-   console.log(`[Layout Protected] Session active pour l'utilisateur: ${session.user.id}`);
+   // console.log(`[Layout Protected] Session active pour l'utilisateur: ${session.user.id}`);
    
    // Récupérer tous les rôles fusionnés de l'utilisateur
    // Fusionne : User.role (rôle principal) + harproles via harpuseroles
@@ -50,8 +47,8 @@ export default async function HarpLayout ( {
    // Format attendu: "ROLE1", "ROLE2", "ROLE3"
    const roles = formatRolesForMenu(allUserRolesArray);
    
-   console.log(`[Layout Protected] Rôles fusionnés (${allUserRolesArray.length}):`, allUserRolesArray);
-   console.log(`[Layout Protected] Rôles formatés pour Menu:`, roles);
+   //  console.log(`[Layout Protected] Rôles fusionnés (${allUserRolesArray.length}):`, allUserRolesArray);
+   // console.log(`[Layout Protected] Rôles formatés pour Menu:`, roles);
 
    // Compter les sessions actives
    // Pour l'instant, on considère qu'il y a 1 session active si l'utilisateur est connecté
@@ -62,10 +59,10 @@ export default async function HarpLayout ( {
     <div className="h-screen flex flex-col md:flex-row">
        <SessionProvider session={session}>
           {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
-          <aside className="hidden md:block w-[14%] lg:w-[16%] xl:w-[14%] p-4 bg-white border-r border-gray-200">
-            <Link href="/home" >
-              <h1 className="text-4xl md:text-6xl lg:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-              <h2 className="mx-2 text-xs md:text-sm font-bold text-gray-500">Human Ressources <span className="text-base md:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
+          <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
+            <Link href="/home" className="flex flex-col items-center xl:items-start">
+              <h1 className="text-2xl md:text-3xl lg:text-3xl xl:text-6xl 2xl:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+              <h2 className="mx-1 md:mx-2 text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 hidden xl:block">Human Ressources <span className="text-sm md:text-base lg:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
             </Link>
             <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
           </aside>
@@ -75,14 +72,14 @@ export default async function HarpLayout ( {
             <MobileMenuButton>
               <Link href="/home" className="block mb-4">
                 <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-                <h2 className="text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
+                <h2 className="hidden text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
               </Link>
               <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
             </MobileMenuButton>
           </div>
           
           {/* Contenu principal */}
-          <div className="flex-1 w-full md:w-[86%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-auto flex flex-col">
+          <div className="flex-1 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] bg-[#F7F8FA] overflow-auto flex flex-col">
               <Navbar   DroitsUser = {roles}/>
                { children }
           </div>

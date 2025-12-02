@@ -145,14 +145,14 @@ export const insertTypeBases = async () => {
     for (let i = 0; i < dispositions.length; i += BATCH_SIZE) {
       const batch = dispositions.slice(i, i + BATCH_SIZE);
       
-      // Mettre à jour chaque disposition dans le lot
-      const updates = batch.map(async (dispo) => {
+      // Mettre à jour chaque disposition dans le lot (séquentiellement pour éviter les conflits de concurrence)
+      for (const dispo of batch) {
         const matchingStatutenv = statutenvs.find(
           statut => statut.statenv === dispo.statenv
         );
         
         if (matchingStatutenv) {
-          return prisma.psadm_dispo.update({
+          await prisma.psadm_dispo.update({
             where: {
               env_fromdate: {
                 env: dispo.env,
@@ -163,11 +163,9 @@ export const insertTypeBases = async () => {
               statenvId: matchingStatutenv.id
             }
           });
+          updatedCount++;
         }
-      });
-
-      const result = await Promise.all(updates.filter(Boolean));
-      updatedCount += result.length;
+      }
       
       // Petit délai entre les lots pour laisser le pool de connexions se récupérer
       if (i + BATCH_SIZE < dispositions.length) {
@@ -278,7 +276,7 @@ export const GenererLesMenus = async () => {
         { display: 0, level: 2, menu:  'Permissions', href: '/list/permis', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Permissions par Rôle', href: '/list/permrole', descr: '', icone: 'localact.png',active:  1, role: 'TMA_LOCAL'},
         { display: 5, level: 1, menu:  'Recherche', href: '', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
-        { display: 7, level: 1, menu:  'Refresh Infos', href: '', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
+        { display: 7, level: 1, menu:  'Refresh Infos', href: '/refresh-info', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles', href: '/list/roles', descr: '', icone: '',active:  1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles serveurs', href: '/list/servrole', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles Utilisateurs', href: '/list/useroles', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
@@ -1623,23 +1621,23 @@ export const updateReleaseEnvIds = async () => {
     const envs = await prisma.envsharp.findMany();
     const releases = await prisma.releaseenv.findMany();
 
-    // Mettre à jour chaque environnement
-    const updates = envs.map(async (env) => {
+    // Mettre à jour chaque environnement (séquentiellement pour éviter les conflits de concurrence)
+    let updateCount = 0;
+    for (const env of envs) {
       const matchingRelease = releases.find(
         release => release.harprelease === env.harprelease
       );
 
       if (matchingRelease) {
-        return prisma.envsharp.update({
+        await prisma.envsharp.update({
           where: { id: env.id },
           data: { releaseId: matchingRelease.id }
         });
+        updateCount++;
       }
-    });
+    }
 
-    const result = await Promise.all(updates.filter(Boolean));
-
-    return { success: `${result.length} environnements mis à jour avec leur releaseId !` };
+    return { success: `${updateCount} environnements mis à jour avec leur releaseId !` };
 
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de la mise à jour des releaseId de ENVSHARP", "updateReleaseEnvIds");
@@ -2151,15 +2149,13 @@ export const updateInstanceServerIds = async () => {
       ORDER BY o.id
     `;
 
-    // Mettre à jour chaque instance avec son serverId correspondant
-    const updates = relations.map(async (relation: any) => {
-      return prisma.harpinstance.update({
+    // Mettre à jour chaque instance avec son serverId correspondant (séquentiellement pour éviter les conflits de concurrence)
+    for (const relation of relations as any[]) {
+      await prisma.harpinstance.update({
         where: { id: relation.instanceId },
         data: { serverId: relation.serverId }
       });
-    });
-
-    await Promise.all(updates);
+    }
 
     return { success: `Les relations instance-serveur ont été mises à jour avec succès !` };
   } catch (error) {
@@ -2284,15 +2280,13 @@ export const updateEnvsharpInstanceIds = async () => {
       ORDER BY e.id
     `;
 
-    // Mettre à jour chaque environnement avec son instanceId correspondant
-    const updates = relations.map(async (relation: any) => {
-      return prisma.envsharp.update({
+    // Mettre à jour chaque environnement avec son instanceId correspondant (séquentiellement pour éviter les conflits de concurrence)
+    for (const relation of relations as any[]) {
+      await prisma.envsharp.update({
         where: { id: relation.id },
         data: { instanceId: relation.instanceId }
       });
-    });
-
-    await Promise.all(updates);
+    }
 
     return { success: `Les relations environnement-instance ont été mises à jour avec succès !` };
   } catch (error) {
@@ -2318,17 +2312,17 @@ export const updateEnvsharpOrarelease = async () => {
       WHERE o.orarelease IS NOT NULL
     `;
 
-    // Mettre à jour chaque environnement avec son orarelease correspondant
-    const updates = relations.map(async (relation: any) => {
-      return prisma.envsharp.update({
+    // Mettre à jour chaque environnement avec son orarelease correspondant (séquentiellement pour éviter les conflits de concurrence)
+    let updateCount = 0;
+    for (const relation of relations as any[]) {
+      await prisma.envsharp.update({
         where: { id: relation.id },
         data: { orarelease: relation.orarelease }
       });
-    });
+      updateCount++;
+    }
 
-    const result = await Promise.all(updates);
-
-    return { success: `${result.length} environnements mis à jour avec leur version Oracle !` };
+    return { success: `${updateCount} environnements mis à jour avec leur version Oracle !` };
 
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de la mise à jour des versions Oracle dans ENVSHARP", "updateEnvsharpOrarelease");

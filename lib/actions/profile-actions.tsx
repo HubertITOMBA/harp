@@ -34,6 +34,7 @@ export async function getUserProfile() {
         role: true,
         nom: true,
         prenom: true,
+        pkeyfile: true,
         harpuseroles: {
           include: {
             harproles: {

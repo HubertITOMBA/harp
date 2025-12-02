@@ -138,6 +138,13 @@ export const UserSchema = z.object({
 
 });
 
+// Schéma pour la mise à jour du profil utilisateur
+export const UpdateProfileSchema = z.object({
+  name: z.string().min(1, "Le nom est requis").max(100).optional(),
+  pkeyfile: z.string().max(255, "Le chemin de la clé SSH ne doit pas dépasser 255 caractères").optional().or(z.literal("")),
+  email: z.string().email().optional(), // Champ en lecture seule, mais nécessaire pour le formulaire
+});
+
 
 //   display      Int            
 //   level        Int            
