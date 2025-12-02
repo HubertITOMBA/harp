@@ -57,18 +57,44 @@ Si les solutions précédentes ne fonctionnent pas :
 npm run build:alt
 ```
 
-### Option 4 : Build ultra-propre (Dernier recours)
+### Option 4 : Build avec Dynatrace désactivé
 
-Si toutes les solutions précédentes échouent, utilisez le script ultra-propre qui :
-- Désactive complètement les workers Next.js
-- Utilise un wrapper node personnalisé
-- Force NODE_OPTIONS à être vide à tous les niveaux
+Si Dynatrace est la cause du problème, désactivez-le explicitement :
+
+```bash
+npm run build:no-dynatrace
+```
+
+Ce script utilise les variables d'environnement Dynatrace pour désactiver l'agent :
+- `DT_DISABLE_INJECTION=true`
+- `DT_AGENT_DISABLED=true`
+- `DT_ONEAGENT_DISABLED=true`
+
+### Option 5 : Build avec wrapper node dans PATH (Solution radicale)
+
+Si toutes les solutions précédentes échouent, utilisez le script qui crée un wrapper node dans le PATH :
+
+```bash
+npm run build:final
+```
+
+Ce script :
+- Crée un wrapper `node` et `npx` dans un répertoire temporaire
+- Ajoute ce répertoire au début du PATH
+- Le wrapper intercepte TOUS les appels à node et ignore NODE_OPTIONS
+- Utilise `env -i` pour créer un environnement vierge à chaque appel
+
+**Note** : Cette solution est la plus robuste car elle intercepte les appels au niveau système.
+
+### Option 6 : Build ultra-propre (Alternative)
+
+Si vous préférez une autre approche :
 
 ```bash
 npm run build:ultra
 ```
 
-**Note** : Ce script est plus lent car il désactive les workers, mais il devrait fonctionner même si Dynatrace injecte NODE_OPTIONS.
+Ce script utilise un wrapper node personnalisé mais sans modifier le PATH.
 
 ## Diagnostic
 

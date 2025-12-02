@@ -8,6 +8,8 @@
     "build:internal": "NODE_OPTIONS=\"\" npx prisma generate && NODE_OPTIONS=\"\" npx next build",
     "build:alt": "bash scripts/build-clean.sh",
     "build:ultra": "bash scripts/build-ultra-clean.sh",
+    "build:final": "bash scripts/build-final.sh",
+    "build:no-dynatrace": "bash scripts/build-dynatrace-disabled.sh",
     "build:direct": "env -i PATH=\"$PATH\" HOME=\"$HOME\" USER=\"$USER\" PWD=\"$PWD\" SHELL=\"$SHELL\" TERM=\"${TERM:-xterm}\" NODE_OPTIONS=\"\" bash -c 'npx prisma generate && next build'",
     "start": "next start -p 3000",
     "lint": "next lint",
