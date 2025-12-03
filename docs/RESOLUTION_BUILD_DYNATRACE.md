@@ -9,11 +9,23 @@ NODE_OPTIONS = -r /opt/dynatrace/oneagent/agent/bin/.../pl-nodejsagent.js
 Next.js build worker exited with code: 9
 ```
 
-Cela se produit parce que Dynatrace injecte automatiquement `NODE_OPTIONS` avec l'agent de monitoring, et cette option n'est pas compatible avec le build Next.js.
+### Cause
+
+D'après la réponse de Dynatrace, le problème est dû à un **bug dans Next.js** qui modifie les arguments de ligne de commande en une séquence invalide. L'option `-r` est introduite par l'injection OneAgent avec une valeur valide, mais Next.js post-traitement la modifie en `--r=` (invalide).
+
+**Référence Next.js** : https://github.com/vercel/next.js/issues/77550
 
 ## Solutions
 
-### Solution 1 : Script de build standard (Recommandée)
+### ⭐ Solution 0 : Mettre à jour OneAgent vers 1.323+ (Solution recommandée par Dynatrace)
+
+**Cette est la solution recommandée par Dynatrace** : Mettre à jour OneAgent vers la version 1.323 ou supérieure, qui utilise `--require` au lieu de `-r`, évitant ainsi le problème de modification des arguments par Next.js.
+
+Voir le document `docs/SOLUTION_DYNATRACE_ONAGENT_1323.md` pour les détails complets.
+
+**Action requise** : Contacter l'équipe infrastructure pour mettre à jour OneAgent vers 1.323+.
+
+### Solution 1 : Script de build standard (Workaround temporaire)
 
 Utilisez le script de build standard qui crée un environnement complètement vierge :
 
@@ -165,4 +177,12 @@ Si même avec `env -i` le problème persiste, cela signifie que Dynatrace inject
 3. **Utiliser un conteneur Docker isolé** pour le build
 
 4. **Modifier next.config.ts** pour désactiver les workers (solution de dernier recours)
+
+## Solution recommandée : Mise à jour OneAgent 1.323+
+
+**Note importante** : La solution recommandée par Dynatrace est de mettre à jour OneAgent vers la version 1.323 ou supérieure, qui utilise `--require` au lieu de `-r`. Cette solution évite complètement le problème de modification des arguments par Next.js.
+
+Pour plus d'informations, voir :
+- `docs/SOLUTION_DYNATRACE_ONAGENT_1323.md` (Solution recommandée)
+- `docs/DEMANDE_INFRASTRUCTURE_DYNATRACE.md` (Demande à l'équipe infrastructure)
 
