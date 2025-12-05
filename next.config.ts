@@ -22,8 +22,68 @@ const nextConfig: NextConfig = {
       cpus: 1,
     },
 
+    // Exclure ssh2 des Server Components et Server Actions
+    // Cela empêche Next.js de bundler ssh2 et ses dépendances natives
+    serverComponentsExternalPackages: ['ssh2'],
+
     webpack: (config, { isServer }) => {
-      // Exclure ssh2 du bundle client car c'est un module natif serveur uniquement
+      // Ignorer les fichiers binaires .node (modules natifs)
+      // Créer un loader inline qui retourne un module vide
+      config.module = config.module || {};
+      config.module.rules = config.module.rules || [];
+      
+      // Règle pour ignorer complètement les fichiers .node
+      // Utiliser un loader inline qui retourne module.exports = {}
+      try {
+        config.module.rules.push({
+          test: /\.node$/,
+          use: {
+            loader: require.resolve('./webpack-loaders/ignore-node-loader.js'),
+          },
+        });
+      } catch (error) {
+        // Si le loader n'existe pas, utiliser une approche alternative
+        // Utiliser asset/inline pour éviter le parsing
+        config.module.rules.push({
+          test: /\.node$/,
+          type: 'asset/inline',
+        });
+      }
+      // Empêcher webpack de résoudre les fichiers .node
+      config.resolve = config.resolve || {};
+      config.resolve.extensions = config.resolve.extensions || [];
+      // Ne pas inclure .node dans les extensions résolues automatiquement
+      config.resolve.extensions = config.resolve.extensions.filter((ext: string) => ext !== '.node');
+
+      // Exclure ssh2 complètement du bundle webpack
+      const originalExternals = config.externals;
+      
+      const ssh2External = (data: { context: string; request: string }, callback: (err?: Error | null, result?: string) => void) => {
+        const { request } = data;
+        // Exclure ssh2 et tous ses sous-modules
+        if (request === 'ssh2' || request.startsWith('ssh2/')) {
+          return callback(null, `commonjs ${request}`);
+        }
+        
+        // Si originalExternals est une fonction, l'appeler
+        if (typeof originalExternals === 'function') {
+          return originalExternals(data, callback);
+        }
+        
+        callback();
+      };
+
+      if (Array.isArray(originalExternals)) {
+        config.externals = [...originalExternals, ssh2External];
+      } else if (typeof originalExternals === 'function') {
+        config.externals = [originalExternals, ssh2External];
+      } else if (originalExternals) {
+        config.externals = [originalExternals, ssh2External];
+      } else {
+        config.externals = ssh2External;
+      }
+
+      // Exclure ssh2 du bundle client avec fallback pour les modules Node.js
       if (!isServer) {
         config.resolve.fallback = {
           ...config.resolve.fallback,
@@ -32,11 +92,8 @@ const nextConfig: NextConfig = {
           tls: false,
           crypto: false,
         };
-        config.externals = config.externals || [];
-        config.externals.push({
-          'ssh2': 'commonjs ssh2',
-        });
       }
+      
       return config;
     },
 
