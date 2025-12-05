@@ -22,6 +22,24 @@ const nextConfig: NextConfig = {
       cpus: 1,
     },
 
+    webpack: (config, { isServer }) => {
+      // Exclure ssh2 du bundle client car c'est un module natif serveur uniquement
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+          net: false,
+          tls: false,
+          crypto: false,
+        };
+        config.externals = config.externals || [];
+        config.externals.push({
+          'ssh2': 'commonjs ssh2',
+        });
+      }
+      return config;
+    },
+
 
 };
 

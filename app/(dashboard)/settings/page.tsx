@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarproles, 
  // importInstanceOra, 
   importListEnvs, 
@@ -21,11 +22,13 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   importerLesTools,
   importerLesMenuRoles,
   insertTypeBases,
-  forceImportSpecificEnvs} from "@/actions/importharp";
+  forceImportSpecificEnvs,
+  importerLesMonitors} from "@/actions/importharp";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Database, Server, Users, Package, RefreshCw, Link2, History, AlertTriangle, Wrench } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Settings, Database, Server, Users, Package, RefreshCw, Link2, History, AlertTriangle, Wrench, Loader2 } from "lucide-react";
 import VerifierDoublons from '@/components/harp/VerifierDoublons';
 
   const handlestatutEnv = async () => {
@@ -514,9 +517,64 @@ toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
 }
 }
 
-
  //=============================================   
 export default function Home() {
+  const [isLoadingMonitors, setIsLoadingMonitors] = useState(false);
+  const [monitorsProgress, setMonitorsProgress] = useState(0);
+  const [monitorsMessage, setMonitorsMessage] = useState("");
+
+  const handleLesMonitors = async () => {
+    setIsLoadingMonitors(true);
+    setMonitorsProgress(0);
+    setMonitorsMessage("Démarrage de l'import...");
+    
+    try {
+      // Simuler une progression pendant l'import
+      const progressInterval = setInterval(() => {
+        setMonitorsProgress(prev => {
+          if (prev >= 90) return prev; // Ne pas dépasser 90% avant la fin
+          return prev + Math.random() * 5; // Progression aléatoire entre 0 et 5%
+        });
+      }, 500);
+
+      const result = await importerLesMonitors();
+      
+      clearInterval(progressInterval);
+      setMonitorsProgress(100);
+      
+      if (result.error) {
+        setMonitorsMessage("Erreur lors de l'import");
+        toast.error(result.error);
+      } else if (result.success) {
+        setMonitorsMessage("Import terminé avec succès !");
+        toast.success(result.success);
+        // Afficher les détails si disponibles
+        if (result.details) {
+          const details = result.details;
+          const detailMsg = `Importé: ${details.imported || 0}, Ignoré: ${details.ignoredRecords || 0} enregistrement(s) pour ${details.ignoredEnvironments || 0} environnement(s)`;
+          setTimeout(() => toast.info(detailMsg), 1000);
+        }
+      } else if (result.info) {
+        setMonitorsMessage("Aucune donnée à importer");
+        toast.info(result.info);
+      } else if (result.warning) {
+        setMonitorsMessage("Import partiel");
+        toast.warning(result.warning);
+      }
+      
+      // Réinitialiser après 2 secondes
+      setTimeout(() => {
+        setMonitorsProgress(0);
+        setMonitorsMessage("");
+      }, 2000);
+    } catch (error) {
+      setMonitorsProgress(0);
+      setMonitorsMessage("Erreur");
+      toast.error("Une erreur est survenue lors de l'import des données de monitoring !");
+    } finally {
+      setIsLoadingMonitors(false);
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -795,6 +853,35 @@ export default function Home() {
               >
                 Importer les Indisponibilités d&apos;environnements
               </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleLesMonitors}
+                  variant="outline"
+                  className="w-full justify-start"
+                  disabled={isLoadingMonitors}
+                >
+                  {isLoadingMonitors ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Import en cours...
+                    </>
+                  ) : (
+                    "Importer les données de monitoring"
+                  )}
+                </Button>
+                {isLoadingMonitors && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <span>{monitorsMessage || "Traitement en cours..."}</span>
+                      <span>{Math.round(monitorsProgress)}%</span>
+                    </div>
+                    <Progress value={monitorsProgress} className="h-2" />
+                    <p className="text-xs text-slate-500 italic">
+                      Cette opération peut prendre plusieurs minutes en raison du volume de données...
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

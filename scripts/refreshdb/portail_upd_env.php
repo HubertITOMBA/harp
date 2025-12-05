@@ -1,23 +1,6 @@
 #!/opt/remi/php82/root/usr/bin/php
 <?PHP
-//==========================================================================================================
-// SCRIPT : portail_upd_env.php
-//==========================================================================================================
-//
-// USAGE : Mise a jour des releases HARP des environnements V2
-//
-// Parametres:  Aucun
-//
-//==========================================================================================================
-// Historique des versions
-// 24/05/2018 : V1.0.0 : MOUNIER  : DXC PROJET HARP :  Suppression de la fonction die() 
-// 05/07/2019 : V1.0.1 : MOUNIER  : DXC PROJET HARP :  Ajout info anonymisation
-// 07/02/2023 : V1.0.2 : MOUNIER  : DXC PROJET HARP :  Ajout info password FT_EXPLOIT
-// 27/03/2023 : V1.0.3 : MOUNIER  : DXC PROJET HARP :  Correction sur la MAJ du password FT_EXPLOIT
-// 30/06/2023 : V1.0.4 : MOUNIER  : DXC PROJET HARP :  Version PHP 8.2
-// 03/07/2023 : V1.0.5 : MOUNIER  : DXC PROJET HARP :  Ajout info EDI
-// 27/11/2023 : V1.0.6 : MOUNIER  : DXC PROJET HARP :  Migration menu GASSI_DEV vers MY_TOOLS
-//==========================================================================================================
+
 
 $path = '/produits/portail_harp/www/htdocs/html/portail/includes';
 set_include_path(get_include_path() . PATH_SEPARATOR . $path);
@@ -120,41 +103,41 @@ if ($db_handle) {
                       echo "Environnement $env   : Config EDI (O/N) : $edi  \n";
 
                       echo "Environnement $env   : release $harprelease  \n";
-                      $SQL="UPDATE psadm_env set harprelease='$harprelease' $SQLCOBVER , ptversion='$ptversion' , psversion='$psversion', anonym='$anonym', edi='$edi'  WHERE env='$env'";
+                      $SQL="UPDATE envsharp set harprelease='$harprelease' $SQLCOBVER , ptversion='$ptversion' , psversion='$psversion', anonym='$anonym', edi='$edi'  WHERE env='$env'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_env (release harp, cobver, ptversion, psversion, anonym, edi) '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table envsharp (release harp, cobver, ptversion, psversion, anonym, edi) '.mysqli_error();
                       }
 
                       // on met a jour la base pour les environnements GASSI PRODUCTION
-                      $SQL="UPDATE psadm_env set edi='O' WHERE env='$env' AND env in ('FHHPR1','GASSI_PRODUCTION')";
+                      $SQL="UPDATE envsharp set edi='O' WHERE env='$env' AND env in ('FHHPR1','GASSI_PRODUCTION')";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_env pour FHHPR1 et GASSI_PRODUCTION '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table envsharp pour FHHPR1 et GASSI_PRODUCTION '.mysqli_error();
                       }
 
                       echo "Environnement $env   : deploy cobol $deploycbl  \n";
-                      $SQL="UPDATE psadm_envinfo set deploycbldt='$deploycbl'  WHERE env='$env'";
+                      $SQL="UPDATE harpenvinfo set deploycbldt='$deploycbl'  WHERE env='$env'";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour deploycbl'.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour deploycbl'.mysqli_error();
                       }
 
-                      // on traite le champ pswd_ft_exploit de psadm_envinfo
+                      // on traite le champ pswd_ft_exploit de harpenvinfo
                       echo "Environnement $env   : mot de passe FT_EXPLOIT xxxxxxxx  \n";
                       if ($pswd_ft_exploit!='null')
-                         $SQL="UPDATE psadm_envinfo set pswd_ft_exploit='$pswd_ft_exploit'  WHERE env='$env'";
+                         $SQL="UPDATE harpenvinfo set pswd_ft_exploit='$pswd_ft_exploit'  WHERE env='$env'";
                       else
-                         $SQL="UPDATE psadm_envinfo set pswd_ft_exploit=null  WHERE env='$env'";
+                         $SQL="UPDATE harpenvinfo set pswd_ft_exploit=null  WHERE env='$env'";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour pswd_ft_exploit'.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour pswd_ft_exploit'.mysqli_error();
                       }
 
                       $oracle_sid='null';
-                      $SQL = "select oracle_sid from psadm_env where env='$env'";
+                      $SQL = "select  b.oracle_sid from envsharp a, harpora b where a.env='$env' and a.id=b.envId";
                       $result = mysqli_query($db_handle,$SQL);
                       while ($data = mysqli_fetch_array($result)) {
                             $oracle_sid=$data['oracle_sid'];
@@ -166,7 +149,7 @@ if ($db_handle) {
                       else
                       {
                          echo "Environnement $env   : ORACLE_SID $oracle_sid  \n";
-                         $SQL="UPDATE psadm_oracle set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
+                         $SQL="UPDATE harpora set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
                          echo "$SQL \n";
                          $result = mysqli_query($db_handle,$SQL);
                          if (!$result) {
@@ -174,11 +157,11 @@ if ($db_handle) {
                          }
                        }
 
-                      $SQL="UPDATE psadm_oracle set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
+                      $SQL="UPDATE harpora set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_oracle pour orarelease'.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpora pour orarelease'.mysqli_error();
                       }
 
                       // on traite la date de refresh
@@ -203,23 +186,23 @@ if ($db_handle) {
                       echo "Environnement $env   : mode $SQLMODETP  \n";
 
                       // on met a jour la base pour les environnements non production
-                      $SQL="UPDATE psadm_envinfo set datmaj='$infodt',".$SQLDT.$SQLDATADT."  WHERE env='$env' AND env not in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS')";
+                      $SQL="UPDATE harpenvinfo set datmaj='$infodt',".$SQLDT.$SQLDATADT."  WHERE env='$env' AND env not in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS')";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo '.mysqli_error();
                       }
                       // on met a jour la base pour les environnements GASSI => mode restreint
-                      $SQL="UPDATE psadm_envinfo set datmaj='$infodt'".$SQLMODETP."  WHERE env='$env' AND env in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS','FHHPP2','FHFPP2')";
+                      $SQL="UPDATE harpenvinfo set datmaj='$infodt'".$SQLMODETP."  WHERE env='$env' AND env in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS','FHHPP2','FHFPP2')";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour GASSI '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour GASSI '.mysqli_error();
                       }
 
                       // Mise a jour de la table de monitoring 
                       if ($infodt!=''){ 
                          //$SQL="INSERT INTO psadm_monitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,'$lastasdt',$psunxstatus,'$psunxdt',$psntstatus,'$psntdt','$login','$logindt')";
-                         $SQL="INSERT INTO psadm_monitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,str_to_date(replace('$lastasdt',null,''),'%Y-%m-%d %H:%i:%s'),'$psunxstatus',str_to_date(replace('$psunxdt',null,''),'%Y-%m-%d %H:%i:%s'),$psntstatus,str_to_date(replace('$psntdt',null,''),'%Y-%m-%d %H:%i:%s'),'$login',str_to_date(replace('$logindt',null,''),'%Y-%m-%d %H:%i:%s'))";
+                         $SQL="INSERT INTO harpmonitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,str_to_date(replace('$lastasdt',null,''),'%Y-%m-%d %H:%i:%s'),'$psunxstatus',str_to_date(replace('$psunxdt',null,''),'%Y-%m-%d %H:%i:%s'),$psntstatus,str_to_date(replace('$psntdt',null,''),'%Y-%m-%d %H:%i:%s'),'$login',str_to_date(replace('$logindt',null,''),'%Y-%m-%d %H:%i:%s'))";
                          echo "$SQL \n";
                          $result = mysqli_query($db_handle,$SQL);
                          if (!$result) {
@@ -227,68 +210,68 @@ if ($db_handle) {
                          }
                       }
                       // on met a jour les status d'environnement DB
-                      $SQL="UPDATE psadm_rolesrv set status='$dbstatus'  WHERE env='$env' and typsrv='DB'";
+                      $SQL="UPDATE harpenvserv set status='$dbstatus'  WHERE env='$env' and typsrv='DB'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status DB '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status DB '.mysqli_error();
                       }
                       // on met a jour les status d'environnement AS1,2,3,4,5
                       if ($nbdom>1){ 
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' and right(srv,1)='1'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' and right(srv,1)='1'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS1 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS1 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus2'  WHERE env='$env' and typsrv='AS' and right(srv,1)='2'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus2'  WHERE env='$env' and typsrv='AS' and right(srv,1)='2'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS2 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS2 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus3'  WHERE env='$env' and typsrv='AS' and right(srv,1)='3'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus3'  WHERE env='$env' and typsrv='AS' and right(srv,1)='3'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS3 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS3 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus4'  WHERE env='$env' and typsrv='AS' and right(srv,1)='4'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus4'  WHERE env='$env' and typsrv='AS' and right(srv,1)='4'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS4 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS4 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus5'  WHERE env='$env' and typsrv='AS' and right(srv,1)='5'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus5'  WHERE env='$env' and typsrv='AS' and right(srv,1)='5'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS5 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS5 '.mysqli_error();
                       }
                       } else {
-                       $SQL="UPDATE psadm_rolesrv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' ";
+                       $SQL="UPDATE harpenvserv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' ";
                        echo "$SQL \n";
                        $result = mysqli_query($db_handle,$SQL);
                        if (!$result) {
-                          echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS '.mysqli_error();
+                          echo 'Impossible de mettre a jour la table harpenvserv pour status AS '.mysqli_error();
                        }
                       }
                       // on met a jour les status d'environnement PRCSUNIX
-                      $SQL="UPDATE psadm_rolesrv set status='$psunxstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='UNIX') ";
+                      $SQL="UPDATE harpenvserv set status='$psunxstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='UNIX') ";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status PSUNX '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status PSUNX '.mysqli_error();
                       }
                       // on met a jour les status d'environnement PRCSNT
-                      $SQL="UPDATE psadm_rolesrv set status='$psntstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='NT')" ;
+                      $SQL="UPDATE harpenvserv set status='$psntstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='NT')" ;
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status PSNT '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status PSNT '.mysqli_error();
                       }
                       // on met a jour les status d'environnement WS
-                      $SQL="UPDATE psadm_rolesrv set status='$webstatus' WHERE env='$env' and typsrv='WS'" ;
+                      $SQL="UPDATE harpenvserv set status='$webstatus' WHERE env='$env' and typsrv='WS'" ;
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
@@ -344,61 +327,61 @@ if ($db_handle) {
                          $orarelease='N/A';
                       echo "Environnement $env   : Oracle $orarelease  \n";
 
-                      // on traite la version Ptools => champ ptversion de psadm_env
+                      // on traite la version Ptools => champ ptversion de envsharp
                       if ($ptversion=='null')
                          $ptversion='N/A';
                       echo "Environnement $env   : Oracle $ptversion  \n";
 
-                      // on traite la version Psoft => champ psversion de psadm_env
+                      // on traite la version Psoft => champ psversion de envsharp
                       if ($psversion=='null')
                          $psversion='N/A';
                       echo "Environnement $env   : Oracle $psversion  \n";
 
-                      // on traite le champ anonym de psadm_env
+                      // on traite le champ anonym de envsharp
                       if ($anonym=='null')
                          $anonym='N';
                       echo "Environnement $env   : Anonymisation (O/N) : $anonym  \n";
 
-                      // on traite le champ edi de psadm_env
+                      // on traite le champ edi de envsharp
                       if ($edi=='null')
                          $edi='N';
                       echo "Environnement $env   : Config EDI (O/N) : $edi  \n";
 
                       echo "Environnement $env   : release $harprelease  \n";
-                      $SQL="UPDATE psadm_env set harprelease='$harprelease' $SQLCOBVER , ptversion='$ptversion' , psversion='$psversion' , anonym='$anonym', edi='$edi'  WHERE env='$env'";
+                      $SQL="UPDATE envsharp set harprelease='$harprelease' $SQLCOBVER , ptversion='$ptversion' , psversion='$psversion' , anonym='$anonym', edi='$edi'  WHERE env='$env'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_env (release harp, cobver, ptversion, psversion, anonym, edi) '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table envsharp (release harp, cobver, ptversion, psversion, anonym, edi) '.mysqli_error();
                       }
 
                       // on met a jour la base pour les environnements GASSI PRODUCTION
-                      $SQL="UPDATE psadm_env set edi='O' WHERE env='$env' AND env in ('FHHPR1','GASSI_PRODUCTION')";
+                      $SQL="UPDATE envsharp set edi='O' WHERE env='$env' AND env in ('FHHPR1','GASSI_PRODUCTION')";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_env pour FHHPR1 et GASSI_PRODUCTION '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table envsharp pour FHHPR1 et GASSI_PRODUCTION '.mysqli_error();
                       }
 
-                      $SQL="UPDATE psadm_envinfo set deploycbldt='$deploycbl'  WHERE env='$env'";
+                      $SQL="UPDATE harpenvinfo set deploycbldt='$deploycbl'  WHERE env='$env'";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour deploycbl'.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour deploycbl'.mysqli_error();
                       }
 
-                      // on traite le champ pswd_ft_exploit de psadm_envinfo
+                      // on traite le champ pswd_ft_exploit de harpenvinfo
                       echo "Environnement $env   : mot de passe FT_EXPLOIT xxxxxxxx  \n";
                       if ($pswd_ft_exploit!='null')
-                         $SQL="UPDATE psadm_envinfo set pswd_ft_exploit='$pswd_ft_exploit'  WHERE env='$env'";
+                         $SQL="UPDATE harpenvinfo set pswd_ft_exploit='$pswd_ft_exploit'  WHERE env='$env'";
                       else
-                         $SQL="UPDATE psadm_envinfo set pswd_ft_exploit=null  WHERE env='$env'";
+                         $SQL="UPDATE harpenvinfo set pswd_ft_exploit=null  WHERE env='$env'";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour pswd_ft_exploit'.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour pswd_ft_exploit'.mysqli_error();
                       }
 
                       $oracle_sid='null';
-                      $SQL = "select oracle_sid from psadm_env where env='$env'";
+                      $SQL = "select b.oracle_sid from envsharp a, harpora b where a.env='$env' and a.id=b.envId";
                       $result = mysqli_query($db_handle,$SQL);
                       while ($data = mysqli_fetch_array($result)) {
                             $oracle_sid=$data['oracle_sid'];
@@ -410,7 +393,7 @@ if ($db_handle) {
                       else
                       {
                          echo "Environnement $env   : ORACLE_SID $oracle_sid  \n";
-                         $SQL="UPDATE psadm_oracle set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
+                         $SQL="UPDATE harpora set orarelease='$orarelease'  WHERE oracle_sid='$oracle_sid' and aliasql='$env'";
                          echo "$SQL \n";
                          $result = mysqli_query($db_handle,$SQL);
                          if (!$result) {
@@ -440,95 +423,95 @@ if ($db_handle) {
                       echo "Environnement $env   : mode $SQLMODETP  \n";
 
                       // on met a jour la base pour les environnements non production
-                      $SQL="UPDATE psadm_envinfo set datmaj='$infodt',".$SQLDT.$SQLDATADT."  WHERE env='$env' AND env not in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS')";
+                      $SQL="UPDATE harpenvinfo set datmaj='$infodt',".$SQLDT.$SQLDATADT."  WHERE env='$env' AND env not in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS')";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo '.mysqli_error();
                       }
                       // on met a jour la base pour les environnements GASSI => mode restreint
-                      $SQL="UPDATE psadm_envinfo set datmaj='$infodt'".$SQLMODETP."  WHERE env='$env' AND env in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS','FHHPP2','FHFPP2')";
+                      $SQL="UPDATE harpenvinfo set datmaj='$infodt'".$SQLMODETP."  WHERE env='$env' AND env in ('FHHPR1','FHFPR1','GASSI_PRODUCTION','MY_TOOLS','FHHPP2','FHFPP2')";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_envinfo pour GASSI '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvinfo pour GASSI '.mysqli_error();
                       }
                       // Mise a jour de la table de monitoring 
                       if ($infodt!=''){ 
                          //$SQL="INSERT INTO psadm_monitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,'$lastasdt',$psunxstatus,'$psunxdt',$psntstatus,'$psntdt','$login','$logindt')";
-                         $SQL="INSERT INTO psadm_monitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,str_to_date(replace('$lastasdt',null,''),'%Y-%m-%d %H:%i:%s'),$psunxstatus,str_to_date(replace('$psunxdt',null,''),'%Y-%m-%d %H:%i:%s'),$psntstatus,str_to_date(replace('$psntdt',null,''),'%Y-%m-%d %H:%i:%s'),'$login',str_to_date(replace('$logindt',null,''),'%Y-%m-%d %H:%i:%s'))";
+                         $SQL="INSERT INTO harpmonitor values('$env','$infodt',$dbstatus,$nbdom,$asstatus1,$asstatus2,$asstatus3,$asstatus4,$asstatus5,str_to_date(replace('$lastasdt',null,''),'%Y-%m-%d %H:%i:%s'),$psunxstatus,str_to_date(replace('$psunxdt',null,''),'%Y-%m-%d %H:%i:%s'),$psntstatus,str_to_date(replace('$psntdt',null,''),'%Y-%m-%d %H:%i:%s'),'$login',str_to_date(replace('$logindt',null,''),'%Y-%m-%d %H:%i:%s'))";
                          echo "$SQL \n";
                          $result = mysqli_query($db_handle,$SQL);
                          if (!$result) {
-                            echo 'Impossible de mettre a jour la table psadm_monitor '.mysqli_error();
+                            echo 'Impossible de mettre a jour la table harpmonitor '.mysqli_error();
                          }
                       }
                       // on met a jour les status d'environnement DB
-                      $SQL="UPDATE psadm_rolesrv set status='$dbstatus'  WHERE env='$env' and typsrv='DB'";
+                      $SQL="UPDATE harpenvserv set status='$dbstatus'  WHERE env='$env' and typsrv='DB'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status DB '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status DB '.mysqli_error();
                       }
                       // on met a jour les status d'environnement AS1,2,3,4,5
                       if ($nbdom>1){ 
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' and right(srv,1)='1'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' and right(srv,1)='1'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS1 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS1 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus2'  WHERE env='$env' and typsrv='AS' and right(srv,1)='2'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus2'  WHERE env='$env' and typsrv='AS' and right(srv,1)='2'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS2 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS2 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus3'  WHERE env='$env' and typsrv='AS' and right(srv,1)='3'";
+                      $SQL="UPDATE harpenvsrv set status='$asstatus3'  WHERE env='$env' and typsrv='AS' and right(srv,1)='3'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS3 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS3 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus4'  WHERE env='$env' and typsrv='AS' and right(srv,1)='4'";
+                      $SQL="UPDATE harpenvsrv set status='$asstatus4'  WHERE env='$env' and typsrv='AS' and right(srv,1)='4'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS4 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvsrv pour status AS4 '.mysqli_error();
                       }
-                      $SQL="UPDATE psadm_rolesrv set status='$asstatus5'  WHERE env='$env' and typsrv='AS' and right(srv,1)='5'";
+                      $SQL="UPDATE harpenvserv set status='$asstatus5'  WHERE env='$env' and typsrv='AS' and right(srv,1)='5'";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS5 '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status AS5 '.mysqli_error();
                       }
                       } else {
-                         $SQL="UPDATE psadm_rolesrv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' ";
+                         $SQL="UPDATE harpenvserv set status='$asstatus1'  WHERE env='$env' and typsrv='AS' ";
                          echo "$SQL \n";
                          $result = mysqli_query($db_handle,$SQL);
                          if (!$result) {
-                            echo 'Impossible de mettre a jour la table psadm_rolesrv pour status AS '.mysqli_error();
+                            echo 'Impossible de mettre a jour la table harpenvserv pour status AS '.mysqli_error();
                          }
                       }
                       // on met a jour les status d'environnement PRCSUNIX
-                      $SQL="UPDATE psadm_rolesrv set status='$psunxstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='UNIX') ";
+                      $SQL="UPDATE harpenvserv set status='$psunxstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='UNIX') ";
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status PSUNX '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status PSUNX '.mysqli_error();
                       }
                       // on met a jour les status d'environnement PRCSNT
-                      $SQL="UPDATE psadm_rolesrv set status='$psntstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='NT')" ;
+                      $SQL="UPDATE harpenvserv set status='$psntstatus' WHERE env='$env' and typsrv='PRCS' and srv in ( select srv from psadm_srv where os='NT')" ;
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status PSNT '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status PSNT '.mysqli_error();
                       }
                       // on met a jour les status d'environnement WS
-                      $SQL="UPDATE psadm_rolesrv set status='$webstatus' WHERE env='$env' and typsrv='WS'" ;
+                      $SQL="UPDATE harpenvserv set status='$webstatus' WHERE env='$env' and typsrv='WS'" ;
                       echo "$SQL \n";
                       $result = mysqli_query($db_handle,$SQL);
                       if (!$result) {
-                         echo 'Impossible de mettre a jour la table psadm_rolesrv pour status WS '.mysqli_error();
+                         echo 'Impossible de mettre a jour la table harpenvserv pour status WS '.mysqli_error();
                       }
 
                       echo "Mise a jour terminee pour $env - OK \n";
@@ -540,9 +523,9 @@ if ($db_handle) {
        }
     }
 
-   $SQL="update psadm_envinfo  set lastcheckstatus=1 where (env,datmaj) in ( select env,monitordt from  psadm_monitor m1 where (dbstatus=0 or (nbdom=1 and asstatus1=0) or (nbdom=2 and (asstatus1=0 or asstatus2=0)) or (nbdom=3 and (asstatus1=0 or asstatus2=0 or asstatus3=0 )) or (nbdom=4 and (asstatus1=0 or asstatus2=0 or asstatus3=0 or asstatus4=0 )) or (nbdom=5 and (asstatus1=0 or asstatus2=0 or asstatus3=0 or asstatus4=0 or asstatus5=0)) or prcsunxstatus=0 or prcsntstatus=0) and monitordt=(select max(monitordt) from psadm_monitor m2 where m2.env=m1.env))";
+   $SQL="update harpenvinfo  set lastcheckstatus=1 where (env,datmaj) in ( select env,monitordt from  psadm_monitor m1 where (dbstatus=0 or (nbdom=1 and asstatus1=0) or (nbdom=2 and (asstatus1=0 or asstatus2=0)) or (nbdom=3 and (asstatus1=0 or asstatus2=0 or asstatus3=0 )) or (nbdom=4 and (asstatus1=0 or asstatus2=0 or asstatus3=0 or asstatus4=0 )) or (nbdom=5 and (asstatus1=0 or asstatus2=0 or asstatus3=0 or asstatus4=0 or asstatus5=0)) or prcsunxstatus=0 or prcsntstatus=0) and monitordt=(select max(monitordt) from psadm_monitor m2 where m2.env=m1.env))";
    echo "$SQL \n";
-   // mysqli_query($db_handle,$SQL) or die ('Impossible de mettre a jour la table psadm_envinfo pour status global environnement '.mysqli_error()); 
+   // mysqli_query($db_handle,$SQL) or die ('Impossible de mettre a jour la table harpenvinfo pour status global environnement '.mysqli_error()); 
 
     mysqli_close($db_handle);
 
