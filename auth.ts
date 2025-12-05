@@ -33,13 +33,17 @@ export const {
                        
          }
 
-         session.user.customField =  await getUserRoles(parseInt(session.user.id));
-        // console.log("DANS auth.ts ==> ", {Session_CUSTOM_TOKEN_USER_ROLE : session.user.customField });
+         // Utiliser les rôles du token au lieu de refaire une requête à chaque fois
+         // Cela améliore considérablement les performances
+         if (token.customField && session.user) {
+            session.user.customField = token.customField as string;
+         } else if (token.role && session.user) {
+            // Fallback : utiliser token.role si customField n'est pas disponible
+            session.user.customField = token.role as string;
+         }
 
          if (token.role && session.user) {
             session.user.role = token.role;
-           // session.user.role = token.role as UserRole;
-           //  session.user.customField =  await getUserRoles(parseInt(token.sub));
          }
 
          if (token.netid && session.user) {
@@ -53,24 +57,53 @@ export const {
         return  session;
        }, 
        
-       async jwt({ token, user, profile } ) {
+       async jwt({ token, user, profile, trigger } ) {
            // console.log("LE TOKEN USER PROFILE DANS auth.ts ==> ",{token, user, profile});
+            
+            // Lors de la première connexion, user est présent
+            if (user) {
+              token.sub = user.id;
+              token.name = user.name;
+              
+              // Récupérer les rôles lors de la première connexion
+              const existingUser = await getUserById(user.id);
+              if (existingUser) {
+                const userRoles = await getUserRoles(parseInt(user.id));
+                token.role = userRoles;
+                token.customField = userRoles;
+                token.netid = existingUser.netid || null;
+                token.pkeyfile = existingUser.pkeyfile || null;
+              }
+              return token;
+            }
+
+            // Pour les requêtes suivantes, vérifier si on doit rafraîchir les rôles
             if(!token.sub)  return token;
 
-            const existingUser = await getUserById(token.sub);
+            // Récupérer les rôles uniquement lors du rafraîchissement explicite du token
+            // Ne pas refaire la requête à chaque requête HTTP (optimisation performance)
+            const shouldRefreshRoles = !token.customField || trigger === "update";
+            
+            if (shouldRefreshRoles) {
+              const existingUser = await getUserById(token.sub);
 
-            if (!existingUser) return token;
- 
-            const userRoles = await getUserRoles(parseInt(token.sub));
-           // console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
-            token.role = userRoles;
-            token.netid = existingUser.netid || null;
-            token.pkeyfile = existingUser.pkeyfile || null;
+              if (!existingUser) return token;
+   
+              const userRoles = await getUserRoles(parseInt(token.sub));
+             // console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
+              token.role = userRoles;
+              token.customField = userRoles; // Stocker aussi dans customField pour le session callback
+              token.netid = existingUser.netid || null;
+              token.pkeyfile = existingUser.pkeyfile || null;
+            }
 
             return token;   
          }    
     },
     adapter: PrismaAdapter(db),
-    session: { strategy: "jwt"},
+    session: { 
+      strategy: "jwt",
+      maxAge: 30 * 24 * 60 * 60, // 30 jours en secondes (au lieu de 30 jours par défaut)
+    },
    ...authConfig,
 });    

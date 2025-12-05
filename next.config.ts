@@ -22,10 +22,6 @@ const nextConfig: NextConfig = {
       cpus: 1,
     },
 
-    // Exclure ssh2 des Server Components et Server Actions
-    // Cela empêche Next.js de bundler ssh2 et ses dépendances natives
-    serverComponentsExternalPackages: ['ssh2'],
-
     webpack: (config, { isServer }) => {
       // Ignorer les fichiers binaires .node (modules natifs)
       // Créer un loader inline qui retourne un module vide

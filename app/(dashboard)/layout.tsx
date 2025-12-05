@@ -5,7 +5,7 @@ import { MobileMenuButton } from "@/components/ui/mobile-menu-button";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { getAllUserRoles } from "@/actions/get-all-user-roles";
-import { formatRolesForMenu, hasAnyRole } from "@/lib/user-roles";
+import { formatRolesForMenu, hasAnyRole, parseRolesFromString } from "@/lib/user-roles";
 
 import Navbar from "@/components/home/Navbar";
 import MenuDash from "@/components/harp/MenuDash";
@@ -37,9 +37,20 @@ export default async function HarpLayout ( {
       );
     }
     
-    // Récupérer tous les rôles fusionnés de l'utilisateur
-    // Fusionne : User.role (rôle principal) + harproles via harpuseroles
-    const allUserRolesArray = await getAllUserRoles();
+    // Récupérer les rôles depuis la session (optimisé pour les performances)
+    // Les rôles sont déjà dans session.user.customField après optimisation de auth.ts
+    let allUserRolesArray: string[] = [];
+    
+    if (session.user.customField) {
+      // Parser les rôles depuis le format "ROLE1", "ROLE2", "ROLE3"
+      allUserRolesArray = parseRolesFromString(session.user.customField);
+    }
+    
+    // Fallback : si pas de rôles dans la session, utiliser getAllUserRoles
+    // (mais cela ne devrait plus arriver après l'optimisation)
+    if (allUserRolesArray.length === 0) {
+      allUserRolesArray = await getAllUserRoles();
+    }
     
     // Vérifier que l'utilisateur a au moins un des rôles requis pour accéder au dashboard
     // Rôles requis : PSADMIN ou PORTAL_ADMIN
