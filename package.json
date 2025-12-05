@@ -4,19 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
-    "build": "bash scripts/build.sh",
-    "build:internal": "NODE_OPTIONS=\"\" npx prisma generate && NODE_OPTIONS=\"\" npx next build",
-    "build:alt": "bash scripts/build-clean.sh",
-    "build:ultra": "bash scripts/build-ultra-clean.sh",
-    "build:final": "bash scripts/build-final.sh",
-    "build:no-dynatrace": "bash scripts/build-dynatrace-disabled.sh",
-    "build:direct": "env -i PATH=\"$PATH\" HOME=\"$HOME\" USER=\"$USER\" PWD=\"$PWD\" SHELL=\"$SHELL\" TERM=\"${TERM:-xterm}\" NODE_OPTIONS=\"\" bash -c 'npx prisma generate && next build'",
+    "build": "npx prisma generate && next build",
     "start": "next start -p 9052",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "migration:run": "npx tsx scripts/run-migration.ts",
-    "migration:init": "npx tsx scripts/run-init-migration.ts",
-    "diagnostic:dynatrace": "bash scripts/diagnostic-dynatrace.sh"
+    "migration:init": "npx tsx scripts/run-init-migration.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
