@@ -9,7 +9,8 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "migration:run": "npx tsx scripts/run-migration.ts",
-    "migration:init": "npx tsx scripts/run-init-migration.ts"
+    "migration:init": "npx tsx scripts/run-init-migration.ts",
+    "migration:users": "npx tsx scripts/run-migrate-users.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

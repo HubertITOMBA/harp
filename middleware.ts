@@ -7,6 +7,7 @@ import {
     publicRoutes,
   } from "@/routes";
 import { isMigrationInProgress } from "@/lib/init-full-migration";
+import { ensureUserMigration } from "@/lib/init-migration";
 
 
 
@@ -29,6 +30,17 @@ export default auth(async (req) => {
     // Si la migration est en cours, rediriger toutes les routes (sauf /init et les API) vers /init
     if (isMigrationInProgress() && !isInitRoute && !isApiRoute && !isApiAuthRoute) {
         return Response.redirect(new URL("/init", nextUrl));
+    }
+
+    // Vérifier et synchroniser les utilisateurs de manière asynchrone (non-bloquant)
+    // Cela garantit que les utilisateurs sont toujours synchronisés pour l'authentification
+    // Ne s'exécute que sur les routes publiques ou d'authentification pour éviter les appels répétés
+    if ((isPublicRoute || isAuthRoute) && !isApiRoute) {
+      // Exécuter de manière asynchrone sans bloquer la requête
+      ensureUserMigration().catch((error) => {
+        // Logger l'erreur mais ne pas bloquer la requête
+        console.error("[Middleware] Erreur lors de la synchronisation des utilisateurs:", error);
+      });
     }
 
     // Laisser passer toutes les routes API (sauf celles d'auth qui sont gérées par NextAuth)

@@ -198,9 +198,9 @@ import VerifierDoublons from '@/components/harp/VerifierDoublons';
 
   const handleImportUsers = async () => {
     try {
-      // Utiliser la version améliorée qui gère mieux les cas d'erreur
-      const result = await migrerLesUtilisateursNEW();
-     // const result = await migrerLesUtilisateurs();
+      // Utiliser migrerLesUtilisateurs() pour forcer l'import même si la table n'est pas vide
+      const result = await migrerLesUtilisateurs();
+     // const result = await migrerLesUtilisateursNEW();
       if (result.error) {
         toast.error(result.error);
       } else if (result.success) {

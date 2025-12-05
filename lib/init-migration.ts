@@ -5,7 +5,7 @@
  */
 
 import prisma from "@/lib/prisma";
-import { migrerLesUtilisateursNEW, migrerLesRolesUtilisateurs } from "@/actions/importharp";
+import { migrerLesUtilisateurs, migrerLesUtilisateursNEW, migrerLesRolesUtilisateurs } from "@/actions/importharp";
 import { ensureFullDatabaseMigration } from "./init-full-migration";
 
 // Variables de contrôle pour éviter les exécutions multiples
@@ -51,10 +51,51 @@ export async function ensureUserMigration() {
       };
     }
     
+    // FORCER l'import des utilisateurs manquants même si la table User n'est pas vide
+    // La table User contient les authentifications, donc on doit toujours synchroniser
     if (userCount > 0) {
-      console.log(`[Migration] La table User contient déjà ${userCount} utilisateur(s). Migration non nécessaire.`);
+      console.log(`[Migration] La table User contient déjà ${userCount} utilisateur(s). Synchronisation des utilisateurs manquants...`);
+      
+      // Utiliser migrerLesUtilisateurs() qui force l'import des utilisateurs manquants
+      const usersResult = await migrerLesUtilisateurs();
+      
+      if (usersResult.error) {
+        console.error(`[Migration] Erreur lors de la synchronisation des utilisateurs: ${usersResult.error}`);
+        // Ne pas bloquer si l'erreur est que psadm_user est vide
+        if (usersResult.error.includes("psadm_user est vide")) {
+          return { skipped: true, reason: "Table psadm_user vide, aucun utilisateur à synchroniser", userCount };
+        }
+      } else if (usersResult.success) {
+        console.log(`[Migration] ${usersResult.success}`);
+      } else if (usersResult.info) {
+        console.log(`[Migration] ${usersResult.info}`);
+      }
+      
+      // Migrer aussi les rôles des utilisateurs
+      try {
+        const rolesResult = await migrerLesRolesUtilisateurs();
+        if (rolesResult.success) {
+          console.log(`[Migration] ${rolesResult.success}`);
+        } else if (rolesResult.info) {
+          console.log(`[Migration] ${rolesResult.info}`);
+        }
+      } catch (rolesError) {
+        console.warn(`[Migration] Avertissement lors de la migration des rôles:`, rolesError);
+      }
+      
+      // Mettre à jour le compteur après synchronisation
+      const newUserCount = await prisma.user.count();
       migrationExecuted = true;
-      return { skipped: true, reason: "Table User non vide", userCount };
+      migrationInProgress = false;
+      migrationPromise = null;
+      
+      return { 
+        success: true, 
+        reason: "Synchronisation des utilisateurs terminée", 
+        userCount: newUserCount,
+        usersMigration: usersResult,
+        rolesMigration: { success: true }
+      };
     }
 
     // Si la base est vide, utiliser la migration complète au lieu de seulement les utilisateurs
