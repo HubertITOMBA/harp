@@ -1,6 +1,7 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "Portail TMA Harp",
+  "short_name": "HARP",
+  "description": "Portail de gestion TMA Harp - Human Resources & Payroll",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +16,10 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#f97316",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
 }
+

@@ -1007,21 +1007,32 @@ export const importerInstancesOracle = async () => {
 
 export async function migrerLesUtilisateurs() {
   try {
-
-     // Vérifier si la table est vide
-     const count = await prisma.user.count();
-    
-     if (count > 1) {
-       return { info: "La table user contient déjà tous les utilisateurs Harp. Importation ignorée." };
+     // Vérifier si la table psadm_user contient des utilisateurs
+     const psadmUserCount = await prisma.psadm_user.count();
+     
+     if (psadmUserCount === 0) {
+       return { error: "La table psadm_user est vide. Aucun utilisateur à migrer." };
      }
 
-      // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE User AUTO_INCREMENT = 1`;
+     // Vérifier le nombre d'utilisateurs dans la table User
+     const userCount = await prisma.user.count();
+     console.log(`[Migration] Nombre d'utilisateurs dans User: ${userCount}, dans psadm_user: ${psadmUserCount}`);
+    
+     // Permettre l'import même si la table User contient quelques utilisateurs
+     // (peut-être un admin par défaut créé manuellement)
+     // On importe tous les utilisateurs manquants de psadm_user
 
      // Récupérer tous les utilisateurs de psadm_user
     const psadmUsers = await prisma.psadm_user.findMany()
     
-    console.log(`Migration de ${psadmUsers.length} utilisateurs...`)
+    if (psadmUsers.length === 0) {
+      return { error: "Aucun utilisateur trouvé dans psadm_user." };
+    }
+
+    console.log(`[Migration] Début de la migration de ${psadmUsers.length} utilisateurs...`)
+
+    let importedCount = 0;
+    let skippedCount = 0;
 
     // Pour chaque utilisateur dans psadm_user
     for (const user of psadmUsers) {
@@ -1031,34 +1042,45 @@ export async function migrerLesUtilisateurs() {
       })
 
       if (!existingUser) {
-        // Créer le nouvel utilisateur dans la table User
-        await prisma.user.create({
-          data: {
-            netid: user.netid,
-            unxid: user.unxid,
-            oprid: user.oprid,
-            nom: user.nom,
-            prenom: user.prenom,
-            name: `${user.nom} ${user.prenom}`,
-            pkeyfile: user.pkeyfile,
-            lastlogin: user.lastlogin,
-            email: user.email,
-            password: user.mdp,
-             
-          }
-        })
-        console.log(`Utilisateurs migré avec succès: ${user.netid}`)
+        try {
+          // Créer le nouvel utilisateur dans la table User
+          await prisma.user.create({
+            data: {
+              netid: user.netid,
+              unxid: user.unxid,
+              oprid: user.oprid,
+              nom: user.nom,
+              prenom: user.prenom,
+              name: `${user.nom || ''} ${user.prenom || ''}`.trim() || user.netid,
+              pkeyfile: user.pkeyfile,
+              lastlogin: user.lastlogin,
+              email: user.email,
+              password: user.mdp,
+            }
+          })
+          importedCount++;
+          console.log(`[Migration] Utilisateur migré avec succès: ${user.netid}`)
+        } catch (createError) {
+          console.error(`[Migration] Erreur lors de la création de l'utilisateur ${user.netid}:`, createError);
+          // Continuer avec les autres utilisateurs
+        }
       } else {
-        console.log(`L'utilisateur ${user.netid} existe déjà`)
+        skippedCount++;
+        console.log(`[Migration] L'utilisateur ${user.netid} existe déjà, ignoré.`)
       }
     }
    
-   // return { success: `${psadmUsers.count} utilisateurmigrer vers Prisma avec succès !` };
-    return { success: `Les utilisateurs sont migrés vers Prisma avec succès !` };
+    if (importedCount === 0 && skippedCount > 0) {
+      return { info: `Tous les utilisateurs (${skippedCount}) existent déjà dans la table User. Aucune migration nécessaire.` };
+    }
+
+    return { success: `${importedCount} utilisateur(s) migré(s) avec succès vers Prisma ! ${skippedCount > 0 ? `(${skippedCount} déjà existant(s))` : ''}` };
   } catch (error) {
+    console.error("[Migration] Erreur lors de la migration des utilisateurs:", error);
     return handlePrismaError(error, "Erreur lors de la migration des utilisateurs vers Prisma.", "migrerLesUtilisateurs");
   } finally {
-    await prisma.$disconnect()
+    // Ne pas déconnecter ici car cela peut causer des problèmes avec d'autres opérations
+    // await prisma.$disconnect()
   }
 };
  
@@ -1804,6 +1826,14 @@ export const migrerLesUtilisateursNEW = async () => {
       }
     }
 
+    // Vérifier d'abord si la table psadm_user contient des utilisateurs
+    const psadmUserCount = await prisma.psadm_user.count();
+    if (psadmUserCount === 0) {
+      return { error: "La table psadm_user est vide. Aucun utilisateur à migrer." };
+    }
+
+    console.log(`[Migration] Nombre d'utilisateurs dans User: ${count}, dans psadm_user: ${psadmUserCount}`);
+
     // Récupérer tous les utilisateurs de psadm_user avec une requête SQL brute
     // pour gérer les dates invalides (0000-00-00) qui causent des erreurs Prisma
     const psadmUsersRaw = await prisma.$queryRaw<Array<{
@@ -1836,6 +1866,14 @@ export const migrerLesUtilisateursNEW = async () => {
         mdp
       FROM psadm_user
     `;
+
+    if (!psadmUsersRaw || psadmUsersRaw.length === 0) {
+      return { error: "Aucun utilisateur trouvé dans psadm_user après la requête SQL." };
+    }
+
+    if (!psadmUsersRaw || psadmUsersRaw.length === 0) {
+      return { error: "Aucun utilisateur trouvé dans psadm_user après la requête SQL." };
+    }
 
     // Convertir les dates string en Date et filtrer les valeurs invalides
     const usersToCreate = psadmUsersRaw.map(user => {
@@ -1870,13 +1908,25 @@ export const migrerLesUtilisateursNEW = async () => {
       };
     });
 
+    if (usersToCreate.length === 0) {
+      return { info: "Aucun utilisateur à créer. Tous les utilisateurs existent déjà dans la table User." };
+    }
+
+    console.log(`[Migration] Tentative de création de ${usersToCreate.length} utilisateur(s)...`);
+
     // Pour chaque utilisateur dans psadm_user
     const createdUsers = await prisma.user.createMany({
       data: usersToCreate,
       skipDuplicates: true // Ignore les doublons basés sur les champs uniques (netid)
     });
 
-    return { success: `${createdUsers.count} utilisateurs migrés vers Prisma avec succès !` };
+    console.log(`[Migration] ${createdUsers.count} utilisateur(s) créé(s) avec succès.`);
+
+    if (createdUsers.count === 0) {
+      return { info: "Aucun nouvel utilisateur créé. Tous les utilisateurs existent déjà dans la table User." };
+    }
+
+    return { success: `${createdUsers.count} utilisateur(s) migré(s) vers Prisma avec succès !` };
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de la migration des utilisateurs vers Prisma.", "migrerLesUtilisateursNEW");
   }
@@ -3201,6 +3251,7 @@ export const importerLesMonitors = async () => {
     return handlePrismaError(error, "Erreur lors de l'importation des données de monitoring", "importerLesMonitors");
   }
 };
+
 
 
 

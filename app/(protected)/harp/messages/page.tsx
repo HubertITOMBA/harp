@@ -10,12 +10,19 @@ export const dynamic = 'force-dynamic'
 
 async function getUsers(): Promise<User[]> {
   try {
+    // Timeout de 5 secondes pour éviter les blocages en production
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const res = await fetch(
       'https://64a6f5fc096b3f0fcc80e3fa.mockapi.io/api/users',
       {
         cache: 'no-store', // Forcer le fetch à chaque requête
+        signal: controller.signal,
       }
     )
+    
+    clearTimeout(timeoutId);
     
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`)
@@ -24,9 +31,19 @@ async function getUsers(): Promise<User[]> {
     const data = await res.json()
     return data
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error)
-    // Retourner un tableau vide en cas d'erreur pour ne pas bloquer le build
-    // L'erreur SSL sera gérée gracieusement et le build pourra continuer
+    // Gérer les erreurs de timeout et de connexion gracieusement
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        console.warn('Timeout lors de la récupération des utilisateurs (API externe non accessible)')
+      } else if (error.message.includes('ERR_CONNECTION_TIMED_OUT') || error.message.includes('ETIMEDOUT')) {
+        console.warn('Connexion timeout - API externe non accessible depuis ce réseau')
+      } else {
+        console.error('Erreur lors de la récupération des utilisateurs:', error.message)
+      }
+    } else {
+      console.error('Erreur lors de la récupération des utilisateurs:', error)
+    }
+    // Retourner un tableau vide en cas d'erreur pour ne pas bloquer l'application
     return []
   }
 }
