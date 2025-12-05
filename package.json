@@ -11,7 +11,7 @@
     "build:final": "bash scripts/build-final.sh",
     "build:no-dynatrace": "bash scripts/build-dynatrace-disabled.sh",
     "build:direct": "env -i PATH=\"$PATH\" HOME=\"$HOME\" USER=\"$USER\" PWD=\"$PWD\" SHELL=\"$SHELL\" TERM=\"${TERM:-xterm}\" NODE_OPTIONS=\"\" bash -c 'npx prisma generate && next build'",
-    "start": "next start -p 9050",
+    "start": "next start -p 9052",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "migration:run": "npx tsx scripts/run-migration.ts",
