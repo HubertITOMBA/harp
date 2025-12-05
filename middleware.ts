@@ -7,7 +7,6 @@ import {
     publicRoutes,
   } from "@/routes";
 import { isMigrationInProgress } from "@/lib/init-full-migration";
-import { ensureUserMigration } from "@/lib/init-migration";
 
 
 
@@ -32,16 +31,12 @@ export default auth(async (req) => {
         return Response.redirect(new URL("/init", nextUrl));
     }
 
-    // Vérifier et synchroniser les utilisateurs de manière asynchrone (non-bloquant)
-    // Cela garantit que les utilisateurs sont toujours synchronisés pour l'authentification
-    // Ne s'exécute que sur les routes publiques ou d'authentification pour éviter les appels répétés
-    if ((isPublicRoute || isAuthRoute) && !isApiRoute) {
-      // Exécuter de manière asynchrone sans bloquer la requête
-      ensureUserMigration().catch((error) => {
-        // Logger l'erreur mais ne pas bloquer la requête
-        console.error("[Middleware] Erreur lors de la synchronisation des utilisateurs:", error);
-      });
-    }
+    // NOTE: La synchronisation des utilisateurs ne peut pas être faite dans le middleware
+    // car le middleware s'exécute sur Edge runtime où Prisma Client ne fonctionne pas.
+    // La synchronisation se fait via :
+    // - La route API /api/migrate-users (appelable manuellement)
+    // - Le composant MigrationInit dans les layouts serveur
+    // - La page /init pour la migration complète
 
     // Laisser passer toutes les routes API (sauf celles d'auth qui sont gérées par NextAuth)
     if (isApiRoute && !isApiAuthRoute) {

@@ -637,12 +637,26 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
       console.log(`[forceImportSpecificEnvs] ${deletedCount} environnement(s) supprimé(s) de envsharp`);
     }
 
+    // Récupérer tous les typenvid valides depuis harptypenv pour vérifier les contraintes de clé étrangère
+    const validTypenvIds = await prisma.harptypenv.findMany({
+      select: { id: true }
+    });
+    const validTypenvIdSet = new Set(validTypenvIds.map(t => t.id));
+    console.log(`[forceImportSpecificEnvs] ${validTypenvIdSet.size} typenvid valide(s) trouvé(s) dans harptypenv`);
+
     // Préparer les données à importer
     // Note: typenvid doit être rempli dans psadm_env par lierTypeEnvs() avant d'appeler cette fonction
     const dataToImport = envData.map(record => {
       if (!record.env) {
         console.error(`[forceImportSpecificEnvs] Environnement sans nom (env) ignoré:`, record);
         return null;
+      }
+
+      // Vérifier que le typenvid existe dans harptypenv, sinon le mettre à null
+      let typenvid: number | null = record.typenvid || null;
+      if (typenvid !== null && !validTypenvIdSet.has(typenvid)) {
+        console.warn(`[forceImportSpecificEnvs] typenvid ${typenvid} pour l'environnement ${record.env} n'existe pas dans harptypenv. Mise à null.`);
+        typenvid = null;
       }
 
       return {
@@ -662,7 +676,7 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
         descr: record.descr || null,
         anonym: record.anonym || null,
         edi: record.edi || null,
-        typenvid: record.typenvid || null, // Utilise typenvid de psadm_env (doit être rempli par lierTypeEnvs())
+        typenvid: typenvid, // Vérifié et validé contre harptypenv
         statenvId: record.statenvId || null
       };
     }).filter((item): item is NonNullable<typeof item> => item !== null);
