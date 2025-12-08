@@ -51,7 +51,18 @@ export function DataTable<TData, TValue>({
 
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    // Colonnes visibles par défaut : tool, cmd, descr, actions
+    // Autres colonnes masquées par défaut (disponibles via le bouton Colonnes)
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+      select: false,
+      tooltype: false,
+      cmdpath: false,
+      version: false,
+      cmdarg: false,
+      mode: false,
+      output: false,
+      // tool, cmd, descr, actions sont visibles par défaut (non définies = true)
+    });
 
     const [rowSelection, setRowSelection] = useState({});
 
@@ -151,7 +162,10 @@ export function DataTable<TData, TValue>({
                 
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell 
+                    key={cell.id}
+                    className={cell.column.id === 'actions' ? 'text-center' : ''}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

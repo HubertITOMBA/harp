@@ -18,6 +18,8 @@ import { getHarpRoleByIdWithUsers } from '@/lib/actions/harprole-actions';
 interface ViewRoleDialogProps {
   roleId: number;
   roleName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface RoleData {
@@ -36,11 +38,13 @@ interface RoleData {
   }>;
 }
 
-export function ViewRoleDialog({ roleId, roleName }: ViewRoleDialogProps) {
+export function ViewRoleDialog({ roleId, roleName, open: controlledOpen, onOpenChange }: ViewRoleDialogProps) {
   const router = useRouter();
   const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const handleBackToList = () => {
     setOpen(false);

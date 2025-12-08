@@ -16,12 +16,16 @@ import { db } from "@/lib/db";
 interface ViewAppliDialogProps {
   appli: string;
   psversion: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ViewAppliDialog({ appli, psversion }: ViewAppliDialogProps) {
+export function ViewAppliDialog({ appli, psversion, open: controlledOpen, onOpenChange }: ViewAppliDialogProps) {
   const [appliData, setAppliData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   useEffect(() => {
     if (open && !appliData) {

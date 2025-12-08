@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from 'react';
 import { EditUserDialog } from './EditUserDialog';
-import { Button } from '@/components/ui/button';
-import { Eye, UserCheck, UserX } from 'lucide-react';
+import { ActionsDropdown, ActionItem } from '@/components/ui/actions-dropdown';
+import { Eye, Pencil, UserCheck, UserX } from 'lucide-react';
 import { toggleUserStatus } from '@/actions/toggle-user-status';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface UserActionsProps {
   user: {
@@ -26,6 +26,7 @@ interface UserActionsProps {
 
 export function UserActions({ user }: UserActionsProps) {
   const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
   const isDisabled = user.mdp?.startsWith('DISABLED_') || false;
 
   const handleToggleStatus = async () => {
@@ -49,34 +50,39 @@ export function UserActions({ user }: UserActionsProps) {
     }
   };
 
+  const actions: ActionItem[] = [
+    {
+      label: "Voir",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => router.push(`/list/users/${user.netid}`),
+    },
+    {
+      label: "Modifier",
+      icon: <Pencil className="h-4 w-4" />,
+      onClick: () => setEditOpen(true),
+    },
+    {
+      label: isDisabled ? "Réactiver" : "Désactiver",
+      icon: isDisabled ? (
+        <UserCheck className="h-4 w-4" />
+      ) : (
+        <UserX className="h-4 w-4" />
+      ),
+      onClick: handleToggleStatus,
+      variant: isDisabled ? "default" : "destructive",
+    },
+  ];
+
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
-        title="Voir"
-      >
-        <Link href={`/list/users/${user.netid}`}>
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Link>
-      </Button>
-      <EditUserDialog user={user} />
-      <Button
-        variant="outline"
-        size="sm"
-        className={`h-7 w-7 sm:h-8 sm:w-8 p-0 ${isDisabled ? 'border-green-300 hover:bg-green-50' : 'border-red-300 hover:bg-red-50'}`}
-        title={isDisabled ? "Réactiver" : "Désactiver"}
-        onClick={handleToggleStatus}
-      >
-        {isDisabled ? (
-          <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-        ) : (
-          <UserX className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-        )}
-      </Button>
-    </div>
+    <>
+      <ActionsDropdown actions={actions} />
+      
+      <EditUserDialog 
+        user={user}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+    </>
   );
 }
 

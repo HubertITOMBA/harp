@@ -102,11 +102,15 @@ export const columns: ColumnDef<ListTools>[] = [
 },
 {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const tool = row.original
 
-      return <ToolsActions tool={tool} />
+      return (
+        <div className="flex justify-center">
+          <ToolsActions tool={tool} />
+        </div>
+      )
     }
   }
 ]

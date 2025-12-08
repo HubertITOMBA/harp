@@ -17,6 +17,8 @@ import { getMenuById } from '@/lib/actions/menu-actions';
 
 interface ViewMenuDialogProps {
   menuId: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface MenuData {
@@ -38,11 +40,13 @@ interface MenuData {
   }>;
 }
 
-export function ViewMenuDialog({ menuId }: ViewMenuDialogProps) {
+export function ViewMenuDialog({ menuId, open: controlledOpen, onOpenChange }: ViewMenuDialogProps) {
   const router = useRouter();
   const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const handleBackToList = () => {
     setOpen(false);

@@ -29,6 +29,8 @@ interface EditEnvDialogProps {
     typenvid: number | null;
     statenvId: number | null;
   };
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function EditEnvDialog({ env }: EditEnvDialogProps) {

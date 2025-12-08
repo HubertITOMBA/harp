@@ -240,16 +240,16 @@ model harptypenv {
 }
 
 model harptools {
-  id       Int    @id @default(autoincrement())
-  tool     String @db.VarChar(255)
-  cmdpath  String @db.VarChar(255)
-  cmd      String @db.VarChar(255)
-  version  String @db.VarChar(10)
-  descr    String @db.VarChar(50)
-  tooltype String @db.Char(5)
-  cmdarg   String @db.VarChar(255)
-  mode     String @db.VarChar(10)
-  output   String @db.Char(1)
+  id       Int     @id @default(autoincrement())
+  tool     String  @db.VarChar(255)
+  cmdpath  String? @db.VarChar(255)
+  cmd      String? @db.VarChar(255)
+  version  String? @db.VarChar(10)
+  descr    String? @db.VarChar(50)
+  tooltype String? @db.VarChar(5)
+  cmdarg   String? @db.VarChar(255)
+  mode     String? @db.VarChar(10)
+  output   String? @db.Char(1)
 }
 
 model statutenv {

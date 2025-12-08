@@ -7,6 +7,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# URL de base de l'API (peut être configurée via variable d'environnement)
+$API_BASE_URL = $env:HARP_API_URL
+if (-not $API_BASE_URL) {
+    # Valeur par défaut pour la production
+    $API_BASE_URL = "https://portails.orange-harp.fr:9052"
+}
+
 function Write-Log($message) {
     $logDir = Join-Path $PSScriptRoot 'logs'
     if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
@@ -21,6 +28,49 @@ function Show-Error($message) {
     Write-Host "ERREUR: $message" -ForegroundColor Red
     Write-Host "========================================`n" -ForegroundColor Red
     Write-Log "ERREUR: $message"
+}
+
+function Get-UserNetId {
+    # Essayer de récupérer le netid depuis l'environnement Windows
+    # Format: DOMAIN\username ou username
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    if ($currentUser -match '\\') {
+        $netid = $currentUser.Split('\')[-1]
+    } else {
+        $netid = $currentUser
+    }
+    return $netid
+}
+
+function Get-ToolInfoFromAPI($tool, $netid) {
+    try {
+        $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
+        Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan
+        Write-Log "Appel API: $apiUrl"
+        
+        # Désactiver la vérification SSL si nécessaire (pour les certificats auto-signés)
+        if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
+            Add-Type @"
+                using System.Net;
+                using System.Security.Cryptography.X509Certificates;
+                public class TrustAllCertsPolicy : ICertificatePolicy {
+                    public bool CheckValidationResult(
+                        ServicePoint srvPoint, X509Certificate certificate,
+                        WebRequest request, int certificateProblem) {
+                        return true;
+                    }
+                }
+"@
+        }
+        [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+        
+        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction Stop
+        return $response
+    } catch {
+        $errorMsg = "Erreur lors de l'appel API: $($_.Exception.Message)"
+        Write-Log $errorMsg
+        throw $errorMsg
+    }
 }
 
 try {
@@ -53,100 +103,92 @@ try {
         Write-Host "Aucun paramètre de requête" -ForegroundColor Gray
     }
 
-    # Whitelist des outils autorisés et mapping chemin + args builder
-    $allowed = @{
-        'putty' = @{ 
-            Path = 'C:\\Program Files\\PuTTY\\putty.exe'
-            BuildArgs = {
-                param($q)
-                $argList = @()
-                
-                # Port doit venir en premier pour PuTTY
-                if ($q.ContainsKey('port')) { 
-                    $argList += '-P'
-                    $argList += [string]$q.port
-                }
-                
-                # Clé SSH avant le host
-                if ($q.ContainsKey('sshkey')) { 
-                    $argList += '-i'
-                    $argList += [string]$q.sshkey
-                }
-                
-                # Host en dernier (avec user si fourni) - REQUIS pour PuTTY
-                if (-not $q.ContainsKey('host') -or [string]::IsNullOrWhiteSpace($q.host)) {
-                    throw "Le parametre 'host' est requis pour lancer PuTTY"
-                }
-                
-                $hostValue = [string]$q.host
-                if ($q.ContainsKey('user') -and $q.user -and -not [string]::IsNullOrWhiteSpace($q.user)) {
-                    $userValue = [string]$q.user
-                    $argList += "${userValue}@${hostValue}"
-                } else {
-                    $argList += $hostValue
-                }
-                
-                return $argList
-            }
-        }
-        'pside' = @{ 
-            Path = 'C:\\Program Files\\PeopleSoft\\pside.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'ptsmt' = @{ 
-            Path = 'C:\\Program Files\\PeopleSoft\\ptsmt.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'sqldeveloper' = @{ 
-            Path = 'C:\\apps\\sqldeveloper\\sqldeveloper.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'psdmt' = @{ 
-            Path = 'C:\\Program Files\\PeopleSoft\\psdmt.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'pscfg' = @{ 
-            Path = 'C:\\Program Files\\PeopleSoft\\pscfg.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'sqlplus' = @{ 
-            Path = 'C:\\oracle\\product\\19.0.0\\dbhome_1\\bin\\sqlplus.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'filezilla' = @{ 
-            Path = 'C:\\Program Files\\FileZilla FTP Client\\filezilla.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'perl' = @{ 
-            Path = 'C:\\Perl64\\bin\\perl.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'winscp' = @{ 
-            Path = 'C:\\Program Files\\WinSCP\\WinSCP.exe'
-            BuildArgs = { param($q) @() }
-        }
-        'winmerge' = @{ 
-            Path = 'C:\\Program Files\\WinMerge\\WinMergeU.exe'
-            BuildArgs = { param($q) @() }
-        }
+    # Récupérer le netid (depuis l'URL ou l'environnement Windows)
+    $netid = $query['netid']
+    if (-not $netid -or [string]::IsNullOrWhiteSpace($netid)) {
+        $netid = Get-UserNetId
+        Write-Host "NetID récupéré depuis l'environnement Windows: $netid" -ForegroundColor Yellow
+    } else {
+        Write-Host "NetID depuis l'URL: $netid" -ForegroundColor Yellow
     }
 
-    if (-not $allowed.ContainsKey($tool)) {
-        throw "Outil non autorisé: '$tool'. Outils disponibles: $($allowed.Keys -join ', ')"
+    # Récupérer les informations de l'outil depuis l'API
+    Write-Host "Récupération des informations de l'outil depuis la base de données..." -ForegroundColor Cyan
+    $toolInfo = Get-ToolInfoFromAPI -tool $tool -netid $netid
+    
+    if (-not $toolInfo -or -not $toolInfo.success) {
+        throw "Impossible de récupérer les informations de l'outil '$tool' depuis la base de données"
     }
 
-    $entry = $allowed[$tool]
-    $exe = $entry.Path
-    Write-Host "Chemin de l'exécutable: $exe" -ForegroundColor Yellow
+    $exe = $toolInfo.path
+    $cmdarg = $toolInfo.cmdarg
+    $pkeyfile = $toolInfo.pkeyfile
+    
+    Write-Host "Informations récupérées:" -ForegroundColor Green
+    Write-Host "  - Chemin: $exe" -ForegroundColor Gray
+    Write-Host "  - Arguments par défaut: $cmdarg" -ForegroundColor Gray
+    if ($pkeyfile) {
+        Write-Host "  - Clé SSH: $pkeyfile" -ForegroundColor Gray
+    }
     
     if (-not (Test-Path $exe)) {
         throw "Exécutable introuvable: $exe"
     }
     Write-Host "Exécutable trouvé: OK" -ForegroundColor Green
 
-    $buildArgs = $entry.BuildArgs
-    # Utiliser .Invoke() directement sans & pour éviter l'interprétation comme commande
-    $argArray = $buildArgs.Invoke($query)
+    # Construire les arguments selon le type d'outil
+    $argArray = @()
+    
+    # Pour PuTTY, construire les arguments spécifiques
+    if ($tool -eq 'putty') {
+        # Port doit venir en premier pour PuTTY
+        if ($query.ContainsKey('port')) { 
+            $argArray += '-P'
+            $argArray += [string]$query.port
+        }
+        
+        # Clé SSH (depuis la base de données ou depuis l'URL)
+        $sshkey = $query['sshkey']
+        if (-not $sshkey -and $pkeyfile) {
+            $sshkey = $pkeyfile
+        }
+        if ($sshkey) { 
+            $argArray += '-i'
+            $argArray += [string]$sshkey
+        }
+        
+        # Host en dernier (avec user si fourni) - REQUIS pour PuTTY
+        if (-not $query.ContainsKey('host') -or [string]::IsNullOrWhiteSpace($query.host)) {
+            throw "Le parametre 'host' est requis pour lancer PuTTY"
+        }
+        
+        $hostValue = [string]$query.host
+        if ($query.ContainsKey('user') -and $query.user -and -not [string]::IsNullOrWhiteSpace($query.user)) {
+            $userValue = [string]$query.user
+            $argArray += "${userValue}@${hostValue}"
+        } else {
+            $argArray += $hostValue
+        }
+    } else {
+        # Pour les autres outils, utiliser cmdarg de la base de données si disponible
+        if ($cmdarg -and $cmdarg.Trim() -ne '') {
+            # Parser les arguments depuis cmdarg (format: "arg1 arg2" ou "arg1=value1 arg2=value2")
+            $cmdargParts = $cmdarg.Trim().Split(' ') | Where-Object { $_ -ne '' }
+            foreach ($part in $cmdargParts) {
+                $argArray += $part
+            }
+        }
+        
+        # Ajouter les paramètres depuis l'URL si présents
+        foreach ($key in $query.Keys) {
+            if ($key -ne 'netid' -and $key -ne 'sshkey') {
+                $value = $query[$key]
+                if ($value -and $value.Trim() -ne '') {
+                    $argArray += "${key}=${value}"
+                }
+            }
+        }
+    }
     
     # S'assurer que $argArray est un tableau plat (NE PAS utiliser $args qui est réservé)
     $processArgs = @()

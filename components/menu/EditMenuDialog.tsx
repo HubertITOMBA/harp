@@ -135,12 +135,17 @@ interface EditMenuDialogProps {
     active: number;
     role: string | null;
   };
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EditMenuDialog({ menu }: EditMenuDialogProps) {
+export function EditMenuDialog({ menu, open: controlledOpen, onOpenChange }: EditMenuDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [role, setRole] = useState<string>(menu.role || "");
   const [icone, setIcone] = useState<string>(menu.icone || "");
   const [active, setActive] = useState<string>(menu.active.toString());
@@ -186,6 +191,7 @@ export function EditMenuDialog({ menu }: EditMenuDialogProps) {
       if (result.success) {
         toast.success(result.message);
         closeDialog();
+        setOpen(false);
         router.refresh();
       } else {
         toast.error(result.error || "Erreur lors de la mise à jour du menu");

@@ -20,6 +20,8 @@ interface EditServerDialogProps {
     domain: string | null;
     statenvId: number | null;
   };
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function EditServerDialog({ server }: EditServerDialogProps) {

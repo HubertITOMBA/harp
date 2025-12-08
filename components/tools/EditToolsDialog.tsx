@@ -3,15 +3,24 @@
 import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormDialog } from '@/components/ui/form-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Wrench, Pencil, FolderOpen } from "lucide-react";
+import { Wrench, Pencil, FolderOpen, Loader2 } from "lucide-react";
 import { updateTools } from '@/actions/update-tools';
 import { toast } from 'react-toastify';
 
 interface EditToolsDialogProps {
   tool: {
+    id?: number;
     tool: string;
     cmdpath: string;
     cmd: string;
@@ -22,14 +31,27 @@ interface EditToolsDialogProps {
     mode: string;
     output: string;
   };
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EditToolsDialog({ tool }: EditToolsDialogProps) {
+export function EditToolsDialog({ tool, children, open: controlledOpen, onOpenChange }: EditToolsDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+  const [toolName, setToolName] = useState<string>(tool.tool || "");
   const [cmdpath, setCmdpath] = useState<string>(tool.cmdpath || "");
   const [cmd, setCmd] = useState<string>(tool.cmd || "");
+  const [version, setVersion] = useState<string>(tool.version || "");
+  const [descr, setDescr] = useState<string>(tool.descr || "");
+  const [tooltype, setTooltype] = useState<string>(tool.tooltype || "");
+  const [cmdarg, setCmdarg] = useState<string>(tool.cmdarg || "");
+  const [mode, setMode] = useState<string>(tool.mode || "");
+  const [output, setOutput] = useState<string>(tool.output || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (
@@ -39,17 +61,39 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
     e.preventDefault();
     setErrors({});
     
+    // Validation côté client
+    const validationErrors: Record<string, string> = {};
+    
+    if (!toolName || toolName.trim() === "") {
+      validationErrors.tool = "Le nom de l'outil est obligatoire";
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      toast.error("Veuillez corriger les erreurs dans le formulaire");
+      return;
+    }
+    
     const formData = new FormData(e.currentTarget);
     
     startTransition(async () => {
-      const result = await updateTools(tool.tool, formData);
+      const toolId = tool.id || tool.tool;
+      const result = await updateTools(toolId, formData);
       
       if (result.success) {
-        toast.success(result.message);
+        toast.success(result.message || "L'outil a été mis à jour avec succès", {
+          position: "top-right",
+          autoClose: 3000,
+        });
         closeDialog();
+        setOpen(false);
         router.refresh();
       } else {
-        toast.error(result.error || "Erreur lors de la mise à jour de l'outil");
+        const errorMessage = result.error || "Une erreur est survenue lors de la mise à jour de l'outil";
+        toast.error(errorMessage, {
+          position: "top-right",
+          autoClose: 5000,
+        });
         if (result.error) {
           setErrors({ general: result.error });
         }
@@ -205,52 +249,57 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
     e.target.value = '';
   };
 
-  return (
-    <FormDialog
-      trigger={
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-blue-300 hover:bg-blue-50"
-          title="Éditer"
-        >
-          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Button>
-      }
-      title={`Modifier l'outil ${tool.tool.toUpperCase()}`}
-      description="Modifiez les informations de l'outil"
-      onSubmit={handleSubmit}
-      submitLabel="Enregistrer les modifications"
-      submitIcon={<Pencil className="h-4 w-4" />}
-      isPending={isPending}
-      maxWidth="2xl"
-    >
+  const formContent = (
+    <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Outil (lecture seule) */}
+        {/* Outil */}
         <div className="space-y-2">
           <Label htmlFor="tool" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Wrench className="h-4 w-4 text-orange-600" />
-            Outil
+            Outil <span className="text-red-500 font-bold" title="Champ obligatoire">*</span>
           </Label>
           <Input
             id="tool"
-            value={tool.tool}
-            disabled
-            className="bg-gray-100 cursor-not-allowed"
+            name="tool"
+            required
+            value={toolName}
+            onChange={(e) => {
+              setToolName(e.target.value);
+              if (errors.tool) {
+                setErrors(prev => {
+                  const newErrors = { ...prev };
+                  delete newErrors.tool;
+                  return newErrors;
+                });
+              }
+            }}
+            className={`bg-white transition-colors ${errors.tool ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : 'border-gray-300 focus-visible:ring-orange-500'}`}
+            placeholder="Ex: putty (obligatoire)"
+            maxLength={255}
+            aria-invalid={errors.tool ? "true" : "false"}
+            aria-describedby={errors.tool ? "tool-error" : undefined}
           />
+          {errors.tool && (
+            <p id="tool-error" className="text-sm text-red-600 mt-1 flex items-center gap-1">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.tool}
+            </p>
+          )}
         </div>
 
         {/* Type d'outil */}
         <div className="space-y-2">
           <Label htmlFor="tooltype" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Wrench className="h-4 w-4 text-orange-600" />
-            Type d&apos;outil <span className="text-red-500">*</span>
+            Type d&apos;outil
           </Label>
           <Input
             id="tooltype"
             name="tooltype"
-            required
-            defaultValue={tool.tooltype}
+            value={tooltype}
+            onChange={(e) => setTooltype(e.target.value)}
             className="bg-white"
             placeholder="Ex: ADMIN"
             maxLength={5}
@@ -296,14 +345,13 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="cmd" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Wrench className="h-4 w-4 text-orange-600" />
-            Commande <span className="text-red-500">*</span>
+            Commande
           </Label>
           <Input
             id="cmd"
             name="cmd"
             value={cmd}
             onChange={(e) => setCmd(e.target.value)}
-            required
             className="bg-white"
             placeholder="Ex: psadmin"
             maxLength={255}
@@ -319,7 +367,8 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
           <Input
             id="version"
             name="version"
-            defaultValue={tool.version}
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
             className="bg-white"
             placeholder="Ex: 1.0.0"
             maxLength={10}
@@ -335,7 +384,8 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
           <Input
             id="cmdarg"
             name="cmdarg"
-            defaultValue={tool.cmdarg}
+            value={cmdarg}
+            onChange={(e) => setCmdarg(e.target.value)}
             className="bg-white"
             placeholder="Ex: -u %USER%"
             maxLength={255}
@@ -351,7 +401,8 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
           <Input
             id="mode"
             name="mode"
-            defaultValue={tool.mode}
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
             className="bg-white"
             placeholder="Ex: SYNC"
             maxLength={10}
@@ -367,7 +418,8 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
           <Input
             id="output"
             name="output"
-            defaultValue={tool.output}
+            value={output}
+            onChange={(e) => setOutput(e.target.value)}
             className="bg-white"
             placeholder="Ex: Y"
             maxLength={1}
@@ -378,13 +430,13 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="descr" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Wrench className="h-4 w-4 text-orange-600" />
-            Description <span className="text-red-500">*</span>
+            Description
           </Label>
           <Input
             id="descr"
             name="descr"
-            required
-            defaultValue={tool.descr}
+            value={descr}
+            onChange={(e) => setDescr(e.target.value)}
             className="bg-white"
             placeholder="Ex: Outil d'administration PeopleSoft"
             maxLength={50}
@@ -392,11 +444,105 @@ export function EditToolsDialog({ tool }: EditToolsDialogProps) {
         </div>
       </div>
 
-      {errors.general && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {errors.general}
+      {(errors.general || Object.keys(errors).length > 0) && (
+        <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-red-800 mb-1">
+                Erreurs de validation
+              </h3>
+              <div className="text-sm text-red-700">
+                {errors.general && <p className="mb-1">{errors.general}</p>}
+                {Object.entries(errors).filter(([key]) => key !== 'general').map(([key, value]) => (
+                  <p key={key} className="mb-1">• {value}</p>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
+    </>
+  );
+
+  // Si open/onOpenChange sont fournis, utiliser Dialog directement
+  if (controlledOpen !== undefined || onOpenChange) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="space-y-0">
+            <DialogTitle className="bg-orange-500 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
+              Modifier l&apos;outil {tool.tool.toUpperCase()}
+            </DialogTitle>
+            <DialogDescription className="bg-orange-500 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
+              Modifiez les informations de l&apos;outil
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => handleSubmit(e, () => setOpen(false))}>
+            <div className="space-y-4 py-4">
+              {formContent}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+              >
+                Annuler
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isPending}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Sinon, utiliser FormDialog avec trigger
+  const triggerButton = children || (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-blue-300 hover:bg-blue-50"
+      title="Éditer"
+    >
+      <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+    </Button>
+  );
+
+  return (
+    <FormDialog
+      trigger={triggerButton}
+      title={`Modifier l'outil ${tool.tool.toUpperCase()}`}
+      description="Modifiez les informations de l'outil"
+      onSubmit={handleSubmit}
+      submitLabel="Enregistrer les modifications"
+      submitIcon={<Pencil className="h-4 w-4" />}
+      isPending={isPending}
+      maxWidth="2xl"
+    >
+      {formContent}
     </FormDialog>
   );
 }

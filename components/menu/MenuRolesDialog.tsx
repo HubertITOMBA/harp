@@ -26,6 +26,8 @@ interface HarpRole {
 interface MenuRolesDialogProps {
   menuId: number;
   menuName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -34,9 +36,11 @@ interface MenuRolesDialogProps {
  * @param menuId - L'ID du menu
  * @param menuName - Le nom du menu pour l'affichage
  */
-export function MenuRolesDialog({ menuId, menuName }: MenuRolesDialogProps) {
+export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpenChange }: MenuRolesDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [isPending, startTransition] = useTransition();
   const [harpRoles, setHarpRoles] = useState<HarpRole[]>([]);
   const [loadingHarpRoles, setLoadingHarpRoles] = useState(true);
