@@ -41,14 +41,7 @@ export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
       const launchResult = await launchExternalTool('sqlplus');
 
       if (launchResult.success) {
-        toast.info('Lancement de SQL*Plus en cours...');
-        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
-        setTimeout(() => {
-          toast.warning(
-            'Si SQL*Plus ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
-            { autoClose: 8000 }
-          );
-        }, 2000);
+        toast.success('SQL*Plus est en cours de lancement...');
       } else {
         toast.error(
           launchResult.error || 'Impossible de lancer SQL*Plus. Le protocole mylaunch:// n\'est pas installé.',

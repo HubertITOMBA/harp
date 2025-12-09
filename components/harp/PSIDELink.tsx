@@ -52,14 +52,7 @@ export function PSIDELink({ className, children }: PSIDELinkProps) {
       const launchResult = await launchExternalTool('pside');
 
       if (launchResult.success) {
-        toast.info('Lancement de PSIDE en cours...');
-        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
-        setTimeout(() => {
-          toast.warning(
-            'Si PSIDE ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
-            { autoClose: 8000 }
-          );
-        }, 2000);
+        toast.success('PSIDE est en cours de lancement...');
       } else {
         toast.error(
           launchResult.error || 'Impossible de lancer PSIDE. Le protocole mylaunch:// n\'est pas installé.',

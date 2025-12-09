@@ -46,14 +46,7 @@ export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps)
       const launchResult = await launchExternalTool('sqldeveloper');
 
       if (launchResult.success) {
-        toast.info('Lancement de SQL Developer en cours...');
-        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
-        setTimeout(() => {
-          toast.warning(
-            'Si SQL Developer ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
-            { autoClose: 8000 }
-          );
-        }, 2000);
+        toast.success('SQL Developer est en cours de lancement...');
       } else {
         toast.error(
           launchResult.error || 'Impossible de lancer SQL Developer. Le protocole mylaunch:// n\'est pas installé.',

@@ -70,14 +70,7 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
       });
 
       if (launchResult.success) {
-        toast.info('Lancement de PuTTY en cours...');
-        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
-        setTimeout(() => {
-          toast.warning(
-            'Si PuTTY ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
-            { autoClose: 8000 }
-          );
-        }, 2000);
+        toast.success('PuTTY est en cours de lancement...');
       } else {
         toast.error(
           launchResult.error || 'Impossible de lancer PuTTY. Le protocole mylaunch:// n\'est pas installé.',

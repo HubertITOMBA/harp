@@ -9,29 +9,38 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # Déterminer le chemin d'installation optimal
+# PRIORITÉ: W:\portal (home directory réseau) > LOCALAPPDATA > TEMP
 if ([string]::IsNullOrWhiteSpace($InstallPath)) {
-    # Essayer LOCALAPPDATA d'abord
-    if ($env:LOCALAPPDATA -and (Test-Path $env:LOCALAPPDATA)) {
-        $InstallPath = "$env:LOCALAPPDATA\HARP\launcher"
-    } else {
-        # Si LOCALAPPDATA n'est pas accessible, utiliser W:\portal
-        $wPortalPath = "W:\portal"
-        
-        if (Test-Path "W:\") {
-            if (-not (Test-Path $wPortalPath)) {
-                try {
-                    New-Item -ItemType Directory -Path $wPortalPath -Force | Out-Null
-                    Write-Host "[INFO] Dossier créé: $wPortalPath" -ForegroundColor Cyan
-                } catch {
-                    Write-Host "[ATTENTION] Impossible de créer $wPortalPath, utilisation du dossier temp système" -ForegroundColor Yellow
-                    $wPortalPath = $env:TEMP
-                }
+    # PRIORITÉ 1: Utiliser W:\portal (home directory réseau pour les utilisateurs)
+    $wPortalPath = "W:\portal"
+    
+    if (Test-Path "W:\") {
+        if (-not (Test-Path $wPortalPath)) {
+            try {
+                New-Item -ItemType Directory -Path $wPortalPath -Force | Out-Null
+                Write-Host "[INFO] Dossier créé: $wPortalPath" -ForegroundColor Cyan
+            } catch {
+                Write-Host "[ATTENTION] Impossible de créer $wPortalPath, essai avec LOCALAPPDATA" -ForegroundColor Yellow
+                $wPortalPath = $null
             }
-            $InstallPath = "$wPortalPath\HARP\launcher"
-        } else {
-            # Utiliser le dossier temp système en dernier recours
-            $InstallPath = "$env:TEMP\HARP\launcher"
         }
+        if ($wPortalPath -and (Test-Path $wPortalPath)) {
+            $InstallPath = "$wPortalPath\HARP\launcher"
+        }
+    }
+    
+    # PRIORITÉ 2: Si W:\portal n'est pas accessible, essayer LOCALAPPDATA
+    if ([string]::IsNullOrWhiteSpace($InstallPath)) {
+        if ($env:LOCALAPPDATA -and (Test-Path $env:LOCALAPPDATA)) {
+            $InstallPath = "$env:LOCALAPPDATA\HARP\launcher"
+            Write-Host "[INFO] Utilisation de LOCALAPPDATA car W:\portal n'est pas accessible" -ForegroundColor Yellow
+        }
+    }
+    
+    # PRIORITÉ 3: En dernier recours, utiliser TEMP
+    if ([string]::IsNullOrWhiteSpace($InstallPath)) {
+        $InstallPath = "$env:TEMP\HARP\launcher"
+        Write-Host "[INFO] Utilisation de TEMP comme dernier recours" -ForegroundColor Yellow
     }
 }
 
@@ -90,7 +99,7 @@ if (-not (Test-Path $configPath)) {
     try {
         $defaultConfig = @{
             version = "1.0"
-            apiUrl = "https://portails.orange-harp.fr:9052"
+            apiUrl = "http://portails.orange-harp.fr:9052"
             logLevel = "info"
             keepWindowOpenOnError = $true
             keepWindowOpenOnSuccess = $false

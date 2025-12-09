@@ -46,14 +46,7 @@ export function PSDMTLink({ className, children }: PSDMTLinkProps) {
       const launchResult = await launchExternalTool('psdmt');
 
       if (launchResult.success) {
-        toast.info('Lancement de PSDMT en cours...');
-        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
-        setTimeout(() => {
-          toast.warning(
-            'Si PSDMT ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
-            { autoClose: 8000 }
-          );
-        }, 2000);
+        toast.success('PSDMT est en cours de lancement...');
       } else {
         toast.error(
           launchResult.error || 'Impossible de lancer PSDMT. Le protocole mylaunch:// n\'est pas installé.',

@@ -8,22 +8,35 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Charger la configuration depuis un fichier JSON dans le dossier utilisateur
+# PRIORITÉ: W:\portal (home directory réseau) > LOCALAPPDATA
 function Get-LauncherConfig {
-    $configPath = Join-Path $env:LOCALAPPDATA "HARP\launcher\launcher-config.json"
+    # PRIORITÉ 1: Chercher dans W:\portal\HARP\launcher
+    $configPath = "W:\portal\HARP\launcher\launcher-config.json"
     
-    # Si le fichier de config existe, le charger
+    # Si le fichier de config existe dans W:\portal, le charger
     if (Test-Path $configPath) {
         try {
             $config = Get-Content $configPath -Raw | ConvertFrom-Json
             return $config
         } catch {
-            Write-Host "Erreur lors du chargement de la configuration: $_" -ForegroundColor Yellow
+            Write-Host "Erreur lors du chargement de la configuration depuis W:\portal: $_" -ForegroundColor Yellow
+        }
+    }
+    
+    # PRIORITÉ 2: Si pas trouvé dans W:\portal, chercher dans LOCALAPPDATA
+    $configPath = Join-Path $env:LOCALAPPDATA "HARP\launcher\launcher-config.json"
+    if (Test-Path $configPath) {
+        try {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            return $config
+        } catch {
+            Write-Host "Erreur lors du chargement de la configuration depuis LOCALAPPDATA: $_" -ForegroundColor Yellow
         }
     }
     
     # Retourner une configuration par défaut
     return @{
-        apiUrl = "https://portails.orange-harp.fr:9052"
+        apiUrl = "http://portails.orange-harp.fr:9052"
         logLevel = "info"
         keepWindowOpenOnError = $true
         keepWindowOpenOnSuccess = $false
@@ -39,13 +52,33 @@ if (-not $API_BASE_URL) {
     $API_BASE_URL = $config.apiUrl
 }
 if (-not $API_BASE_URL) {
-    # Valeur par défaut pour la production
-    $API_BASE_URL = "https://portails.orange-harp.fr:9052"
+    # Valeur par défaut pour la production (HTTP en mode test)
+    $API_BASE_URL = "http://portails.orange-harp.fr:9052"
 }
 
 function Write-Log($message) {
     try {
-        $logDir = Join-Path $PSScriptRoot 'logs'
+        # PRIORITÉ: Utiliser le répertoire du script, sinon W:\portal, sinon LOCALAPPDATA
+        $logDir = $null
+        
+        # Si le script est dans un répertoire accessible, utiliser ce répertoire
+        if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+            $logDir = Join-Path $PSScriptRoot 'logs'
+        }
+        
+        # Sinon, essayer W:\portal\HARP\launcher\logs
+        if (-not $logDir -or -not (Test-Path (Split-Path $logDir -Parent))) {
+            $wPortalLogDir = "W:\portal\HARP\launcher\logs"
+            if (Test-Path "W:\portal") {
+                $logDir = $wPortalLogDir
+            }
+        }
+        
+        # En dernier recours, utiliser LOCALAPPDATA
+        if (-not $logDir) {
+            $logDir = Join-Path $env:LOCALAPPDATA "HARP\launcher\logs"
+        }
+        
         if (-not (Test-Path $logDir)) { 
             New-Item -ItemType Directory -Path $logDir -Force | Out-Null 
         }
@@ -93,6 +126,7 @@ function Get-ToolInfoFromAPI($tool, $netid) {
     }
     
     # Désactiver la vérification SSL si nécessaire (pour les certificats auto-signés)
+    # Utiliser une classe C# avec une méthode d'instance qui retourne un délégué
     if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
         Add-Type @"
             using System.Net;
@@ -108,19 +142,31 @@ function Get-ToolInfoFromAPI($tool, $netid) {
     }
     [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
     
-    # Désactiver la vérification de certificat SSL (pour les certificats auto-signés)
+    # Désactiver la vérification de certificat SSL avec une classe C# qui crée le délégué correctement
+    # Utiliser une méthode d'instance au lieu d'une méthode statique pour éviter les problèmes de conversion
     if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicyCallback').Type) {
         Add-Type @"
             using System.Net.Security;
             using System.Security.Cryptography.X509Certificates;
             public class TrustAllCertsPolicyCallback {
-                public static bool OnValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) {
+                public bool ValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) {
                     return true;
                 }
             }
 "@
     }
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [TrustAllCertsPolicyCallback]::OnValidateCertificate
+    
+    # Créer une instance et utiliser sa méthode comme délégué
+    try {
+        $callbackInstance = New-Object TrustAllCertsPolicyCallback
+        $delegateType = [System.Net.Security.RemoteCertificateValidationCallback]
+        $delegate = [System.Delegate]::CreateDelegate($delegateType, $callbackInstance, 'ValidateCertificate')
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $delegate
+    } catch {
+        # Si la création du délégué échoue, ignorer silencieusement (certains environnements peuvent avoir des restrictions)
+        Write-Host "Avertissement: Impossible de configurer la validation SSL - $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Log "Avertissement: Validation SSL non configurée - $($_.Exception.Message)"
+    }
     
     $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
     Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan

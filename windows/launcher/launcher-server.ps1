@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 # URL de base de l'API
 $API_BASE_URL = $env:HARP_API_URL
 if (-not $API_BASE_URL) {
-    $API_BASE_URL = "https://portails.orange-harp.fr:9052"
+    $API_BASE_URL = "http://portails.orange-harp.fr:9052"
 }
 
 # Charger la configuration

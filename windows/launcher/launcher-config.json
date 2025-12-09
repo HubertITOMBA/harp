@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "apiUrl": "https://portails.orange-harp.fr:9052",
+  "apiUrl": "http://portails.orange-harp.fr:9052",
   "logLevel": "info",
   "keepWindowOpenOnError": true,
   "keepWindowOpenOnSuccess": false,
