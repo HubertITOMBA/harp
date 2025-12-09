@@ -107,15 +107,15 @@ const LancerApplis = ({ host, user, port, sshkey, devMode, devUser }: LancerAppl
       // Lancer PuTTY via le protocole mylaunch://
       // En mode dev : utiliser les valeurs forcées (hubert, pas de sshkey)
       // En production : utiliser netid et pkeyfile de la session
-      const success = launchExternalTool('putty', {
+      const launchResult = await launchExternalTool('putty', {
         host: hostToUse,
         user: userToUse,
         port,
         sshkey: sshkeyToUse,
       });
 
-      if (!success) {
-        throw new Error('Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
+      if (!launchResult.success) {
+        throw new Error(launchResult.error || 'Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du lancement de PuTTY';

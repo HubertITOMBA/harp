@@ -7,8 +7,37 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# URL de base de l'API (peut être configurée via variable d'environnement)
+# Charger la configuration depuis un fichier JSON dans le dossier utilisateur
+function Get-LauncherConfig {
+    $configPath = Join-Path $env:LOCALAPPDATA "HARP\launcher\launcher-config.json"
+    
+    # Si le fichier de config existe, le charger
+    if (Test-Path $configPath) {
+        try {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            return $config
+        } catch {
+            Write-Host "Erreur lors du chargement de la configuration: $_" -ForegroundColor Yellow
+        }
+    }
+    
+    # Retourner une configuration par défaut
+    return @{
+        apiUrl = "https://portails.orange-harp.fr:9052"
+        logLevel = "info"
+        keepWindowOpenOnError = $true
+        keepWindowOpenOnSuccess = $false
+        windowCloseDelay = 2
+    }
+}
+
+$config = Get-LauncherConfig
+
+# URL de base de l'API (priorité : variable d'environnement > fichier config > défaut)
 $API_BASE_URL = $env:HARP_API_URL
+if (-not $API_BASE_URL) {
+    $API_BASE_URL = $config.apiUrl
+}
 if (-not $API_BASE_URL) {
     # Valeur par défaut pour la production
     $API_BASE_URL = "https://portails.orange-harp.fr:9052"
@@ -43,33 +72,140 @@ function Get-UserNetId {
 }
 
 function Get-ToolInfoFromAPI($tool, $netid) {
+    $maxRetries = 3
+    $retryDelay = 2 # secondes
+    
+    # Configuration TLS : Essayer TLS 1.2 d'abord (plus compatible)
+    # TLS 1.3 peut causer des problèmes avec certains serveurs/proxies
     try {
-        $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
-        Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan
-        Write-Log "Appel API: $apiUrl"
-        
-        # Désactiver la vérification SSL si nécessaire (pour les certificats auto-signés)
-        if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-            Add-Type @"
-                using System.Net;
-                using System.Security.Cryptography.X509Certificates;
-                public class TrustAllCertsPolicy : ICertificatePolicy {
-                    public bool CheckValidationResult(
-                        ServicePoint srvPoint, X509Certificate certificate,
-                        WebRequest request, int certificateProblem) {
-                        return true;
-                    }
-                }
-"@
-        }
-        [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-        
-        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction Stop
-        return $response
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Write-Host "TLS 1.2 activé" -ForegroundColor Gray
     } catch {
-        $errorMsg = "Erreur lors de l'appel API: $($_.Exception.Message)"
-        Write-Log $errorMsg
-        throw $errorMsg
+        Write-Host "Impossible de configurer TLS 1.2, utilisation de la configuration par défaut" -ForegroundColor Yellow
+    }
+    
+    # Désactiver la vérification SSL si nécessaire (pour les certificats auto-signés)
+    if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
+        Add-Type @"
+            using System.Net;
+            using System.Security.Cryptography.X509Certificates;
+            public class TrustAllCertsPolicy : ICertificatePolicy {
+                public bool CheckValidationResult(
+                    ServicePoint srvPoint, X509Certificate certificate,
+                    WebRequest request, int certificateProblem) {
+                    return true;
+                }
+            }
+"@
+    }
+    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+    
+    # Désactiver la vérification de certificat SSL (pour les certificats auto-signés)
+    if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicyCallback').Type) {
+        Add-Type @"
+            using System.Net.Security;
+            using System.Security.Cryptography.X509Certificates;
+            public class TrustAllCertsPolicyCallback {
+                public static bool OnValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) {
+                    return true;
+                }
+            }
+"@
+    }
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [TrustAllCertsPolicyCallback]::OnValidateCertificate
+    
+    $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
+    Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan
+    Write-Log "Appel API: $apiUrl"
+    
+    # Vérifier si un proxy est configuré
+    $proxyUrl = $env:HTTP_PROXY
+    if (-not $proxyUrl) {
+        $proxyUrl = $env:HTTPS_PROXY
+    }
+    if ($proxyUrl) {
+        Write-Host "Proxy détecté: $proxyUrl" -ForegroundColor Gray
+        Write-Log "Proxy détecté: $proxyUrl"
+    }
+    
+    # Configuration de la requête avec timeout et retry
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            Write-Host "Tentative $attempt/$maxRetries..." -ForegroundColor Gray
+            
+            # Utiliser Invoke-RestMethod qui gère mieux TLS/SSL que HttpWebRequest
+            $params = @{
+                Uri = $apiUrl
+                Method = 'Get'
+                TimeoutSec = 30
+                ErrorAction = 'Stop'
+                UseBasicParsing = $true
+            }
+            
+            # Configurer le proxy si disponible
+            if ($proxyUrl) {
+                try {
+                    $proxy = New-Object System.Net.WebProxy($proxyUrl)
+                    $params['Proxy'] = $proxy
+                    Write-Host "Utilisation du proxy: $proxyUrl" -ForegroundColor Gray
+                } catch {
+                    Write-Host "Impossible de configurer le proxy, continuation sans proxy" -ForegroundColor Yellow
+                }
+            }
+            
+            # Ajouter des headers pour améliorer la compatibilité
+            $headers = @{
+                'User-Agent' = 'HARP-Launcher/1.0'
+                'Accept' = 'application/json'
+            }
+            $params['Headers'] = $headers
+            
+            $response = Invoke-RestMethod @params
+            
+            Write-Host "Réponse API reçue avec succès" -ForegroundColor Green
+            Write-Log "Réponse API: $($response | ConvertTo-Json -Compress)"
+            
+            return $response
+            
+        } catch [System.Net.WebException] {
+            $webException = $_.Exception
+            $statusCode = "Unknown"
+            $statusDescription = ""
+            
+            if ($webException.Response) {
+                $statusCode = [int]$webException.Response.StatusCode
+                $statusDescription = $webException.Response.StatusDescription
+            }
+            
+            $errorDetails = "Erreur HTTP: $statusCode $statusDescription - $($webException.Message)"
+            
+            if ($attempt -lt $maxRetries) {
+                Write-Host "Échec de la tentative $attempt. Nouvelle tentative dans $retryDelay secondes..." -ForegroundColor Yellow
+                Write-Log "Tentative $attempt échouée: $errorDetails"
+                Start-Sleep -Seconds $retryDelay
+            } else {
+                $errorMsg = "Erreur lors de l'appel API après $maxRetries tentatives: $errorDetails"
+                if ($webException.InnerException) {
+                    $errorMsg += "`nErreur interne: $($webException.InnerException.Message)"
+                }
+                Write-Log $errorMsg
+                throw $errorMsg
+            }
+        } catch {
+            $errorMsg = "Erreur lors de l'appel API: $($_.Exception.Message)"
+            if ($_.Exception.InnerException) {
+                $errorMsg += "`nErreur interne: $($_.Exception.InnerException.Message)"
+            }
+            
+            if ($attempt -lt $maxRetries) {
+                Write-Host "Échec de la tentative $attempt. Nouvelle tentative dans $retryDelay secondes..." -ForegroundColor Yellow
+                Write-Log "Tentative $attempt échouée: $errorMsg"
+                Start-Sleep -Seconds $retryDelay
+            } else {
+                Write-Log $errorMsg
+                throw $errorMsg
+            }
+        }
     }
 }
 
@@ -251,16 +387,40 @@ try {
         if ($proc.HasExited) {
             Write-Host "ATTENTION: Le processus s'est terminé immédiatement (Code de sortie: $($proc.ExitCode))" -ForegroundColor Yellow
             Write-Log "ATTENTION: Processus terminé immédiatement (Code: $($proc.ExitCode))"
+            Write-Host "`nAppuyez sur une touche pour fermer cette fenêtre..." -ForegroundColor Yellow
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            exit 1
         }
     } catch {
         Write-Host "Erreur lors du lancement avec Start-Process: $_" -ForegroundColor Red
         # Essayer avec Process.Start comme fallback
         Write-Host "Tentative avec Process.Start..." -ForegroundColor Yellow
-        $proc = [System.Diagnostics.Process]::Start($startInfo)
-        if (-not $proc) { 
-            throw "Échec du lancement: Process.Start a retourné null"
+        try {
+            $proc = [System.Diagnostics.Process]::Start($startInfo)
+            if (-not $proc) { 
+                throw "Échec du lancement: Process.Start a retourné null"
+            }
+            Write-Host "Application lancée avec Process.Start (PID: $($proc.Id))" -ForegroundColor Green
+        } catch {
+            # Si les deux méthodes échouent, relancer l'erreur pour le catch principal
+            throw $_
         }
-        Write-Host "Application lancée avec Process.Start (PID: $($proc.Id))" -ForegroundColor Green
+    }
+    
+    # En cas de succès, gérer la fermeture de la fenêtre selon la configuration
+    if ($config.keepWindowOpenOnSuccess) {
+        Write-Host "`nAppuyez sur une touche pour fermer cette fenêtre..." -ForegroundColor Cyan
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } else {
+        $delay = if ($config.windowCloseDelay) { $config.windowCloseDelay } else { 2 }
+        Write-Host "`nFermeture de la fenêtre dans $delay secondes..." -ForegroundColor Gray
+        Start-Sleep -Seconds $delay
+    }
+    
+    # Si DEBUG est activé via variable d'environnement, garder la fenêtre ouverte
+    if ($env:HARP_LAUNCHER_DEBUG -eq "1") {
+        Write-Host "Mode DEBUG activé - Appuyez sur une touche pour fermer cette fenêtre..." -ForegroundColor Cyan
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
     
     exit 0
@@ -286,8 +446,15 @@ catch {
         Write-Host "Impossible d'afficher la MessageBox (normal si exécution non-interactive)" -ForegroundColor Yellow
     }
     
-    Write-Host "`nAppuyez sur une touche pour fermer cette fenêtre..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    # Gérer la fermeture de la fenêtre selon la configuration
+    if ($config.keepWindowOpenOnError) {
+        Write-Host "`nAppuyez sur une touche pour fermer cette fenêtre..." -ForegroundColor Yellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } else {
+        $delay = if ($config.windowCloseDelay) { $config.windowCloseDelay } else { 5 }
+        Write-Host "`nFermeture de la fenêtre dans $delay secondes..." -ForegroundColor Yellow
+        Start-Sleep -Seconds $delay
+    }
     
     exit 1
 }

@@ -44,13 +44,13 @@ export function ExternalToolLauncher({
   onLaunch,
   onError,
 }: ExternalToolLauncherProps) {
-  const handleClick = React.useCallback(() => {
+  const handleClick = React.useCallback(async () => {
     try {
-      const success = launchExternalTool(tool, params);
-      if (success) {
+      const result = await launchExternalTool(tool, params);
+      if (result.success) {
         onLaunch?.();
       } else {
-        throw new Error("Impossible de construire l'URL de lancement");
+        throw new Error(result.error || "Impossible de lancer l'application");
       }
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

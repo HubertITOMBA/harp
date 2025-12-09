@@ -108,7 +108,11 @@ export function buildMyLaunchUrl(
 }
 
 /**
- * Lance une application externe via le protocole mylaunch://
+ * Lance une application externe via le serveur local ou le protocole mylaunch://
+ * 
+ * Cette fonction essaie d'abord d'utiliser le serveur HTTP local (port 8765),
+ * et si celui-ci n'est pas disponible, utilise le protocole mylaunch://
+ * 
  * @param tool - Le nom de l'outil à lancer
  * @param params - Les paramètres optionnels pour l'outil
  * @returns Promise<{ success: boolean; error?: string }> - Résultat du lancement
@@ -118,28 +122,61 @@ export async function launchExternalTool(
   params?: Record<string, string | number | undefined>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const url = buildMyLaunchUrl(tool, params);
-    
-    // Créer un élément <a> temporaire pour tenter le lancement
-    const link = document.createElement('a');
-    link.href = url;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    
-    // Tenter de cliquer sur le lien
-    link.click();
-    
-    // Nettoyer après un court délai
-    setTimeout(() => {
-      document.body.removeChild(link);
-    }, 100);
-    
-    return { success: true };
+    // Essayer d'abord le serveur HTTP local (sans protocole personnalisé)
+    try {
+      const serverUrl = `http://localhost:8765/launch?tool=${encodeURIComponent(tool)}`;
+      const searchParams = new URLSearchParams();
+      
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      
+      const fullUrl = searchParams.toString() 
+        ? `${serverUrl}&${searchParams.toString()}`
+        : serverUrl;
+      
+      // Essayer de contacter le serveur local
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000); // Timeout de 1 seconde
+      
+      try {
+        const response = await fetch(fullUrl, {
+          method: 'GET',
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          return { success: data.success !== false, error: data.error };
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        // Si le serveur n'est pas disponible, utiliser le protocole mylaunch://
+        throw fetchError;
+      }
+    } catch (serverError) {
+      // Si le serveur local n'est pas disponible, utiliser le protocole mylaunch://
+      console.log('Serveur local non disponible, utilisation du protocole mylaunch://');
+      
+      const url = buildMyLaunchUrl(tool, params);
+      window.location.href = url;
+      
+      return { success: true };
+    }
   } catch (error) {
     console.error('Erreur lors du lancement de l\'outil externe:', error);
     return { 
       success: false, 
-      error: 'Le protocole mylaunch:// n\'est pas installé sur ce poste. Contactez votre administrateur pour installer le launcher.' 
+      error: 'Impossible de lancer l\'application. Vérifiez que le serveur launcher est démarré ou que le protocole mylaunch:// est installé.' 
     };
   }
 }

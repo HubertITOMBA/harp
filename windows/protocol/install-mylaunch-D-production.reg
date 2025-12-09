@@ -1,9 +1,8 @@
 Windows Registry Editor Version 5.00
 
 ; Protocole personnalisé: mylaunch://
-; Configuration pour D:\apps\portail (DEBUG - pour voir les messages)
-; Cette version garde la fenêtre PowerShell ouverte pour le débogage
-; Pour la production, utilisez install-mylaunch-D-production.reg
+; Configuration pour D:\apps\portail (production)
+; Version PRODUCTION : Ferme automatiquement la fenêtre en cas de succès
 ; Mettre à jour les chemins si nécessaire avant déploiement.
 
 [HKEY_CLASSES_ROOT\mylaunch]
@@ -18,6 +17,6 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\mylaunch\shell\open]
 
 [HKEY_CLASSES_ROOT\mylaunch\shell\open\command]
-@="\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -ExecutionPolicy Bypass -NoExit -WindowStyle Normal -File \"D:\\apps\\portail\\launcher\\launcher.ps1\" \"%1\""
+@="\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -ExecutionPolicy Bypass -WindowStyle Hidden -File \"D:\\apps\\portail\\launcher\\launcher.ps1\" \"%1\""
 
 

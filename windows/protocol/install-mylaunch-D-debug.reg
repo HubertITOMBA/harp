@@ -1,9 +1,8 @@
 Windows Registry Editor Version 5.00
 
 ; Protocole personnalisé: mylaunch://
-; Configuration pour D:\apps\portail (DEBUG - pour voir les messages)
-; Cette version garde la fenêtre PowerShell ouverte pour le débogage
-; Pour la production, utilisez install-mylaunch-D-production.reg
+; Configuration pour D:\apps\portail (DEBUG)
+; Version DEBUG : Garde la fenêtre ouverte pour voir les messages
 ; Mettre à jour les chemins si nécessaire avant déploiement.
 
 [HKEY_CLASSES_ROOT\mylaunch]
