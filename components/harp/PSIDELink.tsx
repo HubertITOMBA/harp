@@ -6,12 +6,18 @@ import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 
-interface SQLDeveloperLinkProps {
+interface PSIDELinkProps {
   className?: string;
   children: ReactNode;
 }
 
-export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps) {
+/**
+ * Composant pour lancer PeopleSoft IDE (PSIDE) via le protocole mylaunch://
+ * 
+ * @param className - Classes CSS optionnelles
+ * @param children - Contenu à afficher dans le lien
+ */
+export function PSIDELink({ className, children }: PSIDELinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,25 +40,25 @@ export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps)
         process.env.NODE_ENV === 'development';
 
       if (!isDevMode && netid) {
-        const checkResult = await checkToolAvailability('sqldeveloper', netid);
+        const checkResult = await checkToolAvailability('pside', netid);
         if (!checkResult.success) {
-          toast.error(checkResult.error || 'SQL Developer n\'est pas configuré ou non accessible');
+          toast.error(checkResult.error || 'PSIDE n\'est pas configuré ou non accessible');
           setIsLoading(false);
           return;
         }
       }
 
-      // Lancer SQL Developer via le protocole mylaunch://
-      const success = launchExternalTool('sqldeveloper');
+      // Lancer PSIDE via le protocole mylaunch://
+      const success = launchExternalTool('pside');
 
       if (success) {
-        toast.info('Lancement de SQL Developer en cours...');
+        toast.info('Lancement de PSIDE en cours...');
       } else {
-        toast.error('Impossible de lancer SQL Developer. Vérifiez que le protocole mylaunch:// est installé.');
+        toast.error('Impossible de lancer PSIDE. Vérifiez que le protocole mylaunch:// est installé.');
       }
     } catch (error) {
-      console.error('Erreur lors du lancement de SQL Developer:', error);
-      toast.error('Erreur lors du lancement de SQL Developer');
+      console.error('Erreur lors du lancement de PSIDE:', error);
+      toast.error('Erreur lors du lancement de PSIDE');
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +76,7 @@ export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps)
           handleClick(e as any);
         }
       }}
+      style={{ cursor: isLoading ? 'wait' : 'pointer' }}
     >
       {children}
     </span>

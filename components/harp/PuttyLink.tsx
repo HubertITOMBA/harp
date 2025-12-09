@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool } from '@/lib/mylaunch';
+import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
+import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 
 interface PuttyLinkProps {
@@ -13,40 +15,71 @@ interface PuttyLinkProps {
 
 export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
   const { data: session } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+  const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
     e.preventDefault();
     
     if (!host || host.trim() === '') {
-      console.error('Aucun host spécifié pour PuTTY');
+      toast.error('Aucun serveur spécifié pour PuTTY');
       return;
     }
 
-    // Utiliser l'IP si disponible, sinon le host (nom du serveur)
-    const hostToUse = ip && ip.trim() !== '' ? ip : host;
+    setIsLoading(true);
 
-    // Détection automatique de l'environnement
-    const isDevMode = 
-      process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
-      process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
-      process.env.NODE_ENV === 'development';
+    try {
+      // Récupérer le netid
+      const netid = session?.user?.netid;
+      if (!netid) {
+        toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
+      }
 
-    // En mode dev : utiliser "hubert" sans clé SSH
-    // En production : utiliser netid et pkeyfile de la session
-    const userToUse = isDevMode 
-      ? "hubert"
-      : (session?.user?.netid || undefined);
-  
-    const sshkeyToUse = isDevMode
-      ? undefined
-      : (session?.user?.pkeyfile || undefined);
+      // Vérifier si l'outil est disponible (en production uniquement)
+      const isDevMode = 
+        process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
+        process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
+        process.env.NODE_ENV === 'development';
 
-    // Lancer PuTTY via le protocole mylaunch://
-    launchExternalTool('putty', {
-      host: hostToUse,
-      user: userToUse,
-      sshkey: sshkeyToUse,
-    });
+      if (!isDevMode && netid) {
+        const checkResult = await checkToolAvailability('putty', netid);
+        if (!checkResult.success) {
+          toast.error(checkResult.error || 'PuTTY n\'est pas configuré ou non accessible');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Utiliser l'IP si disponible, sinon le host (nom du serveur)
+      const hostToUse = ip && ip.trim() !== '' ? ip : host;
+
+      // En mode dev : utiliser "hubert" sans clé SSH
+      // En production : utiliser netid et pkeyfile de la session
+      const userToUse = isDevMode 
+        ? "hubert"
+        : (session?.user?.netid || undefined);
+    
+      const sshkeyToUse = isDevMode
+        ? undefined
+        : (session?.user?.pkeyfile || undefined);
+
+      // Lancer PuTTY via le protocole mylaunch://
+      const success = launchExternalTool('putty', {
+        host: hostToUse,
+        user: userToUse,
+        sshkey: sshkeyToUse,
+      });
+
+      if (success) {
+        toast.info('Lancement de PuTTY en cours...');
+      } else {
+        toast.error('Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
+      }
+    } catch (error) {
+      console.error('Erreur lors du lancement de PuTTY:', error);
+      toast.error('Erreur lors du lancement de PuTTY');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

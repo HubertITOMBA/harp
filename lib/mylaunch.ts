@@ -109,7 +109,9 @@ export function buildMyLaunchUrl(
 
 /**
  * Lance une application externe via le protocole mylaunch://
- * Retourne true si le lien a été créé, false sinon
+ * @param tool - Le nom de l'outil à lancer
+ * @param params - Les paramètres optionnels pour l'outil
+ * @returns boolean - true si le lien a été créé, false sinon
  */
 export function launchExternalTool(
   tool: ExternalTool,
@@ -122,6 +124,43 @@ export function launchExternalTool(
   } catch (error) {
     console.error('Erreur lors du lancement de l\'outil externe:', error);
     return false;
+  }
+}
+
+/**
+ * Vérifie si un outil existe dans la base de données et est configuré
+ * @param tool - Le nom de l'outil à vérifier
+ * @param netid - Le netid de l'utilisateur
+ * @returns Promise avec les informations de l'outil ou une erreur
+ */
+export async function checkToolAvailability(
+  tool: string,
+  netid: string
+): Promise<{ success: boolean; error?: string; toolInfo?: any }> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
+    const response = await fetch(`${apiUrl}/api/launcher/tool?tool=${encodeURIComponent(tool)}&netid=${encodeURIComponent(netid)}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+      return { 
+        success: false, 
+        error: errorData.error || `Erreur HTTP ${response.status}` 
+      };
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      return { success: true, toolInfo: data };
+    } else {
+      return { success: false, error: data.error || 'Outil non disponible' };
+    }
+  } catch (error) {
+    console.error('Erreur lors de la vérification de l\'outil:', error);
+    return { 
+      success: false, 
+      error: 'Impossible de vérifier l\'outil. Vérifiez votre connexion.' 
+    };
   }
 }
 

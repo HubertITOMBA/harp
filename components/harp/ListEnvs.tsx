@@ -7,6 +7,7 @@ import { SQLDeveloperLink } from "./SQLDeveloperLink";
 import { SQLPlusLink } from "./SQLPlusLink";
 import { PSDMTLink } from "./PSDMTLink";
 import { FileZillaLink } from "./FileZillaLink";
+import { PSIDELink } from "./PSIDELink";
 import {
   Card,
   CardContent,
@@ -322,12 +323,9 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         <Label className="w-32 text-muted-foreground">
                           Version PSoft :
                         </Label>
-                        <Link
-                          href={envsharp.url || "#"}
-                          className="font-semibold text-harpOrange hover:underline"
-                        >
+                        <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer">
                           {envsharp.psversion || "N/A"}
-                        </Link>
+                        </PSIDELink>
                       </div>
 
                       <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
