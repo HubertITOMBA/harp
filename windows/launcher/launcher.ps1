@@ -44,12 +44,20 @@ if (-not $API_BASE_URL) {
 }
 
 function Write-Log($message) {
-    $logDir = Join-Path $PSScriptRoot 'logs'
-    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
-    $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss.fff')
-    $logMessage = "[$stamp] $message"
-    Add-Content -Path (Join-Path $logDir 'launcher.log') -Value $logMessage
-    Write-Host $logMessage -ForegroundColor Cyan
+    try {
+        $logDir = Join-Path $PSScriptRoot 'logs'
+        if (-not (Test-Path $logDir)) { 
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null 
+        }
+        $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss.fff')
+        $logMessage = "[$stamp] $message"
+        $logFile = Join-Path $logDir 'launcher.log'
+        Add-Content -Path $logFile -Value $logMessage -ErrorAction SilentlyContinue
+        Write-Host $logMessage -ForegroundColor Cyan
+    } catch {
+        # Si l'écriture du log échoue (dossier en lecture seule), afficher seulement dans la console
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')] $message" -ForegroundColor Cyan
+    }
 }
 
 function Show-Error($message) {

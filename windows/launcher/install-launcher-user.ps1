@@ -2,11 +2,38 @@
 # Ce script configure le launcher dans le dossier de l'utilisateur
 
 param(
-    [string]$InstallPath = "$env:LOCALAPPDATA\HARP\launcher",
+    [string]$InstallPath = "",
     [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Déterminer le chemin d'installation optimal
+if ([string]::IsNullOrWhiteSpace($InstallPath)) {
+    # Essayer LOCALAPPDATA d'abord
+    if ($env:LOCALAPPDATA -and (Test-Path $env:LOCALAPPDATA)) {
+        $InstallPath = "$env:LOCALAPPDATA\HARP\launcher"
+    } else {
+        # Si LOCALAPPDATA n'est pas accessible, utiliser W:\portal
+        $wPortalPath = "W:\portal"
+        
+        if (Test-Path "W:\") {
+            if (-not (Test-Path $wPortalPath)) {
+                try {
+                    New-Item -ItemType Directory -Path $wPortalPath -Force | Out-Null
+                    Write-Host "[INFO] Dossier créé: $wPortalPath" -ForegroundColor Cyan
+                } catch {
+                    Write-Host "[ATTENTION] Impossible de créer $wPortalPath, utilisation du dossier temp système" -ForegroundColor Yellow
+                    $wPortalPath = $env:TEMP
+                }
+            }
+            $InstallPath = "$wPortalPath\HARP\launcher"
+        } else {
+            # Utiliser le dossier temp système en dernier recours
+            $InstallPath = "$env:TEMP\HARP\launcher"
+        }
+    }
+}
 
 Write-Host "`n=== Installation du launcher HARP (Mode Utilisateur) ===" -ForegroundColor Green
 Write-Host "Chemin d'installation: $InstallPath`n" -ForegroundColor Cyan
