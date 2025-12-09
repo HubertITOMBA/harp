@@ -1,0 +1,21 @@
+Windows Registry Editor Version 5.00
+
+; Protocole personnalisé: mylaunch://
+; Configuration pour D:\apps\portail (production)
+; Mettre à jour les chemins si nécessaire avant déploiement.
+
+[HKEY_CLASSES_ROOT\mylaunch]
+@="URL:My Launch Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\mylaunch\DefaultIcon]
+@="C:\\Windows\\System32\\shell32.dll,0"
+
+[HKEY_CLASSES_ROOT\mylaunch\shell]
+
+[HKEY_CLASSES_ROOT\mylaunch\shell\open]
+
+[HKEY_CLASSES_ROOT\mylaunch\shell\open\command]
+@="\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -ExecutionPolicy Bypass -WindowStyle Normal -File \"D:\\apps\\portail\\launcher\\launcher.ps1\" \"%1\""
+
+

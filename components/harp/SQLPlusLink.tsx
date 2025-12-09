@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
@@ -13,12 +12,9 @@ interface SQLPlusLinkProps {
 
 export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
   const { data: session } = useSession();
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
     e.preventDefault();
-    
-    setIsLoading(true);
 
     try {
       // Récupérer le netid
@@ -37,24 +33,31 @@ export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
         const checkResult = await checkToolAvailability('sqlplus', netid);
         if (!checkResult.success) {
           toast.error(checkResult.error || 'SQL*Plus n\'est pas configuré ou non accessible');
-          setIsLoading(false);
           return;
         }
       }
 
       // Lancer SQL*Plus via le protocole mylaunch://
-      const success = launchExternalTool('sqlplus');
+      const launchResult = await launchExternalTool('sqlplus');
 
-      if (success) {
+      if (launchResult.success) {
         toast.info('Lancement de SQL*Plus en cours...');
+        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
+        setTimeout(() => {
+          toast.warning(
+            'Si SQL*Plus ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
+            { autoClose: 8000 }
+          );
+        }, 2000);
       } else {
-        toast.error('Impossible de lancer SQL*Plus. Vérifiez que le protocole mylaunch:// est installé.');
+        toast.error(
+          launchResult.error || 'Impossible de lancer SQL*Plus. Le protocole mylaunch:// n\'est pas installé.',
+          { autoClose: 10000 }
+        );
       }
     } catch (error) {
       console.error('Erreur lors du lancement de SQL*Plus:', error);
       toast.error('Erreur lors du lancement de SQL*Plus');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -64,10 +67,10 @@ export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
       className={className}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent<HTMLSpanElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleClick(e as any);
+          handleClick(e as unknown as React.MouseEvent<HTMLSpanElement>);
         }
       }}
     >

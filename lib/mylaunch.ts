@@ -111,19 +111,36 @@ export function buildMyLaunchUrl(
  * Lance une application externe via le protocole mylaunch://
  * @param tool - Le nom de l'outil à lancer
  * @param params - Les paramètres optionnels pour l'outil
- * @returns boolean - true si le lien a été créé, false sinon
+ * @returns Promise<{ success: boolean; error?: string }> - Résultat du lancement
  */
-export function launchExternalTool(
+export async function launchExternalTool(
   tool: ExternalTool,
   params?: Record<string, string | number | undefined>
-): boolean {
+): Promise<{ success: boolean; error?: string }> {
   try {
     const url = buildMyLaunchUrl(tool, params);
-    window.location.href = url;
-    return true;
+    
+    // Créer un élément <a> temporaire pour tenter le lancement
+    const link = document.createElement('a');
+    link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    
+    // Tenter de cliquer sur le lien
+    link.click();
+    
+    // Nettoyer après un court délai
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+    
+    return { success: true };
   } catch (error) {
     console.error('Erreur lors du lancement de l\'outil externe:', error);
-    return false;
+    return { 
+      success: false, 
+      error: 'Le protocole mylaunch:// n\'est pas installé sur ce poste. Contactez votre administrateur pour installer le launcher.' 
+    };
   }
 }
 

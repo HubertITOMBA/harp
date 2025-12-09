@@ -49,12 +49,22 @@ export function PSIDELink({ className, children }: PSIDELinkProps) {
       }
 
       // Lancer PSIDE via le protocole mylaunch://
-      const success = launchExternalTool('pside');
+      const launchResult = await launchExternalTool('pside');
 
-      if (success) {
+      if (launchResult.success) {
         toast.info('Lancement de PSIDE en cours...');
+        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
+        setTimeout(() => {
+          toast.warning(
+            'Si PSIDE ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
+            { autoClose: 8000 }
+          );
+        }, 2000);
       } else {
-        toast.error('Impossible de lancer PSIDE. Vérifiez que le protocole mylaunch:// est installé.');
+        toast.error(
+          launchResult.error || 'Impossible de lancer PSIDE. Le protocole mylaunch:// n\'est pas installé.',
+          { autoClose: 10000 }
+        );
       }
     } catch (error) {
       console.error('Erreur lors du lancement de PSIDE:', error);

@@ -46,12 +46,22 @@ export function FileZillaLink({ host, pshome, className, children }: FileZillaLi
 
       // Lancer FileZilla via le protocole mylaunch://
       // FileZilla s'ouvrira et l'utilisateur pourra se connecter manuellement
-      const success = launchExternalTool('filezilla');
+      const launchResult = await launchExternalTool('filezilla');
 
-      if (success) {
+      if (launchResult.success) {
         toast.info('Lancement de FileZilla en cours...');
+        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
+        setTimeout(() => {
+          toast.warning(
+            'Si FileZilla ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
+            { autoClose: 8000 }
+          );
+        }, 2000);
       } else {
-        toast.error('Impossible de lancer FileZilla. Vérifiez que le protocole mylaunch:// est installé.');
+        toast.error(
+          launchResult.error || 'Impossible de lancer FileZilla. Le protocole mylaunch:// n\'est pas installé.',
+          { autoClose: 10000 }
+        );
       }
     } catch (error) {
       console.error('Erreur lors du lancement de FileZilla:', error);

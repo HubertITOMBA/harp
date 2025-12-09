@@ -63,16 +63,26 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
         : (session?.user?.pkeyfile || undefined);
 
       // Lancer PuTTY via le protocole mylaunch://
-      const success = launchExternalTool('putty', {
+      const launchResult = await launchExternalTool('putty', {
         host: hostToUse,
         user: userToUse,
         sshkey: sshkeyToUse,
       });
 
-      if (success) {
+      if (launchResult.success) {
         toast.info('Lancement de PuTTY en cours...');
+        // Afficher un message d'aide après un court délai au cas où le protocole ne serait pas installé
+        setTimeout(() => {
+          toast.warning(
+            'Si PuTTY ne s\'ouvre pas, le protocole mylaunch:// n\'est peut-être pas installé. Contactez votre administrateur.',
+            { autoClose: 8000 }
+          );
+        }, 2000);
       } else {
-        toast.error('Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
+        toast.error(
+          launchResult.error || 'Impossible de lancer PuTTY. Le protocole mylaunch:// n\'est pas installé.',
+          { autoClose: 10000 }
+        );
       }
     } catch (error) {
       console.error('Erreur lors du lancement de PuTTY:', error);
