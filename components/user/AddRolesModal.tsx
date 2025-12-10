@@ -109,11 +109,11 @@ export function AddRolesModal({ netid, availableRoles }: AddRolesModalProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-h-[75vh] overflow-hidden flex flex-col p-2 sm:p-3 !top-[20%] sm:!top-[15%] !translate-y-0">
         <DialogHeader className="pb-1 space-y-0">
-          <DialogTitle className="flex items-center gap-1 text-xs sm:text-sm bg-orange-500 text-white px-2 py-1.5 rounded-t-md -mx-2 sm:-mx-3 -mt-2 sm:-mt-3">
+          <DialogTitle className="flex items-center gap-1 text-xs sm:text-sm bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1.5 rounded-t-md -mx-2 sm:-mx-3 -mt-2 sm:-mt-3">
             <Shield className="h-3 w-3" />
             Ajouter des rôles
           </DialogTitle>
-          <DialogDescription className="text-[10px] sm:text-[11px] bg-orange-500 text-white px-2 py-1 rounded-b-md -mx-2 sm:-mx-3 mb-1">
+          <DialogDescription className="text-[10px] sm:text-[11px] bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-b-md -mx-2 sm:-mx-3 mb-1">
             Sélectionnez un ou plusieurs rôles à attribuer à <span className="font-semibold uppercase">{netid}</span>
           </DialogDescription>
         </DialogHeader>

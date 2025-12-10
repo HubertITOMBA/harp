@@ -106,11 +106,15 @@ export const columns: ColumnDef<StatusEnv>[] = [
 
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const userRole = row.original
 
-      return <UserRolesActions userRole={userRole} />
+      return (
+        <div className="flex justify-center">
+          <UserRolesActions userRole={userRole} />
+        </div>
+      )
     }
   }
 ]

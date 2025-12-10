@@ -64,11 +64,15 @@ export const columns: ColumnDef<HarpVersList>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const harpVers = row.original
 
-      return <HarpVersActions harpVers={harpVers} />
+      return (
+        <div className="flex justify-center">
+          <HarpVersActions harpVers={harpVers} />
+        </div>
+      )
     }
   }
 ]

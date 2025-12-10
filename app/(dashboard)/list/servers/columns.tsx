@@ -118,11 +118,15 @@ export const columns: ColumnDef<Servs>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const server = row.original
 
-      return <ServerActions server={server} />
+      return (
+        <div className="flex justify-center">
+          <ServerActions server={server} />
+        </div>
+      )
     }
   }
 ]

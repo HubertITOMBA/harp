@@ -26,7 +26,14 @@ const menuItems = [
       href: "/logout",
       visible: ["PSADMIN", "admin", "teacher", "student", "parent"],
     },                          
-]; 
+];
+
+// Menu statique pour les notifications
+const staticNotificationMenu = {
+  menu: "Notifications",
+  href: "/list/notifications",
+  icone: "bell.png", // Vous pouvez utiliser une icône existante ou créer bell.png
+}; 
 
 interface RoleMenuProps {
   DroitsUser : string ;

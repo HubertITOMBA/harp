@@ -65,12 +65,12 @@ export function ChangePasswordDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-orange-600" />
+        <DialogHeader className="space-y-0">
+          <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6 flex items-center gap-2">
+            <Key className="h-5 w-5" />
             Modifier mon mot de passe
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
             Entrez votre mot de passe actuel et choisissez un nouveau mot de passe sécurisé
           </DialogDescription>
         </DialogHeader>

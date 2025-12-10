@@ -137,11 +137,15 @@ export const columns: ColumnDef<Users>[] = [
 //   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const user = row.original
 
-      return <UserActions user={user} />
+      return (
+        <div className="flex justify-center">
+          <UserActions user={user} />
+        </div>
+      )
     }
   }
 ]

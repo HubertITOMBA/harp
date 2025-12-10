@@ -64,11 +64,15 @@ export const columns: ColumnDef<PtVersionList>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const ptVers = row.original
 
-      return <PtVersActions ptVers={ptVers} />
+      return (
+        <div className="flex justify-center">
+          <PtVersActions ptVers={ptVers} />
+        </div>
+      )
     }
   }
 ]

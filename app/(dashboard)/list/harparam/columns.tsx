@@ -69,11 +69,15 @@ export const columns: ColumnDef<HarParamList>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const harParam = row.original
 
-      return <HarParamActions harParam={harParam} />
+      return (
+        <div className="flex justify-center">
+          <HarParamActions harParam={harParam} />
+        </div>
+      )
     }
   }
 ]

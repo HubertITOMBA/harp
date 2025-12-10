@@ -23,9 +23,16 @@ export async function updateProfile(user: { name?: string; pkeyfile?: string }) 
 
       const validatedData = UpdateProfileSchema.parse(user);
   
+      // Convertir l'ID de string à number
+      const userId = parseInt(session.user.id, 10);
+      
+      if (isNaN(userId) || userId <= 0) {
+        return { success: false, message: "ID utilisateur invalide" };
+      }
+  
       const currentUser = await prisma.user.findFirst({
         where: {
-          id: session.user.id,
+          id: userId,
         },
       });
   

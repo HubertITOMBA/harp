@@ -150,11 +150,15 @@ export const columns: ColumnDef<ServRoleList>[] = [
 },
 {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const servRole = row.original
 
-      return <ServRoleActions servRole={servRole} />
+      return (
+        <div className="flex justify-center">
+          <ServRoleActions servRole={servRole} />
+        </div>
+      )
     }
   }
 ]

@@ -101,11 +101,15 @@ export const columns: ColumnDef<JournalList>[] = [
 },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const journal = row.original
 
-      return <JournalActions journal={journal} />
+      return (
+        <div className="flex justify-center">
+          <JournalActions journal={journal} />
+        </div>
+      )
     }
   }
 ]

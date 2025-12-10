@@ -75,11 +75,15 @@ export const columns: ColumnDef<ListRoles>[] = [
 },
 {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const role = row.original
 
-      return <RoleActions role={role} />
+      return (
+        <div className="flex justify-center">
+          <RoleActions role={role} />
+        </div>
+      )
     }
   }
 ]

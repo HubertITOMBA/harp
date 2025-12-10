@@ -89,11 +89,15 @@ export const columns: ColumnDef<MenuHarp>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const typeStatus = row.original
 
-      return <TypeStatusActions typeStatus={typeStatus} />
+      return (
+        <div className="flex justify-center">
+          <TypeStatusActions typeStatus={typeStatus} />
+        </div>
+      )
     }
   }
 ]

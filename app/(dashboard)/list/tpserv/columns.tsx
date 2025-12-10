@@ -64,11 +64,15 @@ export const columns: ColumnDef<TypeEnvList>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const typeServ = row.original
 
-      return <TypeServActions typeServ={typeServ} />
+      return (
+        <div className="flex justify-center">
+          <TypeServActions typeServ={typeServ} />
+        </div>
+      )
     }
   }
 ]

@@ -148,12 +148,14 @@ export const columns: ColumnDef<StatusEnv>[] = [
 
  {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const entry = row.original
 
       return (
-        <HistoryActions entry={entry} />
+        <div className="flex justify-center">
+          <HistoryActions entry={entry} />
+        </div>
       )
     }
   }

@@ -72,11 +72,15 @@ export const columns: ColumnDef<ListApplis>[] = [
 },
 {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const appli = row.original
 
-      return <AppliActions appli={appli} />
+      return (
+        <div className="flex justify-center">
+          <AppliActions appli={appli} />
+        </div>
+      )
     }
   }
 ]

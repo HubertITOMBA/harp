@@ -75,8 +75,9 @@ export async function updateMenuRoles(menuId: number, roleIds: number[]) {
       }
     });
 
-    // Revalider le cache pour cette page
+    // Revalider le cache pour cette page et la liste des menus
     revalidatePath(`/list/menus/${menuId}`);
+    revalidatePath(`/list/menus`);
 
     return {
       success: true,

@@ -9,6 +9,8 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { getAllUserRoles } from "@/actions/get-all-user-roles";
 import { formatRolesForMenu } from "@/lib/user-roles";
+import { ConditionalLayout } from "@/components/layout/ConditionalLayout";
+import { ConditionalNavbarWrapper } from "@/components/layout/ConditionalNavbarWrapper";
 
 
 
@@ -50,40 +52,57 @@ export default async function HarpLayout ( {
    //  console.log(`[Layout Protected] Rôles fusionnés (${allUserRolesArray.length}):`, allUserRolesArray);
    // console.log(`[Layout Protected] Rôles formatés pour Menu:`, roles);
 
-   // Compter les sessions actives
-   // Pour l'instant, on considère qu'il y a 1 session active si l'utilisateur est connecté
-   // TODO: Implémenter un vrai compteur de sessions si nécessaire
-   const activeSessionCount = session ? 1 : 0;
+  // Compter les sessions actives
+  // Pour l'instant, on considère qu'il y a 1 session active si l'utilisateur est connecté
+  // TODO: Implémenter un vrai compteur de sessions si nécessaire
+  const activeSessionCount = session ? 1 : 0;
+
+  const mainMenuSidebar = (
+    <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
+      <Link href="/home" className="flex flex-col items-center xl:items-start">
+        <h1 className="text-2xl md:text-3xl lg:text-3xl xl:text-6xl 2xl:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+        <h2 className="mx-1 md:mx-2 text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 hidden xl:block">Human Ressources <span className="text-sm md:text-base lg:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
+      </Link>
+      <Menu DroitsUser={roles} sessionCount={activeSessionCount} />
+    </aside>
+  );
+
+  const mainMenuMobile = (
+    <div className="md:hidden">
+      <MobileMenuButton>
+        <Link href="/home" className="block mb-4">
+          <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
+          <h2 className="hidden text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
+        </Link>
+        <Menu DroitsUser={roles} sessionCount={activeSessionCount} />
+      </MobileMenuButton>
+    </div>
+  );
 
   return (
     <div className="h-screen flex flex-col md:flex-row">
-       <SessionProvider session={session}>
-          {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
-          <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
-            <Link href="/home" className="flex flex-col items-center xl:items-start">
-              <h1 className="text-2xl md:text-3xl lg:text-3xl xl:text-6xl 2xl:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-              <h2 className="mx-1 md:mx-2 text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 hidden xl:block">Human Ressources <span className="text-sm md:text-base lg:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   
-            </Link>
-            <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
-          </aside>
-          
-          {/* Menu mobile avec hamburger */}
-          <div className="md:hidden">
-            <MobileMenuButton>
-              <Link href="/home" className="block mb-4">
-                <h1 className="text-4xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
-                <h2 className="hidden text-xs font-bold text-gray-500">Human Ressources <span className="text-base font-bold text-harpOrange">&</span> Payroll</h2>   
-              </Link>
-              <Menu  DroitsUser = {roles} sessionCount={activeSessionCount} />
-            </MobileMenuButton>
+      <SessionProvider session={session}>
+        <ConditionalLayout
+          showMainMenu={true}
+          mainMenuContent={
+            <>
+              {mainMenuSidebar}
+              {mainMenuMobile}
+            </>
+          }
+          profileMenuContent={null}
+        >
+          {/* Contenu principal avec navbar conditionnelle */}
+          <div className="flex-1 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] bg-[#F7F8FA] overflow-auto flex flex-col relative">
+            <ConditionalNavbarWrapper>
+              <Navbar DroitsUser={roles} />
+            </ConditionalNavbarWrapper>
+            <div className="flex-1 overflow-auto">
+              {children}
+            </div>
           </div>
-          
-          {/* Contenu principal */}
-          <div className="flex-1 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] bg-[#F7F8FA] overflow-auto flex flex-col">
-              <Navbar   DroitsUser = {roles}/>
-               { children }
-          </div>
-        </SessionProvider> 
+        </ConditionalLayout>
+      </SessionProvider>
     </div>
   )
   

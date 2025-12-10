@@ -191,11 +191,15 @@ export const columns: ColumnDef<Envs>[] = [
 //   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const env = row.original
 
-      return <EnvActions env={env} />
+      return (
+        <div className="flex justify-center">
+          <EnvActions env={env} />
+        </div>
+      )
     }
   }
 ]

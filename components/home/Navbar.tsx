@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
 import { NavbarMobileMenu } from "./navbar-mobile-menu";
 import { HomeLink } from "./HomeLink";
+import { NotificationBell } from "@/components/notification/NotificationBell";
 
 interface RoleMenuProps {
   DroitsUser : string ;
@@ -140,6 +141,7 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <UserButton />
         </div>
       </div>

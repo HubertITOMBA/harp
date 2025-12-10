@@ -88,11 +88,11 @@ export function ViewRoleDialog({ roleId, roleName, open: controlledOpen, onOpenC
       </DialogTrigger>
       <DialogContent className="max-w-[60vw] max-h-[85vh] overflow-y-auto">
         <DialogHeader className="space-y-0">
-          <DialogTitle className="bg-orange-500 text-white px-3 py-1.5 rounded-t-md -mx-6 -mt-6 text-base sm:text-lg">
+          <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 rounded-t-md -mx-6 -mt-6 text-base sm:text-lg">
             Rôle {roleName.toUpperCase()}
           </DialogTitle>
           {roleData && (
-            <DialogDescription className="bg-orange-500 text-white px-3 py-1 rounded-b-md -mx-6 mb-3 text-xs sm:text-sm">
+            <DialogDescription className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1 rounded-b-md -mx-6 mb-3 text-xs sm:text-sm">
               {roleData.descr}
             </DialogDescription>
           )}

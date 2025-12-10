@@ -123,11 +123,15 @@ export const columns: ColumnDef<MenuHarp>[] = [
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const menu = row.original
 
-      return <MenuActions menu={menu} />
+      return (
+        <div className="flex justify-center">
+          <MenuActions menu={menu} />
+        </div>
+      )
     }
   }
 ]

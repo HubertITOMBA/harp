@@ -892,6 +892,7 @@ model User {
   accounts      Account[]
   session       Session[]
   harpuseroles  harpuseroles[]
+  notificationsCreated harpnotification[]
 }
 
 model Account {
@@ -1011,4 +1012,29 @@ enum harpDomain {
   FHXEND21
   FHXENP11
   FHXENP21
+}
+
+model harpnotification {
+  id          Int                            @id @default(autoincrement())
+  title       String                         @db.VarChar(255)
+  message     String                         @db.Text
+  createdBy   Int
+  createdAt   DateTime                       @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime                       @updatedAt @db.Timestamp(0)
+  creator     User                           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  recipients  harpnotificationrecipient[]
+}
+
+model harpnotificationrecipient {
+  id             Int            @id @default(autoincrement())
+  notificationId Int
+  recipientType  String         @db.VarChar(10) // "USER" ou "ROLE"
+  recipientId    Int             // ID de l'utilisateur ou du rôle
+  read           Boolean         @default(false)
+  readAt         DateTime?       @db.Timestamp(0)
+  notification   harpnotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, recipientType, recipientId])
+  @@index([notificationId])
+  @@index([recipientType, recipientId])
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
@@ -12,8 +13,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ActionsDropdown, ActionItem } from "@/components/ui/actions-dropdown";
 import { removeRoleFromMenu } from "@/actions/update-menu-roles";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,7 @@ interface MenuRoleActionsProps {
 
 function MenuRoleActions({ menuId, roleId, roleName, onDelete }: MenuRoleActionsProps) {
   const router = useRouter();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleDelete = async () => {
     const result = await removeRoleFromMenu(menuId, roleId);
@@ -46,38 +48,40 @@ function MenuRoleActions({ menuId, roleId, roleName, onDelete }: MenuRoleActions
       toast.success(result.message || "Rôle supprimé avec succès");
       router.refresh();
       onDelete();
+      setDeleteDialogOpen(false);
     } else {
       toast.error(result.error || "Erreur lors de la suppression");
     }
   };
 
+  const actions: ActionItem[] = [
+    {
+      label: "Modifier",
+      icon: <Pencil className="h-4 w-4" />,
+      onClick: () => {
+        // TODO: Implémenter la modification
+        toast.info("Fonctionnalité de modification à venir");
+      },
+    },
+    {
+      label: "Supprimer",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: () => setDeleteDialogOpen(true),
+      variant: "destructive",
+    },
+  ];
+
   return (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          // TODO: Implémenter la modification
-          toast.info("Fonctionnalité de modification à venir");
-        }}
-      >
-        <Pencil className="h-4 w-4 mr-1" />
-        Modifier
-      </Button>
+    <>
+      <ActionsDropdown actions={actions} />
       
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="sm">
-            <Trash2 className="h-4 w-4 mr-1" />
-            Supprimer
-          </Button>
-        </AlertDialogTrigger>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader className="space-y-0">
-            <AlertDialogTitle className="bg-orange-500 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
+            <AlertDialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
               Confirmer la suppression
             </AlertDialogTitle>
-            <AlertDialogDescription className="bg-orange-500 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
+            <AlertDialogDescription className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-1.5 rounded-b-md -mx-6 mb-4">
               Êtes-vous sûr de vouloir supprimer le rôle <strong>{roleName}</strong> de ce menu ?
               Cette action est irréversible.
             </AlertDialogDescription>
@@ -90,7 +94,7 @@ function MenuRoleActions({ menuId, roleId, roleName, onDelete }: MenuRoleActions
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 
@@ -128,16 +132,18 @@ export function createMenuRolesColumns(menuId: number): ColumnDef<MenuRole>[] {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: ({ row }) => {
         const role = row.original;
         return (
-          <MenuRoleActions
-            menuId={menuId}
-            roleId={role.roleId}
-            roleName={role.harproles.role}
-            onDelete={() => {}}
-          />
+          <div className="flex justify-center">
+            <MenuRoleActions
+              menuId={menuId}
+              roleId={role.roleId}
+              roleName={role.harproles.role}
+              onDelete={() => {}}
+            />
+          </div>
         );
       },
     },

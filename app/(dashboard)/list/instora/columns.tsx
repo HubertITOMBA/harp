@@ -146,11 +146,15 @@ export const columns: ColumnDef<OraIns>[] = [
 
   {
     id: 'actions',
-    header: 'Actions',
+    header: () => <div className="text-center">Actions</div>,
     cell: ({ row }) => {
       const instora = row.original
 
-      return <InstOraActions instora={instora} />
+      return (
+        <div className="flex justify-center">
+          <InstOraActions instora={instora} />
+        </div>
+      )
     }
   }
 ]
