@@ -36,7 +36,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react"
 import { useState } from "react"
 
 interface DataTableProps<TData, TValue> {
@@ -52,8 +52,8 @@ export function DataTable<TData, TValue>({
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-
     const [rowSelection, setRowSelection] = useState({});
+    const [globalFilter, setGlobalFilter] = useState("");
 
   const table = useReactTable({
     data,
@@ -80,20 +80,31 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between text-gray-500 font-semibold">
-     <div className="flex items-center py-4 ">
-        <Input
-          placeholder="Filtrer par serveur..."
-          value={(table.getColumn("srv")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("srv")?.setFilterValue(event.target.value)
-          }
-          className="rounded-lg max-w-sm"
-        />
+     <div className="flex items-center justify-between text-gray-500 font-semibold py-2">
+     <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Rechercher par serveur, IP, PS Home, OS, Domain, PS User..."
+            value={globalFilter}
+            onChange={(event) => {
+              const value = event.target.value;
+              setGlobalFilter(value);
+              // Filtrer sur toutes les colonnes pertinentes
+              table.getColumn("srv")?.setFilterValue(value);
+              table.getColumn("ip")?.setFilterValue(value);
+              table.getColumn("pshome")?.setFilterValue(value);
+              table.getColumn("os")?.setFilterValue(value);
+              table.getColumn("domain")?.setFilterValue(value);
+              table.getColumn("psuser")?.setFilterValue(value);
+            }}
+            className="pl-10 rounded-lg max-w-sm h-8 text-xs"
+          />
+        </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-lg ml-auto p-2.5">
+            <Button variant="outline" className="rounded-lg ml-auto p-2 h-8 text-xs">
               Colonnes
             </Button>
           </DropdownMenuTrigger>
@@ -121,14 +132,14 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-xs sm:text-sm font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-xs font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="h-8 sm:h-9">
+            <TableRow key={headerGroup.id} className="h-7">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1 sm:py-1.5">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -147,11 +158,10 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200 h-8 sm:h-9"
-                
+                className="hover:bg-harpSkyLight transition-colors duration-200 h-7"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-1 sm:py-1.5">
+                  <TableCell key={cell.id} className="py-1 text-xs">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -159,7 +169,7 @@ export function DataTable<TData, TValue>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
+              <TableCell colSpan={columns.length} className="h-16 text-center text-xs">
                 Aucun resultat.
               </TableCell>
             </TableRow>
@@ -187,22 +197,22 @@ export function DataTable<TData, TValue>({
         </Button>
     </div> */}
 
-<div className="bg-white mt-5 flex items-center justify-between py-5 font-semibold rounded-xl shadow-xl">
-          <div className="ml-5 mt-2 flex-1 text-sm text-muted-foreground">
+<div className="bg-white mt-2 flex items-center justify-between py-2 font-semibold rounded-lg shadow-md">
+          <div className="ml-3 flex-1 text-xs text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} sur {" "}
             {table.getFilteredRowModel().rows.length} ligne(s) selectionée(s).
           </div>
 
       <div className="flex items-center space-x-6 lg:space-x-8 ">
             <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium ">Lignes par page</p>
+              <p className="text-xs font-medium">Lignes par page</p>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
                   table.setPageSize(Number(value))
                 }}
               >
-                <SelectTrigger className="h-8 w-[70px] rounded-">
+                <SelectTrigger className="h-7 w-[70px] text-xs">
                   <SelectValue placeholder={table.getState().pagination.pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">
@@ -215,46 +225,46 @@ export function DataTable<TData, TValue>({
               </Select>
             </div>
      
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+        <div className="flex w-[100px] items-center justify-center text-xs font-medium">
           Page {table.getState().pagination.pageIndex + 1} sur {" "}
           {table.getPageCount()}
         </div>
-          <div className="flex items-center space-x-2 ">
+          <div className="flex items-center space-x-1">
             <Button
                 variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
+                className="hidden h-7 w-7 p-0 lg:flex"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
             >
                 <span className="sr-only">Go to first page</span>
-                <ChevronsLeft />
+                <ChevronsLeft className="h-3 w-3" />
             </Button>
             <Button
                 variant="outline"
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
             >
                 <span className="sr-only">Go to previous page</span>
-                <ChevronLeft />
+                <ChevronLeft className="h-3 w-3" />
             </Button>
             <Button
                 variant="outline"
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
             >
                 <span className="sr-only">Go to next page</span>
-                <ChevronRight />
+                <ChevronRight className="h-3 w-3" />
             </Button>
             <Button
                 variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
+                className="hidden h-7 w-7 p-0 lg:flex"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
             >
                 <span className="sr-only">Go to last page</span>
-                <ChevronsRight />
+                <ChevronsRight className="h-3 w-3" />
             </Button>
           </div>
  <div> 

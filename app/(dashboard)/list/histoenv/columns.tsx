@@ -4,10 +4,10 @@ import { ColumnDef } from '@tanstack/react-table'
 import { ArrowUpDown, Eye, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
 import { deleteHistoryEntry } from '@/actions/delete-history-entry'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
+import { ActionsDropdown, ActionItem } from '@/components/ui/actions-dropdown'
 
 export type StatusEnv = {
   env: string
@@ -182,28 +182,19 @@ function HistoryActions({ entry }: { entry: StatusEnv }) {
     }
   };
 
-  return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
-        title="Voir"
-      >
-        <Link href={`/list/histoenv/${encodeURIComponent(entry.env)}/${encodeURIComponent(entry.fromdate.toISOString())}`}>
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Link>
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-red-300 hover:bg-red-50"
-        title="Supprimer"
-        onClick={handleDelete}
-      >
-        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-      </Button>
-    </div>
-  );
+  const actions: ActionItem[] = [
+    {
+      label: "Voir",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => router.push(`/list/histoenv/${encodeURIComponent(entry.env)}/${encodeURIComponent(entry.fromdate.toISOString())}`),
+    },
+    {
+      label: "Supprimer",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: handleDelete,
+      variant: "destructive",
+    },
+  ];
+
+  return <ActionsDropdown actions={actions} />;
 }

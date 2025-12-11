@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { sendMail } from "@/lib/mail";
 
 const CreateNotificationSchema = z.object({
   title: z.string().min(1, "Le titre est requis").max(255, "Le titre ne peut pas dépasser 255 caractères"),
@@ -110,6 +111,67 @@ export async function createNotification(formData: FormData) {
 
     const validatedData = CreateNotificationSchema.parse(rawData);
 
+    // Récupérer les emails des destinataires pour l'envoi d'emails
+    const recipientEmails: Array<{ email: string; name: string }> = [];
+    
+    // Récupérer les emails des utilisateurs sélectionnés
+    if (validatedData.userIds.length > 0) {
+      const users = await db.user.findMany({
+        where: {
+          id: { in: validatedData.userIds.map(id => parseInt(id, 10)) },
+          email: { not: null },
+        },
+        select: {
+          email: true,
+          name: true,
+          netid: true,
+        },
+      });
+      
+      users.forEach(user => {
+        if (user.email) {
+          recipientEmails.push({
+            email: user.email,
+            name: user.name || user.netid || 'Utilisateur',
+          });
+        }
+      });
+    }
+    
+    // Récupérer les emails des utilisateurs ayant les rôles sélectionnés
+    if (validatedData.roleIds.length > 0) {
+      const roleIds = validatedData.roleIds.map(id => parseInt(id, 10));
+      
+      // Récupérer les utilisateurs ayant ces rôles via harpuseroles
+      const usersWithRoles = await db.harpuseroles.findMany({
+        where: {
+          roleId: { in: roleIds },
+        },
+        include: {
+          user: {
+            select: {
+              email: true,
+              name: true,
+              netid: true,
+            },
+          },
+        },
+      });
+      
+      usersWithRoles.forEach(userRole => {
+        if (userRole.user?.email) {
+          // Éviter les doublons
+          const emailExists = recipientEmails.some(e => e.email === userRole.user.email);
+          if (!emailExists) {
+            recipientEmails.push({
+              email: userRole.user.email,
+              name: userRole.user.name || userRole.user.netid || 'Utilisateur',
+            });
+          }
+        }
+      });
+    }
+
     // Créer la notification
     const notification = await db.harpnotification.create({
       data: {
@@ -135,9 +197,46 @@ export async function createNotification(formData: FormData) {
       },
     });
 
+    // Envoyer les emails aux destinataires qui ont une adresse email
+    const emailResults: Array<{ email: string; success: boolean }> = [];
+    
+    if (recipientEmails.length > 0) {
+      const emailPromises = recipientEmails.map(async (recipient) => {
+        const result = await sendMail({
+          to: recipient.email,
+          subject: `[Portail HARP] ${validatedData.title}`,
+          html: `
+            <h2>${validatedData.title}</h2>
+            <div style="margin-top: 20px;">
+              ${validatedData.message.replace(/\n/g, '<br>')}
+            </div>
+            <p style="margin-top: 20px; color: #666; font-size: 12px;">
+              Cette notification a été envoyée depuis le Portail HARP.
+            </p>
+          `,
+          text: `${validatedData.title}\n\n${validatedData.message}`,
+        });
+        
+        return { email: recipient.email, success: result.success };
+      });
+      
+      emailResults.push(...await Promise.all(emailPromises));
+    }
+
+    const emailsSent = emailResults.filter(r => r.success).length;
+    const emailsFailed = emailResults.filter(r => !r.success).length;
+    
+    let message = `La notification a été créée avec succès`;
+    if (emailsSent > 0) {
+      message += ` et ${emailsSent} email${emailsSent > 1 ? 's ont' : ' a'} été envoyé${emailsSent > 1 ? 's' : ''}`;
+    }
+    if (emailsFailed > 0) {
+      message += `. ${emailsFailed} email${emailsFailed > 1 ? 's n\'ont' : ' n\'a'} pas pu être envoyé${emailsFailed > 1 ? 's' : ''}`;
+    }
+
     return { 
       success: true, 
-      message: `La notification a été créée et envoyée avec succès`,
+      message,
       id: notification.id 
     };
   } catch (error) {
@@ -447,5 +546,153 @@ export async function getNotificationById(id: number) {
   } catch (error) {
     console.error("Erreur lors de la récupération de la notification:", error);
     return null;
+  }
+}
+
+const SendEmailSchema = z.object({
+  subject: z.string().min(1, "Le sujet est requis").max(255, "Le sujet ne peut pas dépasser 255 caractères"),
+  message: z.string().min(1, "Le message est requis"),
+  userIds: z.array(z.string()).optional(),
+  roleIds: z.array(z.string()).optional(),
+}).refine(
+  (data) => (data.userIds && data.userIds.length > 0) || (data.roleIds && data.roleIds.length > 0),
+  {
+    message: "Vous devez sélectionner au moins un utilisateur ou un rôle",
+  }
+);
+
+/**
+ * Envoie un email directement à des utilisateurs ou des rôles sans créer de notification
+ * 
+ * @param formData - Les données du formulaire contenant le sujet, le message et les destinataires
+ * @returns Un objet avec success (boolean), message (string) en cas de succès, 
+ *          ou error (string) en cas d'échec
+ */
+export async function sendEmail(formData: FormData) {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.id) {
+      return { success: false, error: "Vous devez être connecté pour envoyer un email" };
+    }
+
+    const rawData = {
+      subject: formData.get("subject") as string,
+      message: formData.get("message") as string,
+      userIds: formData.getAll("userIds").map(id => id as string).filter(Boolean),
+      roleIds: formData.getAll("roleIds").map(id => id as string).filter(Boolean),
+    };
+
+    const validatedData = SendEmailSchema.parse(rawData);
+
+    // Récupérer les emails des destinataires
+    const recipientEmails: Array<{ email: string; name: string }> = [];
+    
+    // Récupérer les emails des utilisateurs sélectionnés
+    if (validatedData.userIds.length > 0) {
+      const users = await db.user.findMany({
+        where: {
+          id: { in: validatedData.userIds.map(id => parseInt(id, 10)) },
+          email: { not: null },
+        },
+        select: {
+          email: true,
+          name: true,
+          netid: true,
+        },
+      });
+      
+      users.forEach(user => {
+        if (user.email) {
+          recipientEmails.push({
+            email: user.email,
+            name: user.name || user.netid || 'Utilisateur',
+          });
+        }
+      });
+    }
+    
+    // Récupérer les emails des utilisateurs ayant les rôles sélectionnés
+    if (validatedData.roleIds.length > 0) {
+      const roleIds = validatedData.roleIds.map(id => parseInt(id, 10));
+      
+      const usersWithRoles = await db.harpuseroles.findMany({
+        where: {
+          roleId: { in: roleIds },
+        },
+        include: {
+          user: {
+            select: {
+              email: true,
+              name: true,
+              netid: true,
+            },
+          },
+        },
+      });
+      
+      usersWithRoles.forEach(userRole => {
+        if (userRole.user?.email) {
+          const emailExists = recipientEmails.some(e => e.email === userRole.user.email);
+          if (!emailExists) {
+            recipientEmails.push({
+              email: userRole.user.email,
+              name: userRole.user.name || userRole.user.netid || 'Utilisateur',
+            });
+          }
+        }
+      });
+    }
+
+    // Vérifier qu'il y a au moins un destinataire avec email
+    if (recipientEmails.length === 0) {
+      return { 
+        success: false, 
+        error: "Aucun destinataire avec une adresse email valide trouvé" 
+      };
+    }
+
+    // Envoyer les emails
+    const emailResults: Array<{ email: string; success: boolean }> = [];
+    
+    const emailPromises = recipientEmails.map(async (recipient) => {
+      const result = await sendMail({
+        to: recipient.email,
+        subject: `[Portail HARP] ${validatedData.subject}`,
+        html: `
+          <h2>${validatedData.subject}</h2>
+          <div style="margin-top: 20px;">
+            ${validatedData.message.replace(/\n/g, '<br>')}
+          </div>
+          <p style="margin-top: 20px; color: #666; font-size: 12px;">
+            Cet email a été envoyé depuis le Portail HARP.
+          </p>
+        `,
+        text: `${validatedData.subject}\n\n${validatedData.message}`,
+      });
+      
+      return { email: recipient.email, success: result.success };
+    });
+    
+    emailResults.push(...await Promise.all(emailPromises));
+
+    const emailsSent = emailResults.filter(r => r.success).length;
+    const emailsFailed = emailResults.filter(r => !r.success).length;
+    
+    let message = `${emailsSent} email${emailsSent > 1 ? 's ont' : ' a'} été envoyé${emailsSent > 1 ? 's' : ''} avec succès`;
+    if (emailsFailed > 0) {
+      message += `. ${emailsFailed} email${emailsFailed > 1 ? 's n\'ont' : ' n\'a'} pas pu être envoyé${emailsFailed > 1 ? 's' : ''}`;
+    }
+
+    return { 
+      success: emailsSent > 0, 
+      message: emailsSent > 0 ? message : "Aucun email n'a pu être envoyé"
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
+    console.error("Erreur lors de l'envoi de l'email:", error);
+    return { success: false, error: "Erreur lors de l'envoi de l'email" };
   }
 }

@@ -7,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bell, Plus, Users, Shield } from "lucide-react";
-import { createNotification, getAllUsersForNotifications, getAllRolesForNotifications } from '@/lib/actions/notification-actions';
+import { Mail, Plus, Users, Shield } from "lucide-react";
+import { sendEmail, getAllUsersForNotifications, getAllRolesForNotifications } from '@/lib/actions/notification-actions';
 import { toast } from 'react-toastify';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 
-export function CreateNotificationDialog() {
+export function SendEmailDialog() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,8 +72,11 @@ export function CreateNotificationDialog() {
       formData.append("roleIds", roleId);
     });
 
+    // Renommer "subject" pour l'email
+    formData.set("subject", formData.get("subject") as string);
+
     startTransition(async () => {
-      const result = await createNotification(formData);
+      const result = await sendEmail(formData);
 
       if (result.success) {
         toast.success(result.message);
@@ -82,7 +85,7 @@ export function CreateNotificationDialog() {
         setSelectedRoleIds([]);
         router.refresh();
       } else {
-        toast.error(result.error || "Erreur lors de la création de la notification");
+        toast.error(result.error || "Erreur lors de l'envoi de l'email");
         if (result.error) {
           setErrors({ general: result.error });
         }
@@ -93,18 +96,18 @@ export function CreateNotificationDialog() {
   return (
     <FormDialog
       trigger={
-        <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-md">
-          <Plus className="h-4 w-4 mr-2" />
-          Créer une notification
+        <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-md">
+          <Mail className="h-4 w-4 mr-2" />
+          Envoyer un email
         </Button>
       }
-      title="Créer une nouvelle notification"
-      description="Rédigez votre notification et sélectionnez les destinataires"
-      icon={<Bell className="h-5 w-5 text-orange-600" />}
+      title="Envoyer un email"
+      description="Rédigez votre email et sélectionnez les destinataires"
+      icon={<Mail className="h-5 w-5 text-blue-600" />}
       onSubmit={handleSubmit}
       isPending={isPending}
-      submitLabel="Créer la notification"
-      submitIcon={<Bell className="h-4 w-4" />}
+      submitLabel="Envoyer l'email"
+      submitIcon={<Mail className="h-4 w-4" />}
     >
       <div className="space-y-4">
         {errors.general && (
@@ -113,15 +116,15 @@ export function CreateNotificationDialog() {
           </div>
         )}
 
-        {/* Titre */}
+        {/* Sujet */}
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-sm font-semibold text-slate-700">
-            Titre <span className="text-red-500">*</span>
+          <Label htmlFor="subject" className="text-sm font-semibold text-slate-700">
+            Sujet <span className="text-red-500">*</span>
           </Label>
           <Input
-            id="title"
-            name="title"
-            placeholder="Titre de la notification"
+            id="subject"
+            name="subject"
+            placeholder="Sujet de l'email"
             required
             maxLength={255}
             className="w-full"
@@ -137,7 +140,7 @@ export function CreateNotificationDialog() {
           <Textarea
             id="message"
             name="message"
-            placeholder="Contenu de la notification"
+            placeholder="Contenu de l'email"
             required
             rows={6}
             className="w-full resize-none"
@@ -148,7 +151,7 @@ export function CreateNotificationDialog() {
         {/* Sélection des utilisateurs */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Users className="h-4 w-4 text-orange-600" />
+            <Users className="h-4 w-4 text-blue-600" />
             Utilisateurs
           </Label>
           <MultiSelect
@@ -165,7 +168,7 @@ export function CreateNotificationDialog() {
         {/* Sélection des rôles */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-orange-600" />
+            <Shield className="h-4 w-4 text-blue-600" />
             Rôles
           </Label>
           <MultiSelect
@@ -187,7 +190,7 @@ export function CreateNotificationDialog() {
 
         <div className="text-xs text-gray-500 mt-2">
           <p className="font-semibold mb-1">Note :</p>
-          <p>Vous devez sélectionner au moins un utilisateur ou un rôle pour créer la notification. Les utilisateurs avec une adresse email recevront également un email.</p>
+          <p>Vous devez sélectionner au moins un utilisateur ou un rôle pour envoyer l'email. Seuls les utilisateurs avec une adresse email valide recevront l'email.</p>
         </div>
       </div>
     </FormDialog>

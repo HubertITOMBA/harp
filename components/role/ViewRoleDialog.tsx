@@ -43,8 +43,10 @@ export function ViewRoleDialog({ roleId, roleName, open: controlledOpen, onOpenC
   const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [loading, setLoading] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
-  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setOpen = onOpenChange || setInternalOpen;
+  
+  const isControlled = controlledOpen !== undefined || onOpenChange !== undefined;
+  const open = isControlled ? (controlledOpen ?? false) : internalOpen;
+  const setOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
   const handleBackToList = () => {
     setOpen(false);
@@ -76,16 +78,18 @@ export function ViewRoleDialog({ roleId, roleName, open: controlledOpen, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
-          title="Voir"
-        >
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
+            title="Voir"
+          >
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-[60vw] max-h-[85vh] overflow-y-auto">
         <DialogHeader className="space-y-0">
           <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 rounded-t-md -mx-6 -mt-6 text-base sm:text-lg">

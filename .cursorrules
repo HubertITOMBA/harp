@@ -105,12 +105,16 @@ export async function createEntity(formData: FormData) {
 - Gérer les erreurs avec un message approprié
 
 ### Composants Actions (boutons d'action)
-- Structure standard :
+- **OBLIGATOIRE** : Toutes les colonnes Actions dans les DataTable doivent utiliser uniquement le composant `ActionsDropdown` (menu avec trois points "..")
+- **INTERDIT** : Ne jamais utiliser de boutons individuels (Eye, Pencil, etc.) dans les colonnes Actions des DataTable
+- Structure standard avec ActionsDropdown :
 ```typescript
 "use client";
 
-import { ViewDialog, EditDialog, CreateDialog } from './...';
-import { Eye, Pencil, Plus, Ban } from "lucide-react";
+import { useState } from 'react';
+import { ActionsDropdown, ActionItem } from '@/components/ui/actions-dropdown';
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { ViewDialog, EditDialog } from './...';
 
 /**
  * Composant d'actions pour une entité (voir, éditer, supprimer, etc.)
@@ -118,23 +122,65 @@ import { Eye, Pencil, Plus, Ban } from "lucide-react";
  * @param entity - L'entité pour laquelle afficher les actions
  */
 export function EntityActions({ entity }: EntityActionsProps) {
+  const [viewOpen, setViewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+
+  const actions: ActionItem[] = [
+    {
+      label: "Voir",
+      icon: <Eye className="h-4 w-4" />,
+      onClick: () => setViewOpen(true),
+    },
+    {
+      label: "Modifier",
+      icon: <Pencil className="h-4 w-4" />,
+      onClick: () => setEditOpen(true),
+    },
+    {
+      label: "Supprimer",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: handleDelete,
+      variant: "destructive",
+    },
+  ];
+
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      <ViewDialog entity={entity} />
-      <EditDialog entity={entity} />
-      <Button /* toggle status */ />
-    </div>
+    <>
+      <ActionsDropdown actions={actions} />
+      <ViewDialog entity={entity} open={viewOpen} onOpenChange={setViewOpen} />
+      <EditDialog entity={entity} open={editOpen} onOpenChange={setEditOpen} />
+    </>
   );
 }
 ```
 
-- Tailles des boutons : `h-7 w-7 sm:h-8 sm:w-8 p-0`
-- Couleurs :
-  - Voir : `border-orange-300 hover:bg-orange-50`
-  - Éditer : `border-blue-300 hover:bg-blue-50`
-  - Créer : `border-green-300 hover:bg-green-50`
-  - Désactiver : `border-red-300 hover:bg-red-50`
-  - Réactiver : `border-green-300 hover:bg-green-50`
+- Dans les colonnes DataTable, utiliser uniquement :
+```typescript
+{
+  id: 'actions',
+  header: () => <div className="text-center">Actions</div>,
+  cell: ({ row }) => {
+    const entity = row.original;
+    return (
+      <div className="flex justify-center">
+        <EntityActions entity={entity} />
+      </div>
+    );
+  }
+}
+```
+
+- **JAMAIS** utiliser de boutons individuels dans les colonnes Actions :
+```typescript
+// ❌ INTERDIT - Ne pas faire cela
+<div className="flex items-center gap-1 sm:gap-2">
+  <Button><Eye /></Button>
+  <Button><Pencil /></Button>
+</div>
+
+// ✅ CORRECT - Utiliser uniquement ActionsDropdown
+<ActionsDropdown actions={actions} />
+```
 
 ### Pages de liste
 - **Style uniforme et professionnel** avec gradient et Card :

@@ -1,10 +1,9 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { ArrowUpDown, Eye, Pencil, ServerOff, Server } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
 import { ServerActions } from '@/components/server/ServerActions';
 
 export type Servs = {
@@ -83,35 +82,90 @@ export const columns: ColumnDef<Servs>[] = [
   },
   {
     accessorKey: 'ip',
-    header: 'IP',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
+        >
+          IP
+          <ArrowUpDown className='ml-2 h-3 w-3' />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       return <div className="text-xs sm:text-sm">{row.getValue('ip') || '-'}</div>
     }
   },
   {
     accessorKey: 'pshome',
-    header: 'PS Home',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
+        >
+          PS Home
+          <ArrowUpDown className='ml-2 h-3 w-3' />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       return <div className="text-xs sm:text-sm">{row.getValue('pshome') || '-'}</div>
     }
   },
   {
     accessorKey: 'os',
-    header: 'OS',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
+        >
+          OS
+          <ArrowUpDown className='ml-2 h-3 w-3' />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       return <div className="text-xs sm:text-sm">{row.getValue('os') || '-'}</div>
     }
   },
   {
     accessorKey: 'domain',
-    header: 'Domain',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
+        >
+          Domain
+          <ArrowUpDown className='ml-2 h-3 w-3' />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       return <div className="text-xs sm:text-sm">{row.getValue('domain') || '-'}</div>
     }
   },
   {
     accessorKey: 'psuser',
-    header: 'PS User',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
+        >
+          PS User
+          <ArrowUpDown className='ml-2 h-3 w-3' />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       return <div className="text-xs sm:text-sm">{row.getValue('psuser') || '-'}</div>
     }

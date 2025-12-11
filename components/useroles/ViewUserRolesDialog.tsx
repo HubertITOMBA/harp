@@ -19,12 +19,18 @@ interface ViewUserRolesDialogProps {
   role: string;
   userName: string;
   roleName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ViewUserRolesDialog({ netid, role, userName, roleName }: ViewUserRolesDialogProps) {
+export function ViewUserRolesDialog({ netid, role, userName, roleName, open: controlledOpen, onOpenChange }: ViewUserRolesDialogProps) {
   const [userRoleData, setUserRoleData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const isControlled = controlledOpen !== undefined || onOpenChange !== undefined;
+  const open = isControlled ? (controlledOpen ?? false) : internalOpen;
+  const setOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
   useEffect(() => {
     if (open && !userRoleData) {
@@ -44,16 +50,18 @@ export function ViewUserRolesDialog({ netid, role, userName, roleName }: ViewUse
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
-          title="Voir"
-        >
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
+            title="Voir"
+          >
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-0">
           <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">

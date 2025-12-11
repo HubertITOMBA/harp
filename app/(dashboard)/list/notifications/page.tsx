@@ -5,6 +5,7 @@ import { DataTable } from './data-table';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell } from "lucide-react";
 import { CreateNotificationDialog } from '@/components/notification/CreateNotificationDialog';
+import { SendEmailDialog } from '@/components/notification/SendEmailDialog';
 
 export default async function NotificationsListPage() {
   const data = await getAllNotifications();
@@ -21,8 +22,9 @@ export default async function NotificationsListPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex justify-end gap-2">
               <CreateNotificationDialog />
+              <SendEmailDialog />
             </div>
             <DataTable columns={columns} data={data} />
           </CardContent>

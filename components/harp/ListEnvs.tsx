@@ -29,8 +29,10 @@ import {
   Info, 
   ExternalLink,
   Lock,
-  Globe
+  Globe,
+  Activity
 } from "lucide-react";
+import { CopyPasswordButton } from "./CopyPasswordButton";
 
 interface EnvInfoProps {
   typenvid: number;
@@ -127,18 +129,23 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
     },
   });
 
+  // Récupérer le nom du menu depuis harpmenus
+  const menu = await prisma.harpmenus.findFirst({
+    where: { display: typenvid },
+    select: { menu: true },
+  });
+
+  const menuName = menu?.menu || `Menu ${typenvid}`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8 text-[75%]">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-2 sm:p-3 text-[75%]">
+      <div className="max-w-7xl mx-auto space-y-2">
       {/* Header avec statistiques */}
-      <div className="flex flex-row p-4 justify-between items-center bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-xl mb-4 border border-orange-300/30 shadow-lg">
+      <div className="flex flex-row p-2 justify-between items-center bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-lg mb-2 border border-orange-300/30 shadow-md">
         <div>
-          <h1 className="text-3xl font-bold text-harpOrange">
-            {envCount} Environnement{envCount > 1 ? "s" : ""}
+          <h1 className="text-xl sm:text-2xl font-bold text-harpOrange">
+            {menuName} : {envCount} Environnement{envCount > 1 ? "s" : ""}
           </h1>
-           <p className="text-sm text-muted-foreground mt-1">
-            Type d&apos;environnement : {typenvid}
-          </p>  
         </div>
       </div>
 
@@ -165,32 +172,32 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
             className="w-full shadow-lg hover:shadow-xl transition-all duration-300 border-2 hover:border-harpOrange/30"
           >
             {/* En-tête de l'environnement */}
-            <CardHeader className="bg-gradient-to-r from-white to-harpSkyLight/5 pb-3">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+            <CardHeader className="bg-gradient-to-r from-white to-harpSkyLight/5 pb-2 pt-3 px-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   {/* Icône de statut */}
                   {envsharp.statutenv?.icone && (
                     <div className="flex-shrink-0">
                       <Image
                         src={`/ressources/${envsharp.statutenv.icone}`}
                         alt={envsharp.statutenv.statenv || "Statut"}
-                        width={48}
-                        height={48}
-                        className="rounded-lg"
+                        width={32}
+                        height={32}
+                        className="rounded"
                       />
                     </div>
                   )}
 
                   {/* Nom de l'environnement */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <Link
                         href={envsharp.url || "#"}
-                        className="text-2xl font-bold text-harpOrange hover:underline flex items-center gap-2"
+                        className="text-lg sm:text-xl font-bold text-harpOrange hover:underline flex items-center gap-1.5"
                       >
                         {envsharp.env}
                         {envsharp.url && (
-                          <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
                         )}
                       </Link>
                       {envsharp.anonym === "N" ? null : (
@@ -231,210 +238,231 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
             </CardHeader>
 
             {/* Contenu avec onglets */}
-            <CardContent className="pt-4">
+            <CardContent className="pt-2 px-3 pb-3">
               <Tabs defaultValue="environment" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+                <TabsList className="grid w-full grid-cols-4 bg-slate-100 border border-slate-300 shadow-sm text-xs py-1">
                   <TabsTrigger
                     value="environment"
-                    className="flex items-center gap-2 data-[state=active]:bg-harpOrange data-[state=active]:text-white"
+                    className="flex items-center gap-1 px-2 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md border-r border-slate-300 transition-all"
                   >
-                    <Info className="w-4 h-4" />
+                    <Info className="w-3 h-3" />
                     Environnement
                   </TabsTrigger>
                   <TabsTrigger
                     value="bases"
-                    className="flex items-center gap-2 data-[state=active]:bg-harpOrange data-[state=active]:text-white"
+                    className="flex items-center gap-1 px-2 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md border-r border-slate-300 transition-all"
                   >
-                    <Database className="w-4 h-4" />
+                    <Database className="w-3 h-3" />
                     Oracle
                   </TabsTrigger>
                   <TabsTrigger
                     value="serveurs"
-                    className="flex items-center gap-2 data-[state=active]:bg-harpOrange data-[state=active]:text-white"
+                    className="flex items-center gap-1 px-2 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md border-r border-slate-300 transition-all"
                   >
-                    <Server className="w-4 h-4" />
+                    <Server className="w-3 h-3" />
                     Serveurs
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="statut"
+                    className="flex items-center gap-1 px-2 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                  >
+                    <Activity className="w-3 h-3" />
+                    Statut
                   </TabsTrigger>
                 </TabsList>
 
                 {/* Onglet Environnement */}
-                <TabsContent value="environment" className="mt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Version Harp :
+                <TabsContent value="environment" className="mt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Version Harp
                         </Label>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{envsharp.appli}</span>
-                          {envsharp.harprelease && (
-                            <Link
-                              href={envsharp.url || "#"}
-                              className="text-sm font-bold text-harpOrange hover:underline"
-                            >
-                              {envsharp.harprelease}
-                            </Link>
-                          )}
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <div className="flex items-center gap-2">
+                            <span>{envsharp.appli}</span>
+                            {envsharp.harprelease && (
+                              <Link
+                                href={envsharp.url || "#"}
+                                className="text-sm font-bold text-harpOrange hover:underline"
+                              >
+                                {envsharp.harprelease}
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Type :
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Instance Oracle
                         </Label>
-                        <span className="font-semibold">
-                          {envsharp.typenvid}
-                        </span>
-                      </div> */}
-
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Instance Oracle :
-                        </Label>
-                        <span className="font-semibold">
-                          {envsharp.instanceId || "N/A"}
-                        </span>
-                        <SQLDeveloperLink className="font-semibold text-harpOrange hover:underline cursor-pointer">
-                          {envsharp.aliasql || "N/A"} - {envsharp.orarelease || "N/A"}
-                        </SQLDeveloperLink>
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <span>{envsharp.instanceId || "N/A"}</span>
+                          <SQLDeveloperLink className="ml-2 font-semibold text-harpOrange hover:underline cursor-pointer">
+                            {envsharp.aliasql || "N/A"} - {envsharp.orarelease || "N/A"}
+                          </SQLDeveloperLink>
+                        </div>
                       </div>
 
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Alias SQL*Net / Schema  :
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Alias SQL*Net / Schema
                         </Label>
-                        <SQLPlusLink className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer">
-                          {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
-                        </SQLPlusLink>
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <SQLPlusLink className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer">
+                            {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
+                          </SQLPlusLink>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Schéma Oracle :
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Schéma Oracle
                         </Label>
-                        <PSDMTLink className="font-semibold text-harpOrange hover:underline cursor-pointer">
-                          {envsharp.oraschema || "N/A"}
-                        </PSDMTLink>
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <PSDMTLink className="font-semibold text-harpOrange hover:underline cursor-pointer">
+                            {envsharp.oraschema || "N/A"}
+                          </PSDMTLink>
+                        </div>
                       </div>
 
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Version PSoft :
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Version PSoft
                         </Label>
-                        <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer">
-                          {envsharp.psversion || "N/A"}
-                        </PSIDELink>
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer">
+                            {envsharp.psversion || "N/A"}
+                          </PSIDELink>
+                        </div>
                       </div>
 
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Version PTools :
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Version PTools
                         </Label>
-                        <Link
-                          href={envsharp.url || "#"}
-                          className="font-semibold text-harpOrange hover:underline"
-                        >
-                          {envsharp.ptversion || "N/A"}
-                        </Link>
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                          <Link
+                            href={envsharp.url || "#"}
+                            className="font-semibold text-harpOrange hover:underline"
+                          >
+                            {envsharp.ptversion || "N/A"}
+                          </Link>
+                        </div>
                       </div>
 
-                      <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <Label className="w-32 text-muted-foreground">
-                          Version Cobol :
+                      <div className="space-y-1">
+                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                          <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                          Version Cobol
                         </Label>
-                        <span className="font-semibold">
+                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                           {envsharp.volum || "N/A"}
-                        </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </TabsContent>
 
                 {/* Onglet Oracle - Lazy loading */}
-                <TabsContent value="bases" className="mt-4">
+                <TabsContent value="bases" className="mt-2">
                   {/* Informations harpenvinfo - Style EnvInfos */}
                   {envsharp.harpenvinfo && envsharp.harpenvinfo.length > 0 && (
-                    <Card className="mt-4">
-                      <CardHeader>
-                        <CardTitle>Informations Environnement</CardTitle>
+                    <Card className="mt-2">
+                      <CardHeader className="pb-2 pt-3 px-3">
+                        <CardTitle className="text-sm">Informations Environnement</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="px-3 pb-3">
                         {(() => {
                           const envInfo = envsharp.harpenvinfo[0];
                           return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {envInfo.datadt && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    Image production :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Image production
                                   </Label>
-                                  <Label className="font-semibold text-sm">
+                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                                     {new Intl.DateTimeFormat("fr-FR", {
                                       dateStyle: "short",
                                       timeStyle: "medium",
                                     }).format(envInfo.datadt)}
-                                  </Label>
+                                  </div>
                                 </div>
                               )}
                               {envInfo.refreshdt && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    Dernier refresh :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Dernier refresh
                                   </Label>
-                                  <Label className="font-semibold text-sm">
+                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                                     {new Intl.DateTimeFormat("fr-FR", {
                                       dateStyle: "short",
                                       timeStyle: "medium",
                                     }).format(envInfo.refreshdt)}
-                                  </Label>
+                                  </div>
                                 </div>
                               )}
                               {envInfo.modedt && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    Dernier mis à jour :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Dernier mis à jour
                                   </Label>
-                                  <Label className="font-semibold text-sm">
+                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                                     {new Intl.DateTimeFormat("fr-FR", {
                                       dateStyle: "short",
                                       timeStyle: "short",
                                     }).format(envInfo.modedt)}
-                                  </Label>
+                                  </div>
                                 </div>
                               )}
                               {envInfo.datmaj && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    Date maj :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Date maj
                                   </Label>
-                                  <Label className="font-semibold text-sm">
+                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                                     {new Intl.DateTimeFormat("fr-FR", {
                                       dateStyle: "short",
                                       timeStyle: "short",
                                     }).format(envInfo.datmaj)}
-                                  </Label>
+                                  </div>
                                 </div>
                               )}
                               {envInfo.userunx && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    Sudo Sudoer :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Sudo Sudoer
                                   </Label>
-                                  <Label className="bg-harpOrange text-white p-1 rounded-xl text-sm">
-                                    {envInfo.userunx}
-                                  </Label>
+                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                                    <span className="bg-harpOrange text-white px-2 py-1 rounded text-xs">
+                                      {envInfo.userunx}
+                                    </span>
+                                  </div>
                                 </div>
                               )}
                               {envInfo.pswd_ft_exploit && (
-                                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                                  <Label className="w-32 text-muted-foreground">
-                                    password FT_EXPLOIT :
+                                <div className="space-y-1">
+                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                    Password FT_EXPLOIT
                                   </Label>
-                                  <Label className="text-red-600 font-semibold text-sm">
-                                    Clique ici pour copier le mot de passe
-                                  </Label>
+                                  <CopyPasswordButton password={envInfo.pswd_ft_exploit} />
                                 </div>
                               )}
                             </div>
@@ -446,23 +474,26 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
 
                   {/* Informations du serveur - Style EnvInfos */}
                   {envsharp.serverInfo && (
-                    <Card className="mt-4">
-                      <CardHeader>
-                        <CardTitle>Informations Serveur</CardTitle>
+                    <Card className="mt-2">
+                      <CardHeader className="pb-2 pt-3 px-3">
+                        <CardTitle className="text-sm">Informations Serveur</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <Label className="w-32 text-muted-foreground">
-                              Serveur :
+                      <CardContent className="px-3 pb-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Server className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              Serveur
                             </Label>
-                            <PuttyLink
-                              host={envsharp.serverInfo.srv || envsharp.serverInfo.ip || ""}
-                              ip={envsharp.serverInfo.ip || ""}
-                              className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
-                            >
-                              {envsharp.serverInfo.srv || "N/A"} {envsharp.serverInfo.ip ? `(${envsharp.serverInfo.ip})` : ""}
-                            </PuttyLink>
+                            <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                              <PuttyLink
+                                host={envsharp.serverInfo.srv || envsharp.serverInfo.ip || ""}
+                                ip={envsharp.serverInfo.ip || ""}
+                                className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
+                              >
+                                {envsharp.serverInfo.srv || "N/A"} {envsharp.serverInfo.ip ? `(${envsharp.serverInfo.ip})` : ""}
+                              </PuttyLink>
+                            </div>
                           </div>
 
 
@@ -479,27 +510,31 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                               {envsharp.serverInfo.ip || "N/A"}
                             </Label>
                           </div> */}
-                          <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <Label className="w-32 text-muted-foreground">
-                              PS Home :
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Server className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              PS Home
                             </Label>
-                            <FileZillaLink
-                              host={envsharp.serverInfo.ip || envsharp.serverInfo.srv}
-                              pshome={envsharp.serverInfo.pshome}
-                              className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
-                            >
-                              {envsharp.serverInfo.pshome
-                                ? `${envsharp.serverInfo.pshome}/HARP_FILES`
-                                : "N/A"}
-                            </FileZillaLink>
+                            <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                              <FileZillaLink
+                                host={envsharp.serverInfo.ip || envsharp.serverInfo.srv}
+                                pshome={envsharp.serverInfo.pshome}
+                                className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
+                              >
+                                {envsharp.serverInfo.pshome
+                                  ? `${envsharp.serverInfo.pshome}/HARP_FILES`
+                                  : "N/A"}
+                              </FileZillaLink>
+                            </div>
                           </div>
-                          <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <Label className="w-32 text-muted-foreground">
-                              Psoft User :
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              Psoft User
                             </Label>
-                            <Label className="font-semibold text-sm">
+                            <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                               {envsharp.serverInfo.psuser || "N/A"}
-                            </Label>
+                            </div>
                           </div>
                           {/* {envsharp.serverInfo.os && (
                             <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
@@ -512,13 +547,14 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             </div>
                           )} */}
                           {envsharp.serverInfo.domain && (
-                            <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                              <Label className="w-32 text-muted-foreground">
-                                Domaine :
+                            <div className="space-y-1">
+                              <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                Domaine
                               </Label>
-                              <Label className="font-semibold text-sm">
+                              <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                                 {envsharp.serverInfo.domain}
-                              </Label>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -528,8 +564,15 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                 </TabsContent>
 
                 {/* Onglet Serveurs - Lazy loading */}
-                <TabsContent value="serveurs" className="mt-4">
+                <TabsContent value="serveurs" className="mt-2">
                   <EnvServRoles id={envsharp.id} />
+                </TabsContent>
+
+                {/* Onglet Statut */}
+                <TabsContent value="statut" className="mt-2">
+                  <div className="p-2 text-center text-muted-foreground">
+                    <p className="text-xs">Les données de statut seront implémentées prochainement.</p>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>

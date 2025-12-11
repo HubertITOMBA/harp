@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `harpnotificationrecipient` (
   `read` BOOLEAN NOT NULL DEFAULT FALSE,
   `readAt` TIMESTAMP(0) NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `harpnotificationrecipient_notificationId_recipientType_recipientId_key` (`notificationId`, `recipientType`, `recipientId`),
+  UNIQUE KEY `harpnotifrecip_uniq` (`notificationId`, `recipientType`, `recipientId`),
   INDEX `harpnotificationrecipient_notificationId_idx` (`notificationId`),
   INDEX `harpnotificationrecipient_recipientType_recipientId_idx` (`recipientType`, `recipientId`),
   CONSTRAINT `harpnotificationrecipient_notificationId_fkey` FOREIGN KEY (`notificationId`) REFERENCES `harpnotification` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
