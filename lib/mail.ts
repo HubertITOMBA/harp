@@ -147,11 +147,42 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
       bcc: bccRecipients,
     };
 
-    await transport.sendMail(mailOptions);
+    const sendResult = await transport.sendMail(mailOptions);
+
+    // Logger les détails de l'envoi pour diagnostic
+    console.log("[MAIL] Email envoyé:", {
+      from,
+      to: recipients,
+      subject,
+      messageId: sendResult.messageId,
+      accepted: sendResult.accepted,
+      rejected: sendResult.rejected,
+      response: sendResult.response,
+    });
+
+    // Vérifier si l'email a été accepté par le serveur SMTP
+    const wasAccepted = sendResult.accepted && sendResult.accepted.length > 0;
+    const wasRejected = sendResult.rejected && sendResult.rejected.length > 0;
+
+    if (wasRejected) {
+      console.warn("[MAIL] Certains emails ont été rejetés:", sendResult.rejected);
+      return {
+        success: false,
+        error: `Le serveur SMTP a rejeté l'email pour: ${sendResult.rejected.join(', ')}`,
+      };
+    }
+
+    if (!wasAccepted) {
+      console.warn("[MAIL] Aucun email n'a été accepté par le serveur SMTP");
+      return {
+        success: false,
+        error: "Le serveur SMTP n'a pas accepté l'email. Vérifiez la configuration du serveur.",
+      };
+    }
 
     return { 
       success: true, 
-      message: `Email envoyé avec succès à ${recipients}` 
+      message: `Email accepté par le serveur SMTP (${process.env.MAIL_HOST || 'serveur SMTP'}) pour ${recipients}. Message ID: ${sendResult.messageId || 'N/A'}. Si l'email n'arrive pas, vérifier la configuration du relais SMTP avec l'administrateur système.` 
     };
   } catch (error) {
     console.error("Erreur lors de l'envoi de l'email:", error);
