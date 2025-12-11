@@ -15,17 +15,43 @@ const transport = useSendmail
       newline: 'unix',
       path: process.env.SENDMAIL_PATH || '/usr/sbin/sendmail',
     })
-  : nodemailer.createTransport({
-      host: process.env.MAIL_HOST || process.env.SMTP_HOST,
-      port: parseInt(process.env.MAIL_PORT || process.env.SMTP_PORT || '25', 10),
-      secure: process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true', // true pour 465, false pour autres ports
-      auth: process.env.MAIL_USER || process.env.SMTP_USER
-        ? {
-            user: process.env.MAIL_USER || process.env.SMTP_USER || '',
-            pass: process.env.MAIL_PASSWORD || process.env.SMTP_PASSWORD || '',
-          }
-        : undefined,
-    } as SMTPTransport.Options);
+  : (() => {
+      const port = parseInt(process.env.MAIL_PORT || process.env.SMTP_PORT || '25', 10);
+      const host = process.env.MAIL_HOST || process.env.SMTP_HOST || '';
+      
+      // Port 25 = SMTP standard (non sécurisé, pas de TLS)
+      // Port 587 = SMTP avec STARTTLS (sécurisé mais pas SSL)
+      // Port 465 = SMTPS (SSL/TLS direct)
+      const isPort25 = port === 25;
+      const isPort465 = port === 465;
+      
+      // Déterminer si on utilise secure (SSL direct) ou requireTLS (STARTTLS)
+      const secure = process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true' || isPort465;
+      const requireTLS = !isPort25 && !isPort465 && process.env.MAIL_REQUIRE_TLS !== 'false';
+      
+      // Configuration de base
+      const config: SMTPTransport.Options = {
+        host,
+        port,
+        secure: secure, // true pour SSL direct (port 465), false pour STARTTLS (port 587) ou non sécurisé (port 25)
+        requireTLS: requireTLS, // Forcer STARTTLS pour les ports non-SSL
+        auth: process.env.MAIL_USER || process.env.SMTP_USER
+          ? {
+              user: process.env.MAIL_USER || process.env.SMTP_USER || '',
+              pass: process.env.MAIL_PASSWORD || process.env.SMTP_PASSWORD || '',
+            }
+          : undefined,
+      };
+      
+      // Pour le port 25 ou si MAIL_IGNORE_TLS_ERRORS est true, désactiver la vérification du certificat
+      if (isPort25 || process.env.MAIL_IGNORE_TLS_ERRORS === 'true') {
+        config.tls = {
+          rejectUnauthorized: false, // Ne pas vérifier le certificat SSL/TLS
+        };
+      }
+      
+      return nodemailer.createTransport(config);
+    })();
 
 /**
  * Interface pour les options d'envoi d'email
@@ -45,11 +71,16 @@ export interface SendMailOptions {
  * 
  * Configuration SMTP (par défaut) :
  * Variables d'environnement requises :
- *   - MAIL_HOST ou SMTP_HOST : Serveur SMTP (ex: smtp.gmail.com)
- *   - MAIL_PORT ou SMTP_PORT : Port SMTP (ex: 587 pour TLS, 465 pour SSL)
- *   - MAIL_USER ou SMTP_USER : Nom d'utilisateur SMTP
- *   - MAIL_PASSWORD ou SMTP_PASSWORD : Mot de passe SMTP
- *   - MAIL_SECURE ou SMTP_SECURE : "true" pour SSL (port 465), "false" pour TLS (port 587)
+ *   - MAIL_HOST ou SMTP_HOST : Serveur SMTP (ex: smtp.gmail.com ou IP: 138.35.24.152)
+ *   - MAIL_PORT ou SMTP_PORT : Port SMTP 
+ *     * Port 25 : SMTP standard (non sécurisé, pas de TLS)
+ *     * Port 587 : SMTP avec STARTTLS (recommandé)
+ *     * Port 465 : SMTPS avec SSL/TLS direct
+ *   - MAIL_USER ou SMTP_USER : Nom d'utilisateur SMTP (optionnel pour port 25)
+ *   - MAIL_PASSWORD ou SMTP_PASSWORD : Mot de passe SMTP (optionnel pour port 25)
+ *   - MAIL_SECURE ou SMTP_SECURE : "true" pour SSL direct (port 465), "false" pour STARTTLS (port 587) ou non sécurisé (port 25)
+ *   - MAIL_REQUIRE_TLS : "false" pour désactiver STARTTLS (défaut: "true" sauf port 25)
+ *   - MAIL_IGNORE_TLS_ERRORS : "true" pour ignorer les erreurs de certificat SSL/TLS (utile pour IP au lieu de domaine)
  *   - MAIL_FROM : Adresse expéditeur (optionnel, défaut: noreply@harp.local)
  * 
  * Configuration sendmail (optionnel, Linux uniquement) :
@@ -116,7 +147,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
       bcc: bccRecipients,
     };
 
-    const sendResult = await transport.sendMail(mailOptions);
+    await transport.sendMail(mailOptions);
 
     return { 
       success: true, 
@@ -136,6 +167,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
         errorMessage = "Impossible de se connecter au serveur SMTP. Vérifiez MAIL_HOST et MAIL_PORT";
       } else if (error.message.includes('EAUTH')) {
         errorMessage = "Échec de l'authentification SMTP. Vérifiez MAIL_USER et MAIL_PASSWORD";
+      } else if (error.message.includes('certificate') || error.message.includes('cert') || error.message.includes('ESOCKET')) {
+        errorMessage = "Erreur de certificat SSL/TLS. Ajoutez MAIL_IGNORE_TLS_ERRORS=true dans votre .env pour ignorer cette vérification";
       } else {
         errorMessage = error.message;
       }

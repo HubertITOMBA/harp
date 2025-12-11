@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3000",
+    "dev": "next dev --turbopack -p 9352",
     "build": "npx prisma generate && next build",
-    "start": "next start -p 9052",
+    "start": "next start -p 9352",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "migration:run": "npx tsx scripts/run-migration.ts",
