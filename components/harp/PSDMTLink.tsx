@@ -9,9 +9,11 @@ import { ReactNode } from 'react';
 interface PSDMTLinkProps {
   className?: string;
   children: ReactNode;
+  ptversion?: string | null;
+  aliasql?: string | null;
 }
 
-export function PSDMTLink({ className, children }: PSDMTLinkProps) {
+export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,8 +44,12 @@ export function PSDMTLink({ className, children }: PSDMTLinkProps) {
         }
       }
 
-      // Lancer PSDMT via le protocole mylaunch://
-      const launchResult = await launchExternalTool('psdmt');
+      // Lancer PSDMT via le protocole mylaunch:// avec les paramètres de l'environnement
+      const params: Record<string, string | undefined> = {};
+      if (ptversion) params.ptversion = ptversion;
+      if (aliasql) params.aliasql = aliasql;
+      
+      const launchResult = await launchExternalTool('psdmt', params);
 
       if (launchResult.success) {
         toast.success('PSDMT est en cours de lancement...');

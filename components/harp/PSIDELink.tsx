@@ -9,6 +9,8 @@ import { ReactNode } from 'react';
 interface PSIDELinkProps {
   className?: string;
   children: ReactNode;
+  ptversion?: string | null;
+  aliasql?: string | null;
 }
 
 /**
@@ -16,8 +18,10 @@ interface PSIDELinkProps {
  * 
  * @param className - Classes CSS optionnelles
  * @param children - Contenu à afficher dans le lien
+ * @param ptversion - Version PeopleTools (ex: "8.60", "8.61")
+ * @param aliasql - Alias SQL de l'environnement
  */
-export function PSIDELink({ className, children }: PSIDELinkProps) {
+export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,8 +52,12 @@ export function PSIDELink({ className, children }: PSIDELinkProps) {
         }
       }
 
-      // Lancer PSIDE via le protocole mylaunch://
-      const launchResult = await launchExternalTool('pside');
+      // Lancer PSIDE via le protocole mylaunch:// avec les paramètres de l'environnement
+      const params: Record<string, string | undefined> = {};
+      if (ptversion) params.ptversion = ptversion;
+      if (aliasql) params.aliasql = aliasql;
+      
+      const launchResult = await launchExternalTool('pside', params);
 
       if (launchResult.success) {
         toast.success('PSIDE est en cours de lancement...');

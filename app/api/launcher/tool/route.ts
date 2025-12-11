@@ -12,6 +12,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const tool = searchParams.get("tool");
     const netid = searchParams.get("netid");
+    // Paramètres optionnels pour construire les arguments dynamiquement
+    const ptversion = searchParams.get("ptversion");
+    const aliasql = searchParams.get("aliasql");
+    const envId = searchParams.get("envId");
+    const ip = searchParams.get("ip");
 
     if (!tool) {
       return NextResponse.json(
@@ -36,6 +41,7 @@ export async function GET(request: NextRequest) {
         cmd: true,
         cmdarg: true,
         descr: true,
+        version: true, // Récupérer la version pour construire dynamiquement le chemin
       },
     });
 
@@ -55,6 +61,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Construire le chemin complet de l'exécutable
+    // TOUS les outils doivent utiliser cmd de harptools
     let fullPath = "";
     if (!toolInfo.cmd || toolInfo.cmd.trim() === "") {
       return NextResponse.json(
@@ -63,18 +70,65 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (toolInfo.cmdpath && toolInfo.cmdpath.trim() !== "") {
-      // Si cmdpath existe, construire le chemin complet
+    // Récupérer cmd de harptools (obligatoire pour tous les outils)
+    const cmd = toolInfo.cmd.trim();
+
+    // Pour psdmt et pside, construire dynamiquement le chemin selon la version
+    // Priorité : ptversion depuis les paramètres > version depuis harptools
+    const versionToUse = ptversion || toolInfo.version;
+    
+    if ((tool === "psdmt" || tool === "pside") && versionToUse) {
+      // Convertir la version (ex: "8.60" -> "pt860", "8.61" -> "pt861")
+      const versionStr = versionToUse.trim();
+      const ptVersion = versionStr.replace(/\./g, ""); // Remplacer les points par rien
+      const basePath = `D:\\apps\\peoplesoft\\pt${ptVersion}\\bin\\client\\winx86`;
+      // Utiliser cmd de harptools
+      fullPath = `${basePath}\\${cmd}`;
+    } else if (toolInfo.cmdpath && toolInfo.cmdpath.trim() !== "") {
+      // Pour les autres outils, utiliser cmdpath + cmd de harptools
       const cmdpath = toolInfo.cmdpath.trim().replace(/\\$/, ""); // Enlever le \ final s'il existe
-      const cmd = toolInfo.cmd.trim();
+      // Utiliser cmd de harptools
       fullPath = `${cmdpath}\\${cmd}`;
     } else {
-      // Sinon, utiliser seulement cmd (qui peut être un chemin complet)
-      fullPath = toolInfo.cmd.trim();
+      // Sinon, utiliser seulement cmd de harptools (qui peut être un chemin complet)
+      fullPath = cmd;
     }
 
     // Normaliser les backslashes pour Windows
     fullPath = fullPath.replace(/\//g, "\\");
+
+    // Construire les arguments dynamiquement selon l'outil
+    let dynamicArgs = toolInfo.cmdarg || "";
+    
+    if (tool === "psdmt" || tool === "pside") {
+      // Pour psdmt et pside : -CT ORACLE -CD {aliasql}
+      if (aliasql) {
+        dynamicArgs = `-CT ORACLE -CD ${aliasql}`;
+      } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
+        dynamicArgs = toolInfo.cmdarg;
+      }
+    } else if (tool === "filezilla") {
+      // Pour filezilla : sftp: {netid}@{ip} -p 22
+      if (ip && netid) {
+        dynamicArgs = `sftp: ${netid}@${ip} -p 22`;
+      } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
+        dynamicArgs = toolInfo.cmdarg;
+      }
+    } else if (tool === "putty") {
+      // Pour putty : les arguments sont construits par le launcher PowerShell
+      // L'API retourne juste cmdarg de la base de données si disponible
+      // Le launcher PowerShell construit les arguments avec -P, -i, et host depuis l'URL
+      if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
+        dynamicArgs = toolInfo.cmdarg;
+      }
+    } else if (tool === "sqlplus") {
+      // Pour sqlplus : /@ {aliasql}
+      if (aliasql) {
+        dynamicArgs = `/@ ${aliasql}`;
+      } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
+        dynamicArgs = toolInfo.cmdarg;
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -82,8 +136,9 @@ export async function GET(request: NextRequest) {
       path: fullPath,
       cmdpath: toolInfo.cmdpath || "",
       cmd: toolInfo.cmd,
-      cmdarg: toolInfo.cmdarg || "",
+      cmdarg: dynamicArgs, // Arguments construits dynamiquement
       descr: toolInfo.descr,
+      version: versionToUse || toolInfo.version || null, // Inclure la version dans la réponse pour le debugging
       pkeyfile: user?.pkeyfile || null,
     });
   } catch (error) {

@@ -12,14 +12,16 @@ Ajoutez ces variables dans votre fichier `.env` en production :
 
 ```env
 # URL de base de l'application (sans slash final)
-AUTH_URL=http://portails.orange-harp.fr:9352
-# ou pour HTTPS :
-# AUTH_URL=https://portails.orange-harp.fr:9352
+# HTTPS est maintenant activé par défaut (certificats installés)
+AUTH_URL=https://portails.orange-harp.fr:9352
+# Si vous utilisez encore HTTP (non recommandé) :
+# AUTH_URL=http://portails.orange-harp.fr:9352
 
 # URL publique du serveur (pour Next.js RSC)
-NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
-# ou pour HTTPS :
-# NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+# HTTPS est maintenant activé par défaut (certificats installés)
+NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+# Si vous utilisez encore HTTP (non recommandé) :
+# NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true
@@ -35,7 +37,7 @@ const nextConfig: NextConfig = {
   
   // Configuration pour la production
   env: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://portails.orange-harp.fr:9352',
+    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'https://portails.orange-harp.fr:9352',
   },
   
   // Si vous utilisez un reverse proxy

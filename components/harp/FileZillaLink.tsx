@@ -8,12 +8,13 @@ import { ReactNode } from 'react';
 
 interface FileZillaLinkProps {
   host?: string;
+  ip?: string;
   pshome?: string;
   className?: string;
   children: ReactNode;
 }
 
-export function FileZillaLink({ host, pshome, className, children }: FileZillaLinkProps) {
+export function FileZillaLink({ host, ip, pshome, className, children }: FileZillaLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -44,9 +45,12 @@ export function FileZillaLink({ host, pshome, className, children }: FileZillaLi
         }
       }
 
-      // Lancer FileZilla via le protocole mylaunch://
-      // FileZilla s'ouvrira et l'utilisateur pourra se connecter manuellement
-      const launchResult = await launchExternalTool('filezilla');
+      // Lancer FileZilla via le protocole mylaunch:// avec les paramètres
+      const params: Record<string, string | undefined> = {};
+      if (ip) params.ip = ip;
+      if (netid) params.netid = netid;
+      
+      const launchResult = await launchExternalTool('filezilla', params);
 
       if (launchResult.success) {
         toast.success('FileZilla est en cours de lancement...');

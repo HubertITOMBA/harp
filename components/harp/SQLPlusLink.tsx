@@ -8,9 +8,10 @@ import { ReactNode } from 'react';
 interface SQLPlusLinkProps {
   className?: string;
   children: ReactNode;
+  aliasql?: string | null;
 }
 
-export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
+export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) {
   const { data: session } = useSession();
 
   const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
@@ -37,8 +38,11 @@ export function SQLPlusLink({ className, children }: SQLPlusLinkProps) {
         }
       }
 
-      // Lancer SQL*Plus via le protocole mylaunch://
-      const launchResult = await launchExternalTool('sqlplus');
+      // Lancer SQL*Plus via le protocole mylaunch:// avec les paramètres
+      const params: Record<string, string | undefined> = {};
+      if (aliasql) params.aliasql = aliasql;
+      
+      const launchResult = await launchExternalTool('sqlplus', params);
 
       if (launchResult.success) {
         toast.success('SQL*Plus est en cours de lancement...');

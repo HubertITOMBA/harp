@@ -314,7 +314,10 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           Alias SQL*Net / Schema
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <SQLPlusLink className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer">
+                          <SQLPlusLink 
+                            className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
+                            aliasql={envsharp.aliasql}
+                          >
                             {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
                           </SQLPlusLink>
                         </div>
@@ -328,7 +331,11 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           Schéma Oracle
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <PSDMTLink className="font-semibold text-harpOrange hover:underline cursor-pointer">
+                          <PSDMTLink 
+                            className="font-semibold text-harpOrange hover:underline cursor-pointer"
+                            ptversion={envsharp.ptversion}
+                            aliasql={envsharp.aliasql}
+                          >
                             {envsharp.oraschema || "N/A"}
                           </PSDMTLink>
                         </div>
@@ -340,7 +347,11 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           Version PSoft
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer">
+                          <PSIDELink 
+                            className="font-semibold text-harpOrange hover:underline cursor-pointer"
+                            ptversion={envsharp.ptversion}
+                            aliasql={envsharp.aliasql}
+                          >
                             {envsharp.psversion || "N/A"}
                           </PSIDELink>
                         </div>
@@ -518,6 +529,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                               <FileZillaLink
                                 host={envsharp.serverInfo.ip || envsharp.serverInfo.srv}
+                                ip={envsharp.serverInfo.ip || undefined}
                                 pshome={envsharp.serverInfo.pshome}
                                 className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
                               >

@@ -1,10 +1,14 @@
 # Configuration de la Session en Production
 
-## Problème
+## Configuration HTTPS
+
+**HTTPS est maintenant activé par défaut** car les certificats SSL ont été installés par l'administrateur.
+
+## Problème (si vous utilisez encore HTTP)
 
 Après `npm run build`, chaque clic redirige vers la page de login. La session n'est pas persistée en production.
 
-## Cause
+## Cause (HTTP uniquement)
 
 En production avec HTTP (pas HTTPS), NextAuth active par défaut les cookies sécurisés (`useSecureCookies: true`), ce qui empêche les cookies de fonctionner correctement car les navigateurs refusent les cookies sécurisés sur des connexions non-HTTPS.
 
@@ -49,9 +53,10 @@ Assurez-vous que ces variables sont définies dans votre `.env` de production :
 
 ```env
 # URL de base de l'application (sans slash final)
-AUTH_URL=http://portails.orange-harp.fr:9352
-# ou pour HTTPS :
-# AUTH_URL=https://portails.orange-harp.fr:9352
+# HTTPS est maintenant activé par défaut (certificats installés)
+AUTH_URL=https://portails.orange-harp.fr:9352
+# Si vous utilisez encore HTTP (non recommandé) :
+# AUTH_URL=http://portails.orange-harp.fr:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true

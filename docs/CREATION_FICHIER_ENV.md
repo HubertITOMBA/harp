@@ -30,12 +30,16 @@ Créez un fichier nommé `.env` (sans extension) à la racine du projet `C:\TOOL
 # ============================================
 
 # URL de base de l'application (sans slash final)
-# En production : http://portails.orange-harp.fr:9352
-AUTH_URL=http://portails.orange-harp.fr:9352
+# En production : HTTPS activé (certificats installés)
+AUTH_URL=https://portails.orange-harp.fr:9352
+# Si vous utilisez encore HTTP (non recommandé) :
+# AUTH_URL=http://portails.orange-harp.fr:9352
 
 # URL publique du serveur (pour Next.js RSC) - OBLIGATOIRE pour le build
 # Doit être identique à AUTH_URL en production
-NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
+NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+# Si vous utilisez encore HTTP (non recommandé) :
+# NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true

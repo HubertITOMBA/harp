@@ -75,7 +75,19 @@ export function buildSQLDeveloperUrl(): string {
 /**
  * Construit une URL mylaunch:// pour lancer un outil simple (sans paramètres)
  */
-export function buildSimpleToolUrl(tool: 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge'): string {
+export function buildSimpleToolUrl(
+  tool: 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge',
+  params?: Record<string, string | number | undefined>
+): string {
+  if (params && Object.keys(params).length > 0) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.set(key, String(value));
+      }
+    });
+    return `mylaunch://${tool}?${searchParams.toString()}`;
+  }
   return `mylaunch://${tool}`;
 }
 
@@ -101,7 +113,7 @@ export function buildMyLaunchUrl(
     case 'perl':
     case 'winscp':
     case 'winmerge':
-      return buildSimpleToolUrl(tool);
+      return buildSimpleToolUrl(tool, params);
     default:
       throw new Error(`Outil non supporté: ${tool}`);
   }

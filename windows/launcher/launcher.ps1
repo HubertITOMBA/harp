@@ -36,7 +36,7 @@ function Get-LauncherConfig {
     
     # Retourner une configuration par défaut
     return @{
-        apiUrl = "http://portails.orange-harp.fr:9052"
+        apiUrl = "http://portails.orange-harp.fr:9352"
         logLevel = "info"
         keepWindowOpenOnError = $true
         keepWindowOpenOnSuccess = $false
@@ -53,7 +53,7 @@ if (-not $API_BASE_URL) {
 }
 if (-not $API_BASE_URL) {
     # Valeur par défaut pour la production (HTTP en mode test)
-    $API_BASE_URL = "http://portails.orange-harp.fr:9052"
+    $API_BASE_URL = "http://portails.orange-harp.fr:9352"
 }
 
 function Write-Log($message) {
@@ -168,7 +168,28 @@ function Get-ToolInfoFromAPI($tool, $netid) {
         Write-Log "Avertissement: Validation SSL non configurée - $($_.Exception.Message)"
     }
     
+    # Construire l'URL de l'API avec les paramètres de base
     $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
+    
+    # Ajouter les paramètres optionnels depuis l'URL mylaunch://
+    $apiParams = @()
+    if ($query.ContainsKey('ptversion')) {
+        $apiParams += "ptversion=$([System.Uri]::EscapeDataString($query.ptversion))"
+    }
+    if ($query.ContainsKey('aliasql')) {
+        $apiParams += "aliasql=$([System.Uri]::EscapeDataString($query.aliasql))"
+    }
+    if ($query.ContainsKey('envId')) {
+        $apiParams += "envId=$([System.Uri]::EscapeDataString($query.envId))"
+    }
+    if ($query.ContainsKey('ip')) {
+        $apiParams += "ip=$([System.Uri]::EscapeDataString($query.ip))"
+    }
+    
+    if ($apiParams.Count -gt 0) {
+        $apiUrl += "&" + ($apiParams -join "&")
+    }
+    
     Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan
     Write-Log "Appel API: $apiUrl"
     
