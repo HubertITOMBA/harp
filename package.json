@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "next dev --turbopack -p 9352",
     "build": "npx prisma generate && next build",
+    "build:check": "node scripts/check-env.js && npm run build",
     "start": "next start -p 9352",
     "lint": "next lint",
     "postinstall": "prisma generate",
+    "check-env": "node scripts/check-env.js",
     "migration:run": "npx tsx scripts/run-migration.ts",
     "migration:init": "npx tsx scripts/run-init-migration.ts",
     "migration:users": "npx tsx scripts/run-migrate-users.ts"

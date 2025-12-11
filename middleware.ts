@@ -8,10 +8,16 @@ import {
   } from "@/routes";
 import { isMigrationInProgress } from "@/lib/init-full-migration";
 
+// Configuration pour la production HTTP
+// Utiliser la même configuration que auth.ts pour la cohérence
+const middlewareAuthConfig = {
+  ...authConfig,
+  // Désactiver les cookies sécurisés si on utilise HTTP (pas HTTPS)
+  useSecureCookies: process.env.AUTH_URL?.startsWith('https://') ?? false,
+  trustHost: true, // Requis pour NextAuth v5 en production
+};
 
-
-
-const { auth } = NextAuth(authConfig);
+const { auth } = NextAuth(middlewareAuthConfig);
 
 export default auth(async (req) => {
     const { nextUrl } = req;

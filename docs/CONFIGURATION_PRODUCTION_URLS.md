@@ -2,7 +2,7 @@
 
 ## Problème
 
-En production, le navigateur essaie de se connecter à `localhost:9052` au lieu de l'URL de production, causant des erreurs `ERR_CONNECTION_REFUSED`.
+En production, le navigateur essaie de se connecter à `localhost:9352` au lieu de l'URL de production, causant des erreurs `ERR_CONNECTION_REFUSED`.
 
 ## Solution
 
@@ -12,14 +12,14 @@ Ajoutez ces variables dans votre fichier `.env` en production :
 
 ```env
 # URL de base de l'application (sans slash final)
-AUTH_URL=http://portails.orange-harp.fr:9052
+AUTH_URL=http://portails.orange-harp.fr:9352
 # ou pour HTTPS :
-# AUTH_URL=https://portails.orange-harp.fr:9052
+# AUTH_URL=https://portails.orange-harp.fr:9352
 
 # URL publique du serveur (pour Next.js RSC)
-NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9052
+NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
 # ou pour HTTPS :
-# NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9052
+# NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true
@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
   
   // Configuration pour la production
   env: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://portails.orange-harp.fr:9052',
+    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://portails.orange-harp.fr:9352',
   },
   
   // Si vous utilisez un reverse proxy
@@ -70,7 +70,7 @@ Après avoir configuré les variables d'environnement :
 
 3. **Tester dans le navigateur** :
    - Ouvrir la console développeur (F12)
-   - Vérifier que les requêtes utilisent l'URL de production et non `localhost:9052`
+   - Vérifier que les requêtes utilisent l'URL de production et non `localhost:9352`
 
 ### 4. Configuration PM2 (si utilisé)
 
@@ -84,8 +84,8 @@ module.exports = {
     args: 'start',
     env: {
       NODE_ENV: 'production',
-      AUTH_URL: 'http://portails.orange-harp.fr:9052',
-      NEXT_PUBLIC_SERVER_URL: 'http://portails.orange-harp.fr:9052',
+      AUTH_URL: 'http://portails.orange-harp.fr:9352',
+      NEXT_PUBLIC_SERVER_URL: 'http://portails.orange-harp.fr:9352',
       AUTH_TRUST_HOST: 'true',
       // ... autres variables
     }
@@ -107,8 +107,8 @@ Type=simple
 User=your-user
 WorkingDirectory=/path/to/harp
 Environment="NODE_ENV=production"
-Environment="AUTH_URL=http://portails.orange-harp.fr:9052"
-Environment="NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9052"
+Environment="AUTH_URL=http://portails.orange-harp.fr:9352"
+Environment="NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352"
 Environment="AUTH_TRUST_HOST=true"
 ExecStart=/usr/bin/npm start
 Restart=always
@@ -131,7 +131,7 @@ Si le problème persiste après configuration :
 
 1. Vérifier que le serveur écoute sur le bon port :
    ```bash
-   netstat -tlnp | grep 9052
+   netstat -tlnp | grep 9352
    ```
 
 2. Vérifier les logs de l'application :

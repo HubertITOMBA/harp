@@ -13,6 +13,10 @@ export const {
     signIn,
     signOut,
 } = NextAuth({
+    // Configuration pour la production HTTP
+    // Désactiver les cookies sécurisés si on utilise HTTP (pas HTTPS)
+    useSecureCookies: process.env.AUTH_URL?.startsWith('https://') ?? false,
+    trustHost: true, // Requis pour NextAuth v5 en production
     callbacks: { 
       // Pas important pour Harp 
       //  async signIn({ user }) {
