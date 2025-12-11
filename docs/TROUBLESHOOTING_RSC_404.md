@@ -56,7 +56,14 @@ echo $AUTH_URL
 echo $NEXT_PUBLIC_SERVER_URL
 
 # Si elles ne sont pas définies, les charger depuis .env
-export $(cat .env | grep -v '^#' | xargs)
+# Option 1 : Utiliser le script (recommandé)
+chmod +x scripts/load-env.sh
+source scripts/load-env.sh
+
+# Option 2 : Méthode manuelle (si le script ne fonctionne pas)
+set -a
+source <(cat .env | grep -v '^#' | sed 's/^/export /')
+set +a
 ```
 
 **Sur Windows (PowerShell)** :
@@ -66,9 +73,22 @@ $env:AUTH_URL
 $env:NEXT_PUBLIC_SERVER_URL
 
 # Si elles ne sont pas définies, les charger depuis .env
+# Option 1 : Utiliser le script (recommandé)
+.\scripts\load-env.ps1
+
+# Option 2 : Méthode manuelle (si le script ne fonctionne pas)
 Get-Content .env | ForEach-Object {
-    if ($_ -match '^([^=]+)=(.*)$') {
-        [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+    $line = $_.Trim()
+    if ($line -and -not $line.StartsWith('#')) {
+        if ($line -match '^([^=]+)=(.*)$') {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            # Supprimer les guillemets si présents
+            if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+                $value = $value.Substring(1, $value.Length - 2)
+            }
+            [System.Environment]::SetEnvironmentVariable($key, $value, 'Process')
+        }
     }
 }
 ```

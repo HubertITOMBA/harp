@@ -40,8 +40,9 @@ npm run rebuild:production
 echo $NEXT_PUBLIC_SERVER_URL
 # Doit afficher : https://portails.orange-harp.fr:9352
 
-# Si ce n'est pas le cas, charger depuis .env
-export $(cat .env | grep -v '^#' | xargs)
+# Si ce n'est pas le cas, charger depuis .env (utiliser le script)
+chmod +x scripts/load-env.sh
+source scripts/load-env.sh
 
 # Supprimer le build précédent
 rm -rf .next
@@ -83,16 +84,13 @@ Cela signifie que le build n'a pas été fait avec les bonnes variables. Solutio
 1. **Vérifier que `.env` existe et contient les bonnes valeurs**
 2. **Vérifier que les variables sont chargées avant le build** :
    ```bash
-   # Sur Linux/Mac
-   export $(cat .env | grep -v '^#' | xargs)
+   # Sur Linux/Mac (utiliser le script)
+   chmod +x scripts/load-env.sh
+   source scripts/load-env.sh
    echo $NEXT_PUBLIC_SERVER_URL
    
-   # Sur Windows PowerShell
-   Get-Content .env | ForEach-Object {
-       if ($_ -match '^([^=]+)=(.*)$') {
-           [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-       }
-   }
+   # Sur Windows PowerShell (utiliser le script)
+   .\scripts\load-env.ps1
    $env:NEXT_PUBLIC_SERVER_URL
    ```
 
