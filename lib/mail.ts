@@ -1,15 +1,31 @@
 import nodemailer from 'nodemailer';
 import Mail from 'nodemailer/lib/mailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 /**
- * Configuration du transport sendmail
- * Utilise sendmail installé sur le serveur (sendmail-8.15.2-34.el8.x86_64)
+ * Configuration du transport email
+ * Par défaut, utilise SMTP via les variables d'environnement.
+ * Pour utiliser sendmail (Linux uniquement), définir USE_SENDMAIL=true
  */
-const transport = nodemailer.createTransport({
-  sendmail: true,
-  newline: 'unix',
-  path: '/usr/sbin/sendmail', // Chemin standard de sendmail sur Linux
-});
+const useSendmail = process.env.USE_SENDMAIL === 'true';
+
+const transport = useSendmail
+  ? nodemailer.createTransport({
+      sendmail: true,
+      newline: 'unix',
+      path: process.env.SENDMAIL_PATH || '/usr/sbin/sendmail',
+    })
+  : nodemailer.createTransport({
+      host: process.env.MAIL_HOST || process.env.SMTP_HOST,
+      port: parseInt(process.env.MAIL_PORT || process.env.SMTP_PORT || '25', 10),
+      secure: process.env.MAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true', // true pour 465, false pour autres ports
+      auth: process.env.MAIL_USER || process.env.SMTP_USER
+        ? {
+            user: process.env.MAIL_USER || process.env.SMTP_USER || '',
+            pass: process.env.MAIL_PASSWORD || process.env.SMTP_PASSWORD || '',
+          }
+        : undefined,
+    } as SMTPTransport.Options);
 
 /**
  * Interface pour les options d'envoi d'email
@@ -25,7 +41,20 @@ export interface SendMailOptions {
 }
 
 /**
- * Envoie un email via sendmail
+ * Envoie un email via SMTP (par défaut) ou sendmail (si USE_SENDMAIL=true)
+ * 
+ * Configuration SMTP (par défaut) :
+ * Variables d'environnement requises :
+ *   - MAIL_HOST ou SMTP_HOST : Serveur SMTP (ex: smtp.gmail.com)
+ *   - MAIL_PORT ou SMTP_PORT : Port SMTP (ex: 587 pour TLS, 465 pour SSL)
+ *   - MAIL_USER ou SMTP_USER : Nom d'utilisateur SMTP
+ *   - MAIL_PASSWORD ou SMTP_PASSWORD : Mot de passe SMTP
+ *   - MAIL_SECURE ou SMTP_SECURE : "true" pour SSL (port 465), "false" pour TLS (port 587)
+ *   - MAIL_FROM : Adresse expéditeur (optionnel, défaut: noreply@harp.local)
+ * 
+ * Configuration sendmail (optionnel, Linux uniquement) :
+ *   - USE_SENDMAIL=true : Active l'utilisation de sendmail
+ *   - SENDMAIL_PATH : Chemin vers sendmail (optionnel, défaut: /usr/sbin/sendmail)
  * 
  * @param options - Les options d'envoi d'email (destinataire, sujet, contenu)
  * @returns Un objet avec success (boolean), message (string) en cas de succès, 
@@ -61,6 +90,17 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
       };
     }
 
+    // Vérifier que les variables SMTP sont configurées (sauf si sendmail est utilisé)
+    if (!useSendmail) {
+      const smtpHost = process.env.MAIL_HOST || process.env.SMTP_HOST;
+      if (!smtpHost) {
+        return {
+          success: false,
+          error: "Configuration SMTP manquante. Veuillez définir MAIL_HOST ou SMTP_HOST dans votre fichier .env"
+        };
+      }
+    }
+
     // Préparer les destinataires
     const recipients = Array.isArray(to) ? to.join(', ') : to;
     const ccRecipients = cc ? (Array.isArray(cc) ? cc.join(', ') : cc) : undefined;
@@ -84,9 +124,26 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
     };
   } catch (error) {
     console.error("Erreur lors de l'envoi de l'email:", error);
+    
+    // Message d'erreur plus explicite selon le type d'erreur
+    let errorMessage = "Erreur lors de l'envoi de l'email";
+    if (error instanceof Error) {
+      if (error.message.includes('ENOENT')) {
+        errorMessage = useSendmail
+          ? "Sendmail non trouvé. Veuillez installer sendmail ou configurer SENDMAIL_PATH"
+          : "Configuration SMTP manquante. Veuillez configurer MAIL_HOST, MAIL_PORT, MAIL_USER et MAIL_PASSWORD dans votre fichier .env";
+      } else if (error.message.includes('ECONNREFUSED') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = "Impossible de se connecter au serveur SMTP. Vérifiez MAIL_HOST et MAIL_PORT";
+      } else if (error.message.includes('EAUTH')) {
+        errorMessage = "Échec de l'authentification SMTP. Vérifiez MAIL_USER et MAIL_PASSWORD";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Erreur lors de l'envoi de l'email" 
+      error: errorMessage
     };
   }
 }
