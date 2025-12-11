@@ -12,6 +12,24 @@ Cela signifie que le build a été fait **sans** les variables d'environnement d
 
 ## Solution : Rebuild avec les bonnes variables
 
+### ⚡ Solution rapide (recommandée)
+
+Utilisez le script de rebuild automatique qui fait tout pour vous :
+
+```bash
+npm run rebuild:production
+```
+
+Ce script :
+- ✅ Vérifie que toutes les variables d'environnement sont définies
+- ✅ Supprime automatiquement le dossier `.next`
+- ✅ Rebuild avec les bonnes variables
+- ✅ Vérifie que le build utilise les bonnes URLs
+
+### Solution manuelle
+
+Si vous préférez faire le rebuild manuellement :
+
 ### 1. Définir les variables d'environnement AVANT le build
 
 **IMPORTANT** : Les variables `NEXT_PUBLIC_*` doivent être définies **au moment du build**, pas seulement au runtime.

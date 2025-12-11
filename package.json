@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack -p 9352",
     "build": "npx prisma generate && next build",
     "build:check": "node scripts/check-env.js && npm run build",
+    "rebuild:production": "node scripts/rebuild-production.js",
     "start": "next start -p 9352",
     "lint": "next lint",
     "postinstall": "prisma generate",
