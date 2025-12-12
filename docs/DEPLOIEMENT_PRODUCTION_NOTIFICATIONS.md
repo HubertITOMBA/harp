@@ -122,7 +122,7 @@ Cette commande :
 npm run start
 ```
 
-L'application démarre sur le port 9052 (configuré dans `package.json`).
+L'application démarre sur le port 9352 (configuré dans `package.json`).
 
 ### Étape 6 : Vérifier le déploiement
 

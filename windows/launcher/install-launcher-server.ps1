@@ -99,7 +99,7 @@ if (-not (Test-Path $configPath)) {
     try {
         $defaultConfig = @{
             version = "1.0"
-            apiUrl = "http://portails.orange-harp.fr:9052"
+            apiUrl = "http://portails.orange-harp.fr:9352"
             logLevel = "info"
             keepWindowOpenOnError = $true
             keepWindowOpenOnSuccess = $false

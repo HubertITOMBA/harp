@@ -19,7 +19,7 @@ Cette erreur indique un problème de négociation TLS/SSL entre PowerShell et le
    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
    
    # Tester la connexion
-   $url = "https://portails.orange-harp.fr:9052/api/launcher/tool?tool=sqldeveloper&netid=hitomba"
+   $url = "https://portails.orange-harp.fr:9352/api/launcher/tool?tool=sqldeveloper&netid=hitomba"
    Invoke-WebRequest -Uri $url -UseBasicParsing
    ```
 
@@ -49,19 +49,19 @@ Si vous êtes derrière un proxy d'entreprise :
 
 1. **Tester la connectivité de base** :
    ```powershell
-   Test-NetConnection -ComputerName portails.orange-harp.fr -Port 9052
+   Test-NetConnection -ComputerName portails.orange-harp.fr -Port 9352
    ```
 
 2. **Tester avec curl (si disponible)** :
    ```powershell
-   curl.exe -k https://portails.orange-harp.fr:9052/api/launcher/tool?tool=sqldeveloper&netid=hitomba
+   curl.exe -k https://portails.orange-harp.fr:9352/api/launcher/tool?tool=sqldeveloper&netid=hitomba
    ```
 
 ### Solution 4 : Vérifier le certificat SSL
 
 1. **Vérifier le certificat** :
    ```powershell
-   $request = [System.Net.HttpWebRequest]::Create("https://portails.orange-harp.fr:9052")
+   $request = [System.Net.HttpWebRequest]::Create("https://portails.orange-harp.fr:9352")
    $request.GetResponse()
    ```
 
@@ -101,7 +101,7 @@ $DebugPreference = "Continue"
 
 ```powershell
 try {
-    $response = Invoke-RestMethod -Uri "https://portails.orange-harp.fr:9052/api/launcher/tool?tool=sqldeveloper&netid=hitomba" -ErrorAction Stop
+    $response = Invoke-RestMethod -Uri "https://portails.orange-harp.fr:9352/api/launcher/tool?tool=sqldeveloper&netid=hitomba" -ErrorAction Stop
 } catch {
     Write-Host "Erreur complète:" -ForegroundColor Red
     $_.Exception | Format-List -Force
@@ -116,12 +116,12 @@ try {
 
 1. **Modifier l'URL de l'API** :
    ```powershell
-   $env:HARP_API_URL = "http://portails.orange-harp.fr:9052"
+   $env:HARP_API_URL = "http://portails.orange-harp.fr:9352"
    ```
 
 2. **Ou modifier directement dans le script** (ligne 14) :
    ```powershell
-   $API_BASE_URL = "http://portails.orange-harp.fr:9052"
+   $API_BASE_URL = "http://portails.orange-harp.fr:9352"
    ```
 
 ## Vérification après correction
@@ -140,7 +140,7 @@ Vous devriez voir dans les logs :
 
 Si aucune de ces solutions ne fonctionne, fournir :
 1. Les logs complets de `D:\apps\portail\launcher\logs\launcher.log`
-2. Le résultat de `Test-NetConnection -ComputerName portails.orange-harp.fr -Port 9052`
+2. Le résultat de `Test-NetConnection -ComputerName portails.orange-harp.fr -Port 9352`
 3. La version de PowerShell : `$PSVersionTable`
 4. La configuration du proxy (si applicable)
 
