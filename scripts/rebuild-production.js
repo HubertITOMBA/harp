@@ -57,6 +57,27 @@ function loadEnvFile(filePath) {
   return true;
 }
 
+/**
+ * Nettoie NODE_OPTIONS en supprimant les références à Dynatrace
+ */
+function cleanNodeOptions() {
+  if (!process.env.NODE_OPTIONS) {
+    return;
+  }
+
+  const nodeOptions = process.env.NODE_OPTIONS;
+  
+  // Vérifier si NODE_OPTIONS contient des références à Dynatrace
+  if (nodeOptions.includes('dynatrace') || nodeOptions.includes('pl-nodejsagent')) {
+    console.log('  ⚠️  NODE_OPTIONS contient des références à Dynatrace');
+    console.log(`     Valeur actuelle: ${nodeOptions}`);
+    
+    // Supprimer complètement NODE_OPTIONS
+    delete process.env.NODE_OPTIONS;
+    console.log('  ✅ NODE_OPTIONS nettoyé (références Dynatrace supprimées)');
+  }
+}
+
 console.log('🔨 Rebuild pour la production\n');
 
 // 0. Charger les variables d'environnement depuis .env.production ou .env
@@ -176,34 +197,71 @@ if (process.env.NODE_ENV !== 'production') {
   console.log('   Le build utilisera le mode production par défaut\n');
 }
 
-// 4. Build
-console.log('🔨 Étape 3 : Build de l\'application...\n');
+// 4. Désactiver Dynatrace et nettoyer NODE_OPTIONS
+console.log('🔧 Étape 3 : Désactivation de Dynatrace et nettoyage de NODE_OPTIONS...\n');
+
+// Désactiver complètement l'injection Dynatrace
+process.env.DT_DISABLE_INJECTION = 'true';
+process.env.DT_AGENT_DISABLED = 'true';
+process.env.DT_ONEAGENT_DISABLED = 'true';
+
+// Nettoyer NODE_OPTIONS (supprime les références à Dynatrace)
+cleanNodeOptions();
+
+// Supprimer complètement NODE_OPTIONS pour éviter les conflits avec Dynatrace
+delete process.env.NODE_OPTIONS;
+
+// Vérifier que NODE_OPTIONS est bien supprimé
+if (process.env.NODE_OPTIONS) {
+  console.log(`  ⚠️  NODE_OPTIONS est encore défini: ${process.env.NODE_OPTIONS}`);
+  console.log('     Tentative de suppression...');
+  delete process.env.NODE_OPTIONS;
+}
+
+console.log('  ✅ Dynatrace désactivé');
+console.log('  ✅ NODE_OPTIONS nettoyé\n');
+
+// 5. Build
+console.log('🔨 Étape 4 : Build de l\'application...\n');
 console.log(`   AUTH_URL=${requiredVars.AUTH_URL}`);
 console.log(`   NEXT_PUBLIC_SERVER_URL=${requiredVars.NEXT_PUBLIC_SERVER_URL}`);
-console.log(`   NODE_ENV=${process.env.NODE_ENV || 'production'}\n`);
+console.log(`   NODE_ENV=${process.env.NODE_ENV || 'production'}`);
+console.log(`   NODE_OPTIONS=${process.env.NODE_OPTIONS || '(vide)'}\n`);
 
 try {
   // S'assurer que NODE_ENV est en production
   process.env.NODE_ENV = 'production';
   
-  // Exécuter le build
+  // Créer un environnement propre pour le build
+  const buildEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    NODE_OPTIONS: '', // Forcer NODE_OPTIONS à être vide
+    DT_DISABLE_INJECTION: 'true',
+    DT_AGENT_DISABLED: 'true',
+    DT_ONEAGENT_DISABLED: 'true',
+    NEXT_PRIVATE_WORKER: '0', // Désactiver les workers Next.js pour éviter l'héritage de NODE_OPTIONS
+  };
+  
+  // Exécuter le build avec l'environnement nettoyé
   execSync('npm run build', {
     stdio: 'inherit',
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-    },
+    env: buildEnv,
   });
   
   console.log('\n✅ Build terminé avec succès !\n');
 } catch (error) {
   console.log('\n❌ Erreur lors du build');
   console.log('   Vérifiez les erreurs ci-dessus');
+  console.log('\n💡 Si l\'erreur est liée à Dynatrace :');
+  console.log('   1. Vérifiez que Dynatrace OneAgent est à jour (version 1.323+)');
+  console.log('   2. Contactez l\'équipe infrastructure pour exclure le processus de build');
+  console.log('   3. Consultez docs/RESOLUTION_BUILD_DYNATRACE.md pour plus d\'informations');
   process.exit(1);
 }
 
-// 5. Vérifier que le build utilise les bonnes URLs
-console.log('🔍 Étape 4 : Vérification du build...\n');
+// 6. Vérifier que le build utilise les bonnes URLs
+console.log('🔍 Étape 5 : Vérification du build...\n');
 
 const manifestPath = path.join(process.cwd(), '.next', 'server', 'app-paths-manifest.json');
 if (fs.existsSync(manifestPath)) {
