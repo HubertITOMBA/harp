@@ -11,7 +11,7 @@ import { getUserByEmail, getUserByNetId } from "@/data/user";
 export const login = async (values: z.infer<typeof LoginSchema>,
   //  callbackUrl?: string | null,
 ) => {
-    console.log(values);
+   / console.log(values);
     const validatedFields = LoginSchema.safeParse(values);
     
      if (!validatedFields.success) {
@@ -22,7 +22,7 @@ export const login = async (values: z.infer<typeof LoginSchema>,
 
      const existingUser = await getUserByNetId(netid);
 
-     console.log("existingUser DANS login.ts ==>", existingUser);
+    // console.log("existingUser DANS login.ts ==>", existingUser);
      
 
         if (!existingUser || 
@@ -43,7 +43,7 @@ export const login = async (values: z.infer<typeof LoginSchema>,
             redirectTo : DEFAULT_LOGIN_REDIRECT,
         })
 
-    console.log("DANS login.ts ==>", password, netid, DEFAULT_LOGIN_REDIRECT);
+  //  console.log("DANS login.ts ==>", password, netid, DEFAULT_LOGIN_REDIRECT);
 
     } catch (error) {
         if (error instanceof AuthError) {

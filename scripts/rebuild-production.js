@@ -382,10 +382,15 @@ if (productionCheck.found) {
   console.log('     Le build doit être refait avec les bonnes variables');
   console.log('     Vérifiez que NEXT_PUBLIC_SERVER_URL est défini dans .env.production');
 } else {
-  console.log(`  ℹ️  L'URL n'a pas été trouvée dans les fichiers de build vérifiés`);
-  console.log('     Cela peut être normal si Next.js utilise des URLs relatives');
-  console.log('     Vérifiez dans le navigateur que les requêtes RSC fonctionnent correctement');
-  console.log(`     Les requêtes doivent utiliser : ${PRODUCTION_URL}`);
+  console.log(`  ⚠️  L'URL de production n'a pas été trouvée dans les fichiers de build`);
+  console.log('     Cela peut causer des erreurs 404 sur les routes RSC');
+  console.log('     Les requêtes RSC doivent utiliser des URLs absolues');
+  console.log(`     URL attendue : ${PRODUCTION_URL}`);
+  console.log('\n💡 Solutions :');
+  console.log('   1. Vérifiez que NEXT_PUBLIC_SERVER_URL est défini dans .env.production');
+  console.log('   2. Assurez-vous que le build a été fait avec cette variable');
+  console.log('   3. Vérifiez dans le navigateur (F12 > Network) les requêtes RSC');
+  console.log('   4. Si les URLs sont relatives (:9352/...), refaites le build');
 }
 
 console.log('\n✅ Rebuild terminé !');
@@ -397,5 +402,10 @@ console.log('  3. Vérifier qu\'il n\'y a plus d\'erreurs 404 sur les routes RSC
 console.log('\n💡 Note importante :');
 console.log('   - Le message "Local: http://localhost:9352" au démarrage est normal');
 console.log('   - La vraie vérification se fait dans le navigateur (onglet Network)');
-console.log('   - Les requêtes RSC doivent utiliser des URLs absolues avec HTTP (selon demande admin)\n');
+console.log('   - Les requêtes RSC doivent utiliser des URLs absolues avec HTTP (selon demande admin)');
+console.log('\n⚠️  Si vous voyez encore des erreurs 404 sur les routes RSC :');
+console.log('   1. Vérifiez que NEXT_PUBLIC_SERVER_URL est bien défini dans .env.production');
+console.log('   2. Assurez-vous que le build a été fait avec cette variable (utilisez ce script)');
+console.log('   3. Vérifiez dans le navigateur que les requêtes utilisent des URLs absolues');
+console.log('   4. Si les URLs sont relatives (:9352/...), le build doit être refait\n');
 
