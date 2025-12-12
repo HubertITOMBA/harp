@@ -16,7 +16,73 @@ const { execSync } = require('child_process');
 
 const PRODUCTION_URL = 'https://portails.orange-harp.fr:9352';
 
+/**
+ * Charge les variables d'environnement depuis un fichier .env
+ */
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return false;
+  }
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.split('\n');
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Ignorer les lignes vides et les commentaires
+    if (!trimmedLine || trimmedLine.startsWith('#')) {
+      continue;
+    }
+
+    // Parser KEY=VALUE
+    const match = trimmedLine.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      let value = match[2].trim();
+      
+      // Supprimer les guillemets au début et à la fin si présents
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      
+      // Ne pas écraser les variables déjà définies dans l'environnement
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  }
+
+  return true;
+}
+
 console.log('🔨 Rebuild pour la production\n');
+
+// 0. Charger les variables d'environnement depuis .env.production ou .env
+console.log('📋 Étape 0 : Chargement des variables d\'environnement...\n');
+
+const envFiles = [
+  path.join(process.cwd(), '.env.production'),
+  path.join(process.cwd(), '.env.local'),
+  path.join(process.cwd(), '.env'),
+];
+
+let envLoaded = false;
+for (const envFile of envFiles) {
+  if (loadEnvFile(envFile)) {
+    console.log(`  ✅ Variables chargées depuis ${path.basename(envFile)}`);
+    envLoaded = true;
+    break; // Charger seulement le premier fichier trouvé (priorité)
+  }
+}
+
+if (!envLoaded) {
+  console.log('  ⚠️  Aucun fichier .env trouvé (.env.production, .env.local, ou .env)');
+  console.log('     Les variables doivent être définies dans l\'environnement système\n');
+} else {
+  console.log('');
+}
 
 // 1. Vérifier les variables d'environnement
 console.log('📋 Étape 1 : Vérification des variables d\'environnement...\n');
@@ -69,7 +135,8 @@ for (const [varName, value] of Object.entries(requiredVars)) {
 if (hasErrors) {
   console.log('\n❌ Des variables requises sont manquantes !');
   console.log('\n💡 Solution :');
-  console.log('  1. Créez ou modifiez le fichier .env à la racine du projet');
+  console.log('  1. Créez ou modifiez le fichier .env.production à la racine du projet');
+  console.log('     (ou .env.local ou .env si .env.production n\'existe pas)');
   console.log('  2. Ajoutez les variables requises :');
   console.log(`     AUTH_URL=${PRODUCTION_URL}`);
   console.log(`     NEXT_PUBLIC_SERVER_URL=${PRODUCTION_URL}`);
