@@ -11,7 +11,7 @@ import { getUserByEmail, getUserByNetId } from "@/data/user";
 export const login = async (values: z.infer<typeof LoginSchema>,
   //  callbackUrl?: string | null,
 ) => {
-   / console.log(values);
+  
     const validatedFields = LoginSchema.safeParse(values);
     
      if (!validatedFields.success) {

@@ -19,7 +19,7 @@ export default {
                
                // const user = await getUserByEmail(email);
 
-                console.log( "USER CONNECTE :", {user});
+               // console.log( "USER CONNECTE :", {user});
                 
                     if (!user || !user.password) return null;
 
