@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const PRODUCTION_URL = 'https://portails.orange-harp.fr:9352';
+const PRODUCTION_URL = 'http://portails.orange-harp.fr:9352';
 
 /**
  * Charge les variables d'environnement depuis un fichier .env
@@ -79,19 +79,20 @@ function cleanNodeOptions() {
 }
 
 /**
- * Corrige HTTP en HTTPS pour les URLs de production
+ * Corrige HTTPS en HTTP pour les URLs de production (selon demande admin)
  */
-function fixHttpToHttps() {
+function fixHttpsToHttp() {
   const urlVars = ['AUTH_URL', 'NEXT_PUBLIC_SERVER_URL'];
   let fixed = false;
 
   for (const varName of urlVars) {
     const value = process.env[varName];
-    if (value && value.startsWith('http://') && value.includes('portails.orange-harp.fr') && !value.includes('localhost')) {
-      const httpsValue = value.replace('http://', 'https://');
+    if (value && value.startsWith('https://') && value.includes('portails.orange-harp.fr') && !value.includes('localhost')) {
+      const httpValue = value.replace('https://', 'http://');
       console.log(`  ⚠️  Correction automatique: ${varName}`);
-      console.log(`     ${value} → ${httpsValue}`);
-      process.env[varName] = httpsValue;
+      console.log(`     ${value} → ${httpValue}`);
+      console.log(`     (HTTP requis par l'admin jusqu'à la fin du développement)`);
+      process.env[varName] = httpValue;
       fixed = true;
     }
   }
@@ -126,13 +127,13 @@ if (!envLoaded) {
   console.log('');
 }
 
-// 1. Corriger automatiquement HTTP en HTTPS si nécessaire
+// 1. Corriger automatiquement HTTPS en HTTP si nécessaire (selon demande admin)
 console.log('📋 Étape 1 : Vérification et correction des variables d\'environnement...\n');
 
-// Corriger HTTP en HTTPS pour les URLs de production
-const httpFixed = fixHttpToHttps();
-if (httpFixed) {
-  console.log('  ✅ URLs corrigées de HTTP vers HTTPS\n');
+// Corriger HTTPS en HTTP pour les URLs de production (selon demande admin)
+const httpsFixed = fixHttpsToHttp();
+if (httpsFixed) {
+  console.log('  ✅ URLs corrigées de HTTPS vers HTTP (selon demande admin)\n');
 }
 
 const requiredVars = {
@@ -158,25 +159,25 @@ for (const [varName, value] of Object.entries(requiredVars)) {
     
     // Vérifications spécifiques
     if (varName === 'AUTH_URL') {
-      if (value.startsWith('http://') && !value.includes('localhost')) {
-        console.log(`     ❌ ERREUR: L'URL utilise HTTP au lieu de HTTPS en production`);
+      if (value.startsWith('https://') && !value.includes('localhost')) {
+        console.log(`     ⚠️  L'URL utilise HTTPS, mais HTTP est requis selon demande admin`);
         console.log(`        Valeur actuelle: ${value}`);
-        console.log(`        Valeur attendue: ${value.replace('http://', 'https://')}`);
-        hasErrors = true;
-      } else if (!value.startsWith('https://') && !value.includes('localhost')) {
-        console.log(`     ⚠️  L'URL devrait utiliser HTTPS en production`);
+        console.log(`        Valeur attendue: ${value.replace('https://', 'http://')}`);
+        hasWarnings = true;
+      } else if (!value.startsWith('http://') && !value.includes('localhost')) {
+        console.log(`     ⚠️  L'URL devrait utiliser HTTP (selon demande admin)`);
         hasWarnings = true;
       }
     }
     
     if (varName === 'NEXT_PUBLIC_SERVER_URL') {
-      if (value.startsWith('http://') && !value.includes('localhost')) {
-        console.log(`     ❌ ERREUR: L'URL utilise HTTP au lieu de HTTPS en production`);
+      if (value.startsWith('https://') && !value.includes('localhost')) {
+        console.log(`     ⚠️  L'URL utilise HTTPS, mais HTTP est requis selon demande admin`);
         console.log(`        Valeur actuelle: ${value}`);
-        console.log(`        Valeur attendue: ${value.replace('http://', 'https://')}`);
-        hasErrors = true;
-      } else if (!value.startsWith('https://') && !value.includes('localhost')) {
-        console.log(`     ⚠️  L'URL devrait utiliser HTTPS en production`);
+        console.log(`        Valeur attendue: ${value.replace('https://', 'http://')}`);
+        hasWarnings = true;
+      } else if (!value.startsWith('http://') && !value.includes('localhost')) {
+        console.log(`     ⚠️  L'URL devrait utiliser HTTP (selon demande admin)`);
         hasWarnings = true;
       }
       if (value !== PRODUCTION_URL && !value.includes('localhost')) {
@@ -197,10 +198,10 @@ if (hasErrors) {
   console.log('\n💡 Solution :');
   console.log('  1. Créez ou modifiez le fichier .env.production à la racine du projet');
   console.log('     (ou .env.local ou .env si .env.production n\'existe pas)');
-  console.log('  2. Assurez-vous que les URLs utilisent HTTPS (pas HTTP) :');
+  console.log('  2. Assurez-vous que les URLs utilisent HTTP (selon demande admin) :');
   console.log(`     AUTH_URL=${PRODUCTION_URL}`);
   console.log(`     NEXT_PUBLIC_SERVER_URL=${PRODUCTION_URL}`);
-  console.log('     ⚠️  IMPORTANT: Utilisez https:// et non http://');
+  console.log('     ⚠️  IMPORTANT: Utilisez http:// (selon demande admin jusqu\'à la fin du développement)');
   console.log('  3. Ajoutez les autres variables requises :');
   console.log('     AUTH_TRUST_HOST=true');
   console.log('     AUTH_SECRET=votre-secret-très-long-et-aléatoire');
@@ -396,5 +397,5 @@ console.log('  3. Vérifier qu\'il n\'y a plus d\'erreurs 404 sur les routes RSC
 console.log('\n💡 Note importante :');
 console.log('   - Le message "Local: http://localhost:9352" au démarrage est normal');
 console.log('   - La vraie vérification se fait dans le navigateur (onglet Network)');
-console.log('   - Les requêtes RSC doivent utiliser des URLs absolues avec HTTPS\n');
+console.log('   - Les requêtes RSC doivent utiliser des URLs absolues avec HTTP (selon demande admin)\n');
 

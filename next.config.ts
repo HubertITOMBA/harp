@@ -7,11 +7,11 @@ const nextConfig: NextConfig = {
     // Les variables NEXT_PUBLIC_* doivent être définies au moment du build
     env: {
       // Utiliser NEXT_PUBLIC_SERVER_URL si défini, sinon AUTH_URL, sinon localhost pour dev
-      // Par défaut en production : HTTPS (certificats installés)
+      // Par défaut en production : HTTP (selon demande admin jusqu'à la fin du développement)
       NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL 
         || process.env.AUTH_URL 
         || (process.env.NODE_ENV === 'production' 
-          ? 'https://portails.orange-harp.fr:9352' 
+          ? 'http://portails.orange-harp.fr:9352' 
           : 'http://localhost:9352'),
     },
 
