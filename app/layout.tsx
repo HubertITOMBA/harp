@@ -24,9 +24,19 @@ const montserrat = localFont({
 // metadataBase est nécessaire pour que Next.js génère des URLs absolues pour les RSC
 // Cela évite les erreurs 404 sur les routes RSC en production
 // SERVER_URL vient de NEXT_PUBLIC_SERVER_URL défini au moment du build
-const metadataBaseUrl = SERVER_URL && SERVER_URL !== 'http://localhost:3000' 
-  ? new URL(SERVER_URL) 
-  : undefined;
+let metadataBaseUrl: URL | undefined = undefined;
+try {
+  if (SERVER_URL && SERVER_URL !== 'http://localhost:3000' && typeof SERVER_URL === 'string') {
+    // Vérifier que SERVER_URL est une URL valide avant de créer l'objet URL
+    if (SERVER_URL.startsWith('http://') || SERVER_URL.startsWith('https://')) {
+      metadataBaseUrl = new URL(SERVER_URL);
+    }
+  }
+} catch (error) {
+  // En cas d'erreur (URL invalide), on laisse metadataBaseUrl à undefined
+  // Cela n'empêchera pas l'application de fonctionner, mais les URLs RSC seront relatives
+  console.warn('Impossible de créer metadataBaseUrl depuis SERVER_URL:', SERVER_URL, error);
+}
 
 export const metadata: Metadata = {
   title: {

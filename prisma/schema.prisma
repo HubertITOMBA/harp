@@ -893,6 +893,7 @@ model User {
   session       Session[]
   harpuseroles  harpuseroles[]
   notificationsCreated harpnotification[]
+  taskItems     harptaskitem[] // Tâches assignées à cet utilisateur
 }
 
 model Account {
@@ -1012,6 +1013,72 @@ enum harpDomain {
   FHXEND21
   FHXENP11
   FHXENP21
+}
+
+enum TaskStatus {
+  EN_ATTENTE
+  EN_COURS
+  BLOQUE
+  TERMINE
+  SUCCES
+  ECHEC
+}
+
+model harptask {
+  id                Int            @id @default(autoincrement())
+  title             String         @db.VarChar(255) // Titre de la chrono-tâche
+  descr             String?        @db.Text // Description
+  status            TaskStatus     @default(EN_ATTENTE) // Statut global de la chrono-tâche
+  date              DateTime?      @db.DateTime(0) // Date de début prévue de la chrono-tâche
+  estimatedDuration Int?           // Durée estimée en minutes
+  effectiveDuration Int?            // Durée effective calculée en minutes (somme des durées des items)
+  createdBy         Int?           // ID de l'utilisateur créateur
+  createdAt         DateTime       @default(now()) @db.Timestamp(0)
+  updatedAt         DateTime       @updatedAt @db.Timestamp(0)
+  items             harptaskitem[] // Les tâches individuelles
+
+  @@index([status])
+  @@index([createdBy])
+  @@index([date])
+}
+
+model harpitems {
+  id          Int            @id @default(autoincrement())
+  descr       String         @unique @db.VarChar(255) // Description unique de l'item réutilisable
+  createdAt   DateTime       @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime       @updatedAt @db.Timestamp(0)
+  taskItems   harptaskitem[] // Les tâches qui utilisent cet item
+
+  @@index([descr])
+}
+
+model harptaskitem {
+  id              Int       @id @default(autoincrement())
+  taskId          Int      // ID de la chrono-tâche parente
+  harpitemId      Int?     // ID de l'item réutilisable (référence à harpitems)
+  duration        Int?      // Durée en minutes
+  startDate       DateTime? @db.DateTime(0) // Date/heure de début
+  endDate         DateTime? @db.DateTime(0) // Date/heure de fin
+  resourceNetid   String?   @db.VarChar(32) // Trigramme netid de la ressource (user)
+  predecessorId   Int?      // ID de la tâche prédécesseur (relation)
+  status          TaskStatus @default(EN_ATTENTE)
+  comment         String?    @db.Text
+  order           Int       @default(0) // Ordre d'affichage
+  createdAt       DateTime  @default(now()) @db.Timestamp(0)
+  updatedAt       DateTime  @updatedAt @db.Timestamp(0)
+  
+  task            harptask  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  harpitem        harpitems? @relation(fields: [harpitemId], references: [id], onDelete: SetNull)
+  predecessor     harptaskitem? @relation("TaskPredecessor", fields: [predecessorId], references: [id])
+  dependents      harptaskitem[] @relation("TaskPredecessor") // Tâches qui dépendent de celle-ci
+  user            User?     @relation(fields: [resourceNetid], references: [netid], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([status])
+  @@index([resourceNetid])
+  @@index([predecessorId])
+  @@index([order])
+  @@index([harpitemId])
 }
 
 model harpnotification {

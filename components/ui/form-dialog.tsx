@@ -14,7 +14,7 @@ import {
 import { Loader2 } from "lucide-react";
 
 interface FormDialogProps {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   title: string;
   description?: string;
   children: ReactNode;
@@ -25,6 +25,8 @@ interface FormDialogProps {
   isPending?: boolean;
   disabled?: boolean;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -43,9 +45,16 @@ export function FormDialog({
   isPending = false,
   disabled = false,
   maxWidth = "2xl",
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: FormDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  
+  // Utiliser le contrôle externe si fourni, sinon utiliser l'état interne
+  const isControlled = controlledOpen !== undefined || controlledOnOpenChange !== undefined;
+  const open = isControlled ? (controlledOpen ?? false) : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen;
 
   const maxWidthClasses = {
     sm: "max-w-sm",
@@ -65,9 +74,11 @@ export function FormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {trigger && (
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
+      )}
       <DialogContent className={maxWidthClasses[maxWidth]}>
         <DialogHeader className="space-y-0">
           <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
