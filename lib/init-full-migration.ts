@@ -30,7 +30,6 @@ import {
   migrerLesUtilisateursNEW,
   migrerLesRolesUtilisateurs,
   updateReleaseEnvIds,
-  importerLesMonitors,
 } from "@/actions/importharp";
 
 // Variables de contrôle pour éviter les exécutions multiples
@@ -76,10 +75,11 @@ const IMPORT_FUNCTIONS = [
   { name: "Importer l'historique des environnements", func: importerLesEnvInfos, step: 19 },
   { name: "Mettre à jour les disponibilités", func: updateDispoEnvIds, step: 20 },
   { name: "Importer les indisponibilités", func: importerLesEnvDispos, step: 21 },
-  { name: "Importer les données de monitoring", func: importerLesMonitors, step: 22 },
-  { name: "Migrer les utilisateurs", func: migrerLesUtilisateursNEW, step: 23 },
-  { name: "Migrer les rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 24 },
-  { name: "Lier les environnements aux releases", func: updateReleaseEnvIds, step: 25 },
+  // NOTE: importerLesMonitors est exclu de la migration automatique car trop long
+  // Il doit être exécuté manuellement depuis la page /settings
+  { name: "Migrer les utilisateurs", func: migrerLesUtilisateursNEW, step: 22 },
+  { name: "Migrer les rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 23 },
+  { name: "Lier les environnements aux releases", func: updateReleaseEnvIds, step: 24 },
 ];
 
 /**

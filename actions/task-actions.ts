@@ -5,6 +5,72 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateTaskEffectiveDuration } from "./calculate-task-duration";
 
+// Schéma de validation pour créer une chrono-tâche
+const CreateTaskSchema = z.object({
+  title: z.string().min(1, "Le titre est requis").max(255, "Le titre ne peut pas dépasser 255 caractères"),
+  descr: z.string().optional().nullable(),
+  status: z.enum(["EN_ATTENTE", "EN_COURS", "BLOQUE", "TERMINE", "SUCCES", "ECHEC"]).optional(),
+  date: z.string().optional().nullable(),
+  estimatedDuration: z.string().optional().nullable(),
+});
+
+/**
+ * Crée une nouvelle chrono-tâche dans la base de données
+ * 
+ * @param formData - Les données du formulaire contenant les champs de la chrono-tâche
+ * @returns Un objet avec success (boolean), message (string) en cas de succès, 
+ *          ou error (string) en cas d'échec, et id (number) de la chrono-tâche créée
+ */
+export async function createTask(formData: FormData) {
+  try {
+    const rawData = {
+      title: formData.get("title") as string,
+      descr: formData.get("descr") as string || null,
+      status: formData.get("status") as string || "EN_ATTENTE",
+      date: formData.get("date") as string || null,
+      estimatedDuration: formData.get("estimatedDuration") as string || null,
+    };
+
+    const validatedData = CreateTaskSchema.parse(rawData);
+
+    // Préparer les données pour l'insertion
+    const taskData: any = {
+      title: validatedData.title,
+      descr: validatedData.descr || null,
+      status: (validatedData.status || "EN_ATTENTE") as any,
+    };
+
+    // Ajouter la date si fournie
+    if (validatedData.date) {
+      taskData.date = new Date(validatedData.date);
+    }
+
+    // Ajouter la durée estimée si fournie
+    if (validatedData.estimatedDuration) {
+      taskData.estimatedDuration = parseInt(validatedData.estimatedDuration, 10);
+    }
+
+    // Créer la chrono-tâche
+    const newTask = await db.harptask.create({
+      data: taskData,
+    });
+
+    return { 
+      success: true, 
+      message: `Chrono-tâche "${validatedData.title}" créée avec succès`,
+      id: newTask.id 
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
+    console.error("Erreur:", error);
+    return { success: false, error: "Erreur lors de la création de la chrono-tâche" };
+  } finally {
+    revalidatePath("/list/tasks");
+  }
+}
+
 // Récupérer toutes les chrono-tâches
 export async function getAllTasks() {
   try {

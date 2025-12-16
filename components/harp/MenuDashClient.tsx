@@ -24,37 +24,51 @@ interface MenuDashClientProps {
 }
 
 export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
-  // Menu statique pour les notifications
-  const notificationMenu = {
-    menu: "Notifications",
-    href: "/list/notifications",
-    icone: "concierge-bell.png",
-  };
+  // Menus statiques
+  const staticMenus = [
+    {
+      menu: "Notifications",
+      href: "/list/notifications",
+      icone: "concierge-bell.png",
+    },
+    {
+      menu: "Chrono-tâche",
+      href: "/list/tasks",
+      icone: "history.png",
+    },
+    {
+      menu: "Items",
+      href: "/list/items",
+      icone: "list.png",
+    },
+  ];
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="mt-2 md:mt-3 lg:mt-3 xl:mt-4 px-1 md:px-1 lg:px-1 xl:px-2 text-xs">
-        {/* Menu statique Notifications */}
-        <div className="flex gap-1 md:gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link 
-                href={notificationMenu.href}
-                className="flex items-center justify-center xl:justify-start gap-1 md:gap-2 text-xs px-1 md:px-2 py-1 md:py-2 rounded-xl hover:bg-orange-300 transition-colors w-full xl:w-auto"
-              >
-                {notificationMenu.icone && notificationMenu.icone !== "" && notificationMenu.icone !== "N" ? (
-                  <Image src={`/ressources/${notificationMenu.icone}`} alt={notificationMenu.menu} width={16} height={16} className="flex-shrink-0" />
-                ) : (
-                  <Image src={`/ressources/list.png`} alt={notificationMenu.menu} width={16} height={16} className="rounded-full flex-shrink-0"/>
-                )}
-                <span className="hidden xl:block text-xs truncate">{notificationMenu.menu}</span>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="xl:hidden">
-              <p className="text-xs font-medium">{notificationMenu.menu}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Menus statiques */}
+        {staticMenus.map((staticMenu) => (
+          <div key={staticMenu.menu} className="flex gap-1 md:gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link 
+                  href={staticMenu.href}
+                  className="flex items-center justify-center xl:justify-start gap-1 md:gap-2 text-xs px-1 md:px-2 py-1 md:py-2 rounded-xl hover:bg-orange-300 transition-colors w-full xl:w-auto"
+                >
+                  {staticMenu.icone && staticMenu.icone !== "" && staticMenu.icone !== "N" ? (
+                    <Image src={`/ressources/${staticMenu.icone}`} alt={staticMenu.menu} width={16} height={16} className="flex-shrink-0" />
+                  ) : (
+                    <Image src={`/ressources/list.png`} alt={staticMenu.menu} width={16} height={16} className="rounded-full flex-shrink-0"/>
+                  )}
+                  <span className="hidden xl:block text-xs truncate">{staticMenu.menu}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="xl:hidden">
+                <p className="text-xs font-medium">{staticMenu.menu}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        ))}
 
         {optionMenu.map((item) => {
           // Afficher tous les menus sans restriction de rôles

@@ -13,8 +13,9 @@ const EnvSinglePage = async ({ params }: { params: { id: string } }) => {
   }
 
   // Vérifier que le typenvid existe dans harptypenv
+  // Note: l'URL utilise typenvid (pas id), donc on cherche par typenvid
   const typenv = await prisma.harptypenv.findUnique({
-    where: { id: typenvid },
+    where: { typenvid: typenvid },
   });
 
   if (!typenv) {

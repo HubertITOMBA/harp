@@ -50,9 +50,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    descr: false,
-  })
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
 
   const table = useReactTable({
@@ -78,10 +76,10 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Input
-          placeholder="Rechercher par titre..."
-          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+          placeholder="Rechercher par description..."
+          value={(table.getColumn("descr")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("title")?.setFilterValue(event.target.value)
+            table.getColumn("descr")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -238,3 +236,4 @@ export function DataTable<TData, TValue>({
     </div>
   )
 }
+

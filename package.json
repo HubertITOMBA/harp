@@ -16,6 +16,7 @@
     "migration:users": "npx tsx scripts/run-migrate-users.ts"
   },
   "dependencies": {
+    "@auth/core": "^0.41.1",
     "@auth/prisma-adapter": "^2.11.1",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
@@ -51,9 +52,9 @@
     "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.4",
     "nodemailer": "^7.0.7",
-    "react": "^19.2.1",
+    "react": "19.2.3",
     "react-calendar": "^5.1.0",
-    "react-dom": "^19.2.1",
+    "react-dom": "19.2.3",
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.4.0",
     "react-toastify": "^11.0.3",
@@ -86,7 +87,6 @@
     "child_process": false
   },
   "overrides": {
-    "@auth/core": "0.41.1",
     "nodemailer": "^7.0.7"
   }
 }

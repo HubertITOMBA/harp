@@ -13,13 +13,16 @@ import {
   Wrench,
   Link as LinkIcon,
   Menu as MenuIcon,
-  Mail
+  Mail,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLastActiveTaskForUser } from "@/lib/actions/task-home-actions";
 
 export const metadata = {
   title: 'Accueil - Portail HARP',
@@ -36,6 +39,9 @@ const HomePage = async () => {
   if (!session?.user) {
     return notFound();
   }
+
+  // Récupérer la dernière chrono-tâche active de l'utilisateur
+  const lastActiveTask = await getLastActiveTaskForUser();
 
   const features = [
     {
@@ -123,11 +129,48 @@ const HomePage = async () => {
           <div className="max-w-4xl mx-auto text-center space-y-6">
             
             {/* Badge */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-orange-100 to-gray-100 text-gray-700 border border-orange-200">
                 <Star className="w-4 h-4 mr-2 text-orange-500" />
                 Bienvenue, {session.user.name || session.user.email}
               </Badge>
+
+              {/* Lien vers la dernière chrono-tâche active */}
+              {lastActiveTask && (
+                <Link href={`/view/tasks/${lastActiveTask.id}`}>
+                  <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-orange-100 cursor-pointer max-w-md">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                          <Clock className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertCircle className="h-4 w-4 text-orange-600" />
+                            <span className="text-sm font-semibold text-gray-900">
+                              Chrono-tâche en cours
+                            </span>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                lastActiveTask.status === "EN_COURS" 
+                                  ? "bg-blue-100 text-blue-800 border-blue-300" 
+                                  : "bg-gray-100 text-gray-800 border-gray-300"
+                              }`}
+                            >
+                              {lastActiveTask.status === "EN_COURS" ? "En cours" : "En attente"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-600 truncate">
+                            {lastActiveTask.title}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-orange-600 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
             </div>
 
             {/* Main Title */}

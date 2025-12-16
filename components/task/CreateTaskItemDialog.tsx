@@ -131,13 +131,19 @@ export function CreateTaskItemDialog({ taskId, open, onOpenChange }: CreateTaskI
         return;
       }
 
+      const resourceNetidRaw = (formData.get("resourceNetid") as string) ?? "";
+      const resourceNetid =
+        resourceNetidRaw && resourceNetidRaw !== "none"
+          ? resourceNetidRaw.trim()
+          : undefined;
+
       const result = await createTaskItem({
         taskId: taskId,
         harpitemId: harpitemId,
         duration: formData.get("duration") ? parseInt(formData.get("duration") as string) : undefined,
         startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : undefined,
         endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : undefined,
-        resourceNetid: (formData.get("resourceNetid") as string)?.trim() || undefined,
+        resourceNetid,
         predecessorId: predecessorId,
         status: (formData.get("status") as any) || "EN_ATTENTE",
         comment: formData.get("comment") as string || undefined,
@@ -273,12 +279,12 @@ export function CreateTaskItemDialog({ taskId, open, onOpenChange }: CreateTaskI
           <Label htmlFor="resourceNetid" className="text-sm font-semibold text-gray-700">
             Ressource (utilisateur)
           </Label>
-          <Select name="resourceNetid" defaultValue="">
+          <Select name="resourceNetid" defaultValue="none">
             <SelectTrigger className="bg-white">
               <SelectValue placeholder="Sélectionner un utilisateur" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Aucun utilisateur</SelectItem>
+              <SelectItem value="none">Aucun utilisateur</SelectItem>
               {users.map((user) => {
                 const displayName = user.nom || user.prenom
                   ? `${user.nom || ''} ${user.prenom || ''}`.trim()

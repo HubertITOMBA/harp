@@ -82,11 +82,15 @@ export const columns: ColumnDef<ListTask>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Titre
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
+    },
+    cell: ({ row }) => {
+      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('title')}</div>
     }
   },
   {
@@ -96,16 +100,17 @@ export const columns: ColumnDef<ListTask>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Statut
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
     },
     cell: ({ row }) => {
       const status = row.getValue("status") as keyof typeof statusLabels;
       return (
-        <Badge className={statusColors[status]}>
+        <Badge className={`${statusColors[status]} text-xs`}>
           {statusLabels[status]}
         </Badge>
       );
@@ -116,7 +121,7 @@ export const columns: ColumnDef<ListTask>[] = [
     header: "Nb tâches",
     cell: ({ row }) => {
       const count = row.original._count.items;
-      return <span>{count}</span>;
+      return <div className="text-xs sm:text-sm">{count}</div>;
     },
   },
   {
@@ -126,23 +131,24 @@ export const columns: ColumnDef<ListTask>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Date prévue
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
     },
     cell: ({ row }) => {
       const date = row.getValue("date") as Date | null;
-      if (!date) return <span className="text-gray-400">-</span>;
+      if (!date) return <div className="text-xs sm:text-sm text-gray-400">-</div>;
       return (
-        <span className="text-sm">
+        <div className="text-xs sm:text-sm">
           {new Date(date).toLocaleDateString("fr-FR", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
           })}
-        </span>
+        </div>
       );
     },
   },
@@ -153,16 +159,17 @@ export const columns: ColumnDef<ListTask>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Durée estimée
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
     },
     cell: ({ row }) => {
       const duration = row.getValue("estimatedDuration") as number | null;
-      if (!duration) return <span className="text-gray-400">-</span>;
-      return <span className="text-sm">{formatDuration(duration)}</span>;
+      if (!duration) return <div className="text-xs sm:text-sm text-gray-400">-</div>;
+      return <div className="text-xs sm:text-sm">{formatDuration(duration)}</div>;
     },
   },
   {
@@ -172,16 +179,17 @@ export const columns: ColumnDef<ListTask>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-8 text-xs sm:text-sm"
         >
           Durée effective
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='ml-2 h-3 w-3' />
         </Button>
       )
     },
     cell: ({ row }) => {
       const duration = row.getValue("effectiveDuration") as number | null;
-      if (!duration) return <span className="text-gray-400">-</span>;
-      return <span className="text-sm font-medium">{formatDuration(duration)}</span>;
+      if (!duration) return <div className="text-xs sm:text-sm text-gray-400">-</div>;
+      return <div className="text-xs sm:text-sm font-medium">{formatDuration(duration)}</div>;
     },
   },
   {

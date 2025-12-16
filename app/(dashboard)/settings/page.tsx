@@ -23,7 +23,8 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   importerLesMenuRoles,
   insertTypeBases,
   forceImportSpecificEnvs,
-  importerLesMonitors} from "@/actions/importharp";
+  importerLesMonitors,
+  importerLesHarpItems} from "@/actions/importharp";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -518,6 +519,21 @@ toast.error("Une erreur est survenue lors de l'import des indisponibilités !");
 }
 }
 
+const handleLesHarpItems = async () => {
+  try {
+    const result = await importerLesHarpItems();
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success(result.success);
+    } else if (result.info) {
+      toast.info(result.info);
+    }
+  } catch (error) {
+    toast.error("Une erreur est survenue lors de l'import des items réutilisables HARP !");
+  }
+}
+
  //=============================================   
 export default function Home() {
   const [isLoadingMonitors, setIsLoadingMonitors] = useState(false);
@@ -902,6 +918,13 @@ export default function Home() {
                 className="w-full justify-start"
               >
                 Importer les anciens chemins de tools
+              </Button>
+              <Button 
+                onClick={handleLesHarpItems}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les items réutilisables HARP
               </Button>
             </CardContent>
           </Card>

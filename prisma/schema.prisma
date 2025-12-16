@@ -103,7 +103,7 @@ model envsharp {
   harpenvdispo  harpenvdispo[]
   statutenv     statutenv?     @relation(fields: [statenvId], references: [id])
   releaseenv    releaseenv?    @relation(fields: [releaseId], references: [id])
-  harptypenv    harptypenv?    @relation(fields: [typenvid], references: [id])
+  harptypenv    harptypenv?    @relation(fields: [typenvid], references: [typenvid])
   harpinstance  harpinstance?  @relation(fields: [instanceId], references: [id])
   psoftversion  psoftversion?  @relation(fields: [psversionId], references: [id])
   ptoolsversion ptoolsversion? @relation(fields: [ptversionId], references: [id])
@@ -236,6 +236,7 @@ model harptypenv {
   typenv   String     @unique @db.VarChar(32)
   href     String?    @db.VarChar(32)
   descr    String?    @db.VarChar(50)
+  typenvid Int        @unique 
   envsharp envsharp[]
 }
 

@@ -166,13 +166,19 @@ export function EditTaskItemDialog({ item, open, onOpenChange }: EditTaskItemDia
         harpitemId = item.harpitemId || null;
       }
 
+      const resourceNetidRaw = (formData.get("resourceNetid") as string) ?? "";
+      const resourceNetid =
+        resourceNetidRaw && resourceNetidRaw !== "none"
+          ? resourceNetidRaw.trim()
+          : null;
+
       const result = await updateTaskItem({
         id: item.id,
         harpitemId: harpitemId,
         duration: formData.get("duration") ? parseInt(formData.get("duration") as string) : null,
         startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : null,
         endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : null,
-        resourceNetid: (formData.get("resourceNetid") as string)?.trim() || null,
+        resourceNetid,
         predecessorId: predecessorId,
         status: (formData.get("status") as any),
         comment: formData.get("comment") as string || null,
@@ -307,12 +313,12 @@ export function EditTaskItemDialog({ item, open, onOpenChange }: EditTaskItemDia
           <Label htmlFor="resourceNetid" className="text-sm font-semibold text-gray-700">
             Ressource (utilisateur)
           </Label>
-          <Select name="resourceNetid" defaultValue={item.resourceNetid || ""}>
+          <Select name="resourceNetid" defaultValue={item.resourceNetid ?? "none"}>
             <SelectTrigger className="bg-white">
               <SelectValue placeholder="Sélectionner un utilisateur" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Aucun utilisateur</SelectItem>
+              <SelectItem value="none">Aucun utilisateur</SelectItem>
               {users.map((user) => {
                 const displayName = user.nom || user.prenom
                   ? `${user.nom || ''} ${user.prenom || ''}`.trim()

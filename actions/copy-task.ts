@@ -55,12 +55,7 @@ export async function copyTask(data: z.infer<typeof copyTaskSchema>) {
         data: {
           taskId: newTask.id,
           harpitemId: sourceItem.harpitemId, // Conserver la référence à l'item réutilisable
-          title: sourceItem.title,
-          duration: sourceItem.duration,
           startDate: validatedData.date ? new Date(validatedData.date) : null, // Utiliser la date de la nouvelle tâche
-          endDate: null, // Nouvelle tâche, pas encore de date de fin
-          resourceNetid: sourceItem.resourceNetid,
-          predecessorNetid: null, // Plus utilisé
           predecessorId: null, // Sera mis à jour après si nécessaire
           status: "EN_ATTENTE", // Nouvelle tâche, tous les items en attente
           comment: sourceItem.comment,

@@ -438,6 +438,35 @@ export const importerLesHarproles = async () => {
 
 
 /**
+ * Mappe le typenvid de psadm_env vers le typenvid de harptypenv
+ * 
+ * @param psadmTypenvId - Le typenvid depuis psadm_env (probablement psadm_typenv.display)
+ * @returns Le typenvid correspondant dans harptypenv, ou null si non trouvé
+ */
+async function mapTypenvIdToHarptypenv(psadmTypenvId: number | null): Promise<number | null> {
+  if (psadmTypenvId === null) {
+    return null;
+  }
+
+  try {
+    // Chercher dans harptypenv un enregistrement dont le champ typenvid correspond
+    const harptypenv = await prisma.harptypenv.findFirst({
+      where: {
+        typenvid: psadmTypenvId
+      },
+      select: {
+        typenvid: true
+      }
+    });
+
+    return harptypenv?.typenvid || null;
+  } catch (error) {
+    console.error(`[mapTypenvIdToHarptypenv] Erreur lors du mapping de typenvid ${psadmTypenvId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Importe les environnements de psadm_env vers envsharp
  * Détecte et importe uniquement les enregistrements manquants (delta)
  * 
@@ -499,12 +528,31 @@ export async function importListEnvs() {
       await prisma.$executeRaw`ALTER TABLE envsharp AUTO_INCREMENT = 1`;
     }
 
-    // Préparer les données à importer avec validation
-    const dataToImport = envsToImport.map(record => {
+    // Récupérer tous les typenvid valides depuis harptypenv pour validation
+    const validHarptypenvTypenvIds = await prisma.harptypenv.findMany({
+      select: {
+        typenvid: true
+      }
+    });
+    const validTypenvIdSet = new Set(validHarptypenvTypenvIds.map(t => t.typenvid).filter((id): id is number => id !== null));
+    console.log(`[importListEnvs] ${validTypenvIdSet.size} typenvid valide(s) trouvé(s) dans harptypenv`);
+
+    // Préparer les données à importer avec validation et mapping
+    const dataToImportPromises = envsToImport.map(async (record) => {
       // Vérifier que les champs requis sont présents
       if (!record.env) {
         console.error(`[importListEnvs] Environnement sans nom (env) ignoré:`, record);
         return null;
+      }
+
+      // Mapper le typenvid de psadm_env vers harptypenv.typenvid
+      const mappedTypenvId = await mapTypenvIdToHarptypenv(record.typenvid || null);
+      
+      // Vérifier que le typenvid mappé existe dans harptypenv
+      let finalTypenvId: number | null = mappedTypenvId;
+      if (finalTypenvId !== null && !validTypenvIdSet.has(finalTypenvId)) {
+        console.warn(`[importListEnvs] typenvid ${finalTypenvId} pour l'environnement ${record.env} n'existe pas dans harptypenv.typenvid. Mise à null.`);
+        finalTypenvId = null;
       }
 
       return {
@@ -524,10 +572,12 @@ export async function importListEnvs() {
         descr: record.descr || null, // Peut être null dans envsharp même si non-null dans psadm_env
         anonym: record.anonym || null,
         edi: record.edi || null,
-        typenvid: record.typenvid || null,
+        typenvid: finalTypenvId, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid
         statenvId: record.statenvId || null
       };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+    });
+
+    const dataToImport = (await Promise.all(dataToImportPromises)).filter((item): item is NonNullable<typeof item> => item !== null);
 
     // Vérifier les environnements spécifiques dans les données à importer
     const specificEnvsInDataToImport = dataToImport.filter(d => specificEnvs.includes(d.env));
@@ -572,9 +622,11 @@ export async function importListEnvs() {
  * Force l'import de certains environnements spécifiques depuis psadm_env vers envsharp
  * Cette fonction supprime d'abord les environnements existants puis les réimporte
  * 
- * IMPORTANT: Il faut absolument exécuter lierTypeEnvs() avant cette fonction pour remplir
- * le champ typenvid dans psadm_env, sinon les imports échoueront avec une erreur de contrainte
- * de clé étrangère.
+ * IMPORTANT: 
+ * - Il faut absolument exécuter lierTypeEnvs() avant cette fonction pour remplir
+ *   le champ typenvid dans psadm_env
+ * - Le typenvid de psadm_env est automatiquement mappé vers harptypenv.typenvid
+ *   (la relation se fait maintenant sur harptypenv.typenvid, pas harptypenv.id)
  * 
  * @param envNames - Tableau des noms d'environnements à forcer (optionnel, utilise la liste par défaut si non fourni)
  * @returns Un objet avec success/info/warning/error et les détails de l'importation
@@ -624,8 +676,53 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
     console.log(`[forceImportSpecificEnvs] ${existingEnvNames.length} environnement(s) existant(s) dans envsharp:`, existingEnvNames);
 
     // Supprimer les environnements existants pour forcer la réimportation
+    // IMPORTANT: Il faut d'abord supprimer les enregistrements dépendants (harpenvinfo, harpmonitor, harpenvdispo)
     let deletedCount = 0;
     if (existingEnvNames.length > 0) {
+      // Récupérer les IDs des environnements à supprimer
+      const envsToDelete = await prisma.envsharp.findMany({
+        where: {
+          env: {
+            in: existingEnvNames
+          }
+        },
+        select: {
+          id: true
+        }
+      });
+      const envIdsToDelete = envsToDelete.map(e => e.id);
+
+      if (envIdsToDelete.length > 0) {
+        // Supprimer les enregistrements dépendants dans l'ordre (pour éviter les contraintes de clé étrangère)
+        await prisma.harpenvinfo.deleteMany({
+          where: {
+            envId: {
+              in: envIdsToDelete
+            }
+          }
+        });
+        console.log(`[forceImportSpecificEnvs] Enregistrements harpenvinfo supprimés`);
+
+        await prisma.harpmonitor.deleteMany({
+          where: {
+            envId: {
+              in: envIdsToDelete
+            }
+          }
+        });
+        console.log(`[forceImportSpecificEnvs] Enregistrements harpmonitor supprimés`);
+
+        await prisma.harpenvdispo.deleteMany({
+          where: {
+            envId: {
+              in: envIdsToDelete
+            }
+          }
+        });
+        console.log(`[forceImportSpecificEnvs] Enregistrements harpenvdispo supprimés`);
+      }
+
+      // Maintenant supprimer les environnements eux-mêmes
       const deleteResult = await prisma.envsharp.deleteMany({
         where: {
           env: {
@@ -638,24 +735,30 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
     }
 
     // Récupérer tous les typenvid valides depuis harptypenv pour vérifier les contraintes de clé étrangère
-    const validTypenvIds = await prisma.harptypenv.findMany({
-      select: { id: true }
+    // IMPORTANT: On utilise maintenant harptypenv.typenvid (pas harptypenv.id)
+    const validHarptypenvTypenvIds = await prisma.harptypenv.findMany({
+      select: {
+        typenvid: true
+      }
     });
-    const validTypenvIdSet = new Set(validTypenvIds.map(t => t.id));
-    console.log(`[forceImportSpecificEnvs] ${validTypenvIdSet.size} typenvid valide(s) trouvé(s) dans harptypenv`);
+    const validTypenvIdSet = new Set(validHarptypenvTypenvIds.map(t => t.typenvid).filter((id): id is number => id !== null));
+    console.log(`[forceImportSpecificEnvs] ${validTypenvIdSet.size} typenvid valide(s) trouvé(s) dans harptypenv.typenvid`);
 
-    // Préparer les données à importer
+    // Préparer les données à importer avec mapping depuis psadm_env.typenvid vers harptypenv.typenvid
     // Note: typenvid doit être rempli dans psadm_env par lierTypeEnvs() avant d'appeler cette fonction
-    const dataToImport = envData.map(record => {
+    const dataToImportPromises = envData.map(async (record) => {
       if (!record.env) {
         console.error(`[forceImportSpecificEnvs] Environnement sans nom (env) ignoré:`, record);
         return null;
       }
 
-      // Vérifier que le typenvid existe dans harptypenv, sinon le mettre à null
-      let typenvid: number | null = record.typenvid || null;
+      // Mapper le typenvid de psadm_env vers harptypenv.typenvid
+      const mappedTypenvId = await mapTypenvIdToHarptypenv(record.typenvid || null);
+      
+      // Vérifier que le typenvid mappé existe dans harptypenv.typenvid
+      let typenvid: number | null = mappedTypenvId;
       if (typenvid !== null && !validTypenvIdSet.has(typenvid)) {
-        console.warn(`[forceImportSpecificEnvs] typenvid ${typenvid} pour l'environnement ${record.env} n'existe pas dans harptypenv. Mise à null.`);
+        console.warn(`[forceImportSpecificEnvs] typenvid ${typenvid} pour l'environnement ${record.env} n'existe pas dans harptypenv.typenvid. Mise à null.`);
         typenvid = null;
       }
 
@@ -676,10 +779,12 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
         descr: record.descr || null,
         anonym: record.anonym || null,
         edi: record.edi || null,
-        typenvid: typenvid, // Vérifié et validé contre harptypenv
+        typenvid: typenvid, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid et validé
         statenvId: record.statenvId || null
       };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+    });
+
+    const dataToImport = (await Promise.all(dataToImportPromises)).filter((item): item is NonNullable<typeof item> => item !== null);
 
     console.log(`[forceImportSpecificEnvs] ${dataToImport.length} environnement(s) préparé(s) pour l'import`);
     if (dataToImport.length > 0) {
@@ -1617,10 +1722,41 @@ export const importerLesTypesEnv = async () => {
       data: typenvsToImport.map(record => ({
         typenv: record.typenv,
         href: `/list/envs/${record.display}`,  // Génération du href basé sur display
-        descr: record.descr
+        descr: record.descr,
+        typenvid: record.display // Utiliser display comme typenvid pour la correspondance avec psadm_env.typenvid
       })),
       skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
+
+    // Mettre à jour les typenvid pour les enregistrements existants selon le mapping défini
+    const typenvidMappings = [
+      { id: 1, typenvid: 7 },
+      { id: 2, typenvid: 6 },
+      { id: 3, typenvid: 2 },
+      { id: 4, typenvid: 3 },
+      { id: 5, typenvid: 4 },
+      { id: 6, typenvid: 5 },
+      { id: 7, typenvid: 19 },
+      { id: 8, typenvid: 11 },
+      { id: 9, typenvid: 12 },
+      { id: 10, typenvid: 16 },
+      { id: 11, typenvid: 21 },
+      { id: 12, typenvid: 9 },
+      { id: 13, typenvid: 10 },
+      { id: 14, typenvid: 15 },
+      { id: 15, typenvid: 13 },
+      { id: 16, typenvid: 8 }
+    ];
+
+    for (const mapping of typenvidMappings) {
+      await prisma.harptypenv.update({
+        where: { id: mapping.id },
+        data: { typenvid: mapping.typenvid }
+      }).catch((error) => {
+        // Ignorer les erreurs si l'enregistrement n'existe pas (idempotent)
+        console.warn(`[importerLesTypesEnv] Impossible de mettre à jour harptypenv.id=${mapping.id}:`, error);
+      });
+    }
 
     return { 
       success: `${result.count} nouveau(x) type(s) d'environnement importé(s) avec succès !`,
@@ -3269,6 +3405,116 @@ export const importerLesMonitors = async () => {
     };
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de l'importation des données de monitoring", "importerLesMonitors");
+  }
+};
+
+/**
+ * Importe les items réutilisables HARP dans la table harpitems
+ * Insère uniquement les items qui n'existent pas encore (basé sur descr unique)
+ * 
+ * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ */
+export const importerLesHarpItems = async () => {
+  try {
+    // Liste des items à importer
+    const itemsToImport = [
+      'Sauvegardes des HARPFILE_entrant\\recus',
+      'Fermeture TP PR1 HRMS / FSCM',
+      'Désactivation des pages indisponibilité',
+      'Activation des pages d indisponibilité',
+      'SVG1 - HR/FS : Point de reprise 1 avec mise sur bandes',
+      'Rétention 1 an + restaurer DRP + synchro HARPFILE',
+      'Arret applications  (Weblo GASSI GASSI AS PRCS)',
+      'Patching Oracle',
+      'Upgrade Nouveaux Ptools',
+      'Bascule vers les nouveaux domaines ptools',
+      'comptage cobol + sqr',
+      'Déploiement des cobols application',
+      'Redemarrage applications  (Weblo GASSI GASSI AS PRCS)',
+      'Upgrade agent Autosys + tester Autosys apres modif de ladapter',
+      'Recréation des schémas Oracle AUTOPS',
+      'Ouverture en mode restreint Finalisation pour tests technique',
+      'Mise à dispo ddaudit pour TMA + Compare Ddaudit',
+      'Test EDI vers NetEntreprise via autosys',
+      'Test de connexion via gate4',
+      'Fermeture du mode restreint finalisation',
+      'Restauration avec SVG1 - point de reprise 1',
+      'Sauvegarde SVG2 HR/FS avec mise sur bandes',
+      'Installation du BL de Production + P0',
+      'Verification de la livraison BL de Production  + P0',
+      'Sécurité Synchro portail',
+      'Lancement Ddaudit et Mis à dispo TMA + compare ddaudit post livraison (PAS ERGONOMIE)',
+      'Arrêt et Relance avec purge des caches Production (Weblo GASSI GASSI AS PRCS)',
+      'Lancement SVG2 (post contrôle livraison BL + P0)',
+      'Lancement plan de production Delta',
+      'Lancement plan de production RT',
+      'Lancement plan de production Init',
+      'Lancement plan de production Finalsation',
+      'Lancement plan de production Hors Paie',
+      'Restauration avec SVG1 - Point de reprise 1',
+      'Lancemzent RCTL',
+      'Contrôles fonctionnels DXC/Orange (Post Plan)',
+      'Lancement GRD',
+      'Point GO/NOGO 1 Post Upgrade Ptools',
+      'Point GO/NOGO Tech/TMA',
+      'Stat et Reorgonisation index',
+      'lancement SVG2 blocage de refresh PP2',
+      'lancement SVG1 Hebdomadaire avec mise sur bandes',
+      'Arrêter environnement',
+      'Arret de tous les environnements',
+      'Refresh environnement',
+      'Refresh environnement pour nouveau tools',
+      'Refresh de MHP / BC1',
+      'Import Psquery',
+      'Lancement script $HARPSHELL/set_config_post_upgrade.ks'
+    ];
+
+    // Récupérer les items déjà présents dans harpitems
+    const existingItems = await prisma.harpitems.findMany({
+      select: {
+        descr: true
+      }
+    });
+
+    // Créer un Set des descriptions existantes pour une recherche rapide
+    const existingDescrSet = new Set(existingItems.map(item => item.descr));
+
+    // Filtrer uniquement les items qui n'existent pas encore (delta)
+    const itemsToInsert = itemsToImport.filter(descr => !existingDescrSet.has(descr));
+
+    if (itemsToInsert.length === 0) {
+      return { 
+        info: "Tous les items réutilisables sont déjà importés. Aucun nouvel enregistrement à importer.",
+        details: {
+          totalInSource: itemsToImport.length,
+          totalInHarpitems: existingItems.length,
+          imported: 0,
+          skipped: itemsToImport.length
+        }
+      };
+    }
+
+    // Insérer uniquement les nouveaux items
+    const result = await prisma.harpitems.createMany({
+      data: itemsToInsert.map(descr => ({
+        descr: descr
+        // createdAt et updatedAt sont gérés automatiquement par Prisma
+      })),
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${result.count} nouveau(x) item(s) réutilisable(s) importé(s) avec succès !`,
+      details: {
+        totalInSource: itemsToImport.length,
+        totalInHarpitems: existingItems.length + result.count,
+        imported: result.count,
+        skipped: itemsToImport.length - itemsToInsert.length
+      }
+    };
+
+  } catch (error) {
+    return handlePrismaError(error, "Erreur lors de l'importation des items réutilisables HARP", "importerLesHarpItems");
   }
 };
 
