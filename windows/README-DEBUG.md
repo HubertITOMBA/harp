@@ -78,7 +78,7 @@ Vous devriez voir la commande PowerShell avec les bons chemins.
 
 1. Vérifier que l'API est accessible :
    ```powershell
-   Invoke-WebRequest -Uri "https://portails.orange-harp.fr:9352/api/launcher/tool?tool=putty&netid=VOTRE_NETID"
+   Invoke-WebRequest -Uri "https://localhost:9352/api/launcher/tool?tool=putty&netid=VOTRE_NETID"
    ```
 2. Vérifier que votre NetID Windows correspond à un utilisateur dans la table `User`
 3. Vérifier que l'outil existe dans la table `harptools`

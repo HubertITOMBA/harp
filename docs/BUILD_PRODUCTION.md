@@ -39,11 +39,11 @@ Créez un fichier `.env.production` ou définissez les variables dans votre envi
 ```env
 # URL de base de l'application (sans slash final)
 # HTTPS est maintenant activé par défaut (certificats installés)
-AUTH_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
 
 # URL publique du serveur (pour Next.js RSC) - OBLIGATOIRE pour le build
 # HTTPS est maintenant activé par défaut (certificats installés)
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true
@@ -59,8 +59,8 @@ AUTH_SECRET=votre-secret-très-long-et-aléatoire
 **Sur Windows (PowerShell)** :
 ```powershell
 # Définir les variables pour cette session
-$env:AUTH_URL="https://portails.orange-harp.fr:9352"
-$env:NEXT_PUBLIC_SERVER_URL="https://portails.orange-harp.fr:9352"
+$env:AUTH_URL="https://localhost:9352"
+$env:NEXT_PUBLIC_SERVER_URL="https://localhost:9352"
 $env:AUTH_TRUST_HOST="true"
 $env:AUTH_SECRET="votre-secret"
 
@@ -71,8 +71,8 @@ npm run build
 **Sur Linux/Mac** :
 ```bash
 # Définir les variables pour cette session
-export AUTH_URL="https://portails.orange-harp.fr:9352"
-export NEXT_PUBLIC_SERVER_URL="https://portails.orange-harp.fr:9352"
+export AUTH_URL="https://localhost:9352"
+export NEXT_PUBLIC_SERVER_URL="https://localhost:9352"
 export AUTH_TRUST_HOST="true"
 export AUTH_SECRET="votre-secret"
 
@@ -89,7 +89,7 @@ npm run build
 
 ### 3. Vérifier que le build utilise les bonnes URLs
 
-Après le build, vérifiez dans `.next/server/app-paths-manifest.json` ou dans les fichiers générés que les URLs utilisent bien `https://portails.orange-harp.fr:9352` et non `localhost:9352`.
+Après le build, vérifiez dans `.next/server/app-paths-manifest.json` ou dans les fichiers générés que les URLs utilisent bien `https://localhost:9352` et non `localhost:9352`.
 
 ### 4. Déployer et démarrer
 
@@ -121,8 +121,8 @@ module.exports = {
     args: 'start',
     env: {
       NODE_ENV: 'production',
-      AUTH_URL: 'https://portails.orange-harp.fr:9352',
-      NEXT_PUBLIC_SERVER_URL: 'https://portails.orange-harp.fr:9352',
+      AUTH_URL: 'https://localhost:9352',
+      NEXT_PUBLIC_SERVER_URL: 'https://localhost:9352',
       AUTH_TRUST_HOST: 'true',
       AUTH_SECRET: 'votre-secret',
       // ... autres variables
@@ -134,7 +134,7 @@ module.exports = {
 Puis build et démarrez :
 ```bash
 # Build avec les variables définies
-export NEXT_PUBLIC_SERVER_URL="https://portails.orange-harp.fr:9352"
+export NEXT_PUBLIC_SERVER_URL="https://localhost:9352"
 npm run build
 
 # Démarrer avec PM2
@@ -151,7 +151,7 @@ pm2 start ecosystem.config.js
 2. **Vérifier les requêtes réseau** :
    - Ouvrir l'onglet Network
    - Naviguer dans l'application
-   - Vérifier que les requêtes RSC utilisent `https://portails.orange-harp.fr:9352` et non `:9352`
+   - Vérifier que les requêtes RSC utilisent `https://localhost:9352` et non `:9352`
 
 3. **Tester la navigation** :
    - Se connecter
@@ -166,7 +166,7 @@ pm2 start ecosystem.config.js
 2. Vérifier que le build a bien utilisé les bonnes variables :
    ```bash
    # Chercher dans les fichiers générés
-   grep -r "portails.orange-harp.fr" .next/
+   grep -r "localhost:9352" .next/
    ```
 3. Vérifier que l'application utilise bien le build de production :
    ```bash

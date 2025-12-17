@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const PRODUCTION_URL = 'http://portails.orange-harp.fr:9352';
+const PRODUCTION_URL = 'https://localhost:9352';
 
 /**
  * Charge les variables d'environnement depuis un fichier .env
@@ -79,25 +79,23 @@ function cleanNodeOptions() {
 }
 
 /**
- * Corrige HTTPS en HTTP pour les URLs de production (selon demande admin)
+ * Vérifie que les URLs utilisent HTTPS (sécurité requise)
  */
-function fixHttpsToHttp() {
+function checkHttpsUrls() {
   const urlVars = ['AUTH_URL', 'NEXT_PUBLIC_SERVER_URL'];
-  let fixed = false;
+  let hasWarnings = false;
 
   for (const varName of urlVars) {
     const value = process.env[varName];
-    if (value && value.startsWith('https://') && value.includes('portails.orange-harp.fr') && !value.includes('localhost')) {
-      const httpValue = value.replace('https://', 'http://');
-      console.log(`  ⚠️  Correction automatique: ${varName}`);
-      console.log(`     ${value} → ${httpValue}`);
-      console.log(`     (HTTP requis par l'admin jusqu'à la fin du développement)`);
-      process.env[varName] = httpValue;
-      fixed = true;
+    if (value && !value.startsWith('https://')) {
+      console.log(`  ⚠️  Avertissement: ${varName} n'utilise pas HTTPS`);
+      console.log(`     Valeur actuelle: ${value}`);
+      console.log(`     HTTPS est recommandé pour la sécurité`);
+      hasWarnings = true;
     }
   }
 
-  return fixed;
+  return hasWarnings;
 }
 
 console.log('🔨 Rebuild pour la production\n');
@@ -127,13 +125,15 @@ if (!envLoaded) {
   console.log('');
 }
 
-// 1. Corriger automatiquement HTTPS en HTTP si nécessaire (selon demande admin)
-console.log('📋 Étape 1 : Vérification et correction des variables d\'environnement...\n');
+// 1. Vérifier que les URLs utilisent HTTPS (sécurité requise)
+console.log('📋 Étape 1 : Vérification des variables d\'environnement...\n');
 
-// Corriger HTTPS en HTTP pour les URLs de production (selon demande admin)
-const httpsFixed = fixHttpsToHttp();
-if (httpsFixed) {
-  console.log('  ✅ URLs corrigées de HTTPS vers HTTP (selon demande admin)\n');
+// Vérifier que les URLs utilisent HTTPS
+const httpsWarnings = checkHttpsUrls();
+if (!httpsWarnings) {
+  console.log('  ✅ Toutes les URLs utilisent HTTPS (sécurité activée)\n');
+} else {
+  console.log('  ⚠️  Certaines URLs n\'utilisent pas HTTPS (recommandé pour la sécurité)\n');
 }
 
 const requiredVars = {
@@ -159,13 +159,10 @@ for (const [varName, value] of Object.entries(requiredVars)) {
     
     // Vérifications spécifiques
     if (varName === 'AUTH_URL') {
-      if (value.startsWith('https://') && !value.includes('localhost')) {
-        console.log(`     ⚠️  L'URL utilise HTTPS, mais HTTP est requis selon demande admin`);
+      if (!value.startsWith('https://') && !value.includes('localhost')) {
+        console.log(`     ⚠️  L'URL devrait utiliser HTTPS pour la sécurité`);
         console.log(`        Valeur actuelle: ${value}`);
-        console.log(`        Valeur attendue: ${value.replace('https://', 'http://')}`);
-        hasWarnings = true;
-      } else if (!value.startsWith('http://') && !value.includes('localhost')) {
-        console.log(`     ⚠️  L'URL devrait utiliser HTTP (selon demande admin)`);
+        console.log(`        Valeur recommandée: ${value.replace('http://', 'https://')}`);
         hasWarnings = true;
       }
     }
@@ -180,8 +177,8 @@ for (const [varName, value] of Object.entries(requiredVars)) {
         console.log(`     ⚠️  L'URL devrait utiliser HTTP (selon demande admin)`);
         hasWarnings = true;
       }
-      if (value !== PRODUCTION_URL && !value.includes('localhost')) {
-        console.log(`     ⚠️  L'URL ne correspond pas à l'URL de production attendue (${PRODUCTION_URL})`);
+      if (!value.includes('localhost:9352')) {
+        console.log(`     ⚠️  L'URL devrait utiliser localhost:9352 (valeur actuelle: ${value})`);
         hasWarnings = true;
       }
     }
@@ -372,17 +369,15 @@ function searchUrlInBuildFiles(searchUrl) {
 const productionCheck = searchUrlInBuildFiles(PRODUCTION_URL);
 const localhostCheck = searchUrlInBuildFiles('localhost:9352');
 
-if (productionCheck.found) {
-  console.log(`  ✅ Le build utilise l'URL de production : ${PRODUCTION_URL}`);
-  if (productionCheck.files.length > 0) {
+if (localhostCheck.found || productionCheck.found) {
+  console.log(`  ✅ Le build utilise l'URL attendue : localhost:9352`);
+  if (localhostCheck.found && localhostCheck.files.length > 0) {
+    console.log(`     Trouvé dans ${localhostCheck.files.length} fichier(s)`);
+  } else if (productionCheck.found && productionCheck.files.length > 0) {
     console.log(`     Trouvé dans ${productionCheck.files.length} fichier(s)`);
   }
-} else if (localhostCheck.found) {
-  console.log(`  ⚠️  Le build utilise encore localhost au lieu de ${PRODUCTION_URL}`);
-  console.log('     Le build doit être refait avec les bonnes variables');
-  console.log('     Vérifiez que NEXT_PUBLIC_SERVER_URL est défini dans .env.production');
 } else {
-  console.log(`  ⚠️  L'URL de production n'a pas été trouvée dans les fichiers de build`);
+  console.log(`  ⚠️  L'URL localhost:9352 n'a pas été trouvée dans les fichiers de build`);
   console.log('     Cela peut causer des erreurs 404 sur les routes RSC');
   console.log('     Les requêtes RSC doivent utiliser des URLs absolues');
   console.log(`     URL attendue : ${PRODUCTION_URL}`);
@@ -400,7 +395,7 @@ console.log('  2. Vérifier dans le navigateur (F12 > Network) que les requêtes
 console.log(`     ${PRODUCTION_URL}/...?_rsc=...`);
 console.log('  3. Vérifier qu\'il n\'y a plus d\'erreurs 404 sur les routes RSC');
 console.log('\n💡 Note importante :');
-console.log('   - Le message "Local: http://localhost:9352" au démarrage est normal');
+console.log('   - Le message "Local: https://localhost:9352" au démarrage est normal');
 console.log('   - La vraie vérification se fait dans le navigateur (onglet Network)');
 console.log('   - Les requêtes RSC doivent utiliser des URLs absolues avec HTTP (selon demande admin)');
 console.log('\n⚠️  Si vous voyez encore des erreurs 404 sur les routes RSC :');

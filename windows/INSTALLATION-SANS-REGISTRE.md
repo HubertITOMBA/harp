@@ -110,7 +110,7 @@ Vous devriez recevoir :
   "status": "ok",
   "service": "HARP Launcher Server",
   "port": 8765,
-  "apiUrl": "https://portails.orange-harp.fr:9352"
+  "apiUrl": "https://localhost:9352"
 }
 ```
 

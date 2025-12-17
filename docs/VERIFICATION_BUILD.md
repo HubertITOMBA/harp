@@ -6,7 +6,7 @@ Lorsque vous lancez `npm run start`, Next.js affiche :
 
 ```
 ▲ Next.js 15.5.7
-- Local:        http://localhost:9352
+- Local:        https://localhost:9352
 - Network:      http://10.173.8.125:9352
 ```
 
@@ -19,8 +19,8 @@ Lorsque vous lancez `npm run start`, Next.js affiche :
 Assurez-vous que votre `.env` contient :
 
 ```env
-AUTH_URL=https://portails.orange-harp.fr:9352
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 AUTH_TRUST_HOST=true
 AUTH_SECRET=votre-secret
 ```
@@ -38,7 +38,7 @@ npm run rebuild:production
 ```bash
 # Vérifier que les variables sont chargées
 echo $NEXT_PUBLIC_SERVER_URL
-# Doit afficher : https://portails.orange-harp.fr:9352
+# Doit afficher : https://localhost:9352
 
 # Si ce n'est pas le cas, charger depuis .env (utiliser le script)
 chmod +x scripts/load-env.sh
@@ -57,7 +57,7 @@ Après le build, vérifiez que les URLs sont correctes :
 
 ```bash
 # Chercher l'URL de production dans les fichiers générés
-grep -r "portails.orange-harp.fr" .next/server/app-paths-manifest.json
+grep -r "localhost:9352" .next/server/app-paths-manifest.json
 
 # Ou vérifier qu'il n'y a pas de localhost
 grep -r "localhost:9352" .next/server/app-paths-manifest.json
@@ -71,7 +71,7 @@ grep -r "localhost:9352" .next/server/app-paths-manifest.json
 3. Recharger la page
 4. Chercher les requêtes RSC (filtre : `_rsc`)
 
-**✅ Correct** : Les requêtes doivent utiliser `https://portails.orange-harp.fr:9352/...?_rsc=...`
+**✅ Correct** : Les requêtes doivent utiliser `https://localhost:9352/...?_rsc=...`
 
 **❌ Incorrect** : Les requêtes utilisent `:9352/...?_rsc=...` (URL relative)
 
@@ -110,25 +110,25 @@ Cela signifie que le build n'a pas été fait avec les bonnes variables. Solutio
 Vérifiez que votre `.env` utilise bien `https://` :
 
 ```env
-AUTH_URL=https://portails.orange-harp.fr:9352
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 ```
 
 Puis rebuild.
 
 ## Checklist de vérification
 
-- [ ] Le fichier `.env` existe et contient `NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352`
+- [ ] Le fichier `.env` existe et contient `NEXT_PUBLIC_SERVER_URL=https://localhost:9352`
 - [ ] Les variables sont chargées dans l'environnement (vérifier avec `echo $NEXT_PUBLIC_SERVER_URL`)
 - [ ] Le dossier `.next` a été supprimé avant le rebuild
 - [ ] Le build a été fait avec `npm run build` ou `npm run rebuild:production`
-- [ ] Les fichiers générés contiennent `https://portails.orange-harp.fr:9352`
+- [ ] Les fichiers générés contiennent `https://localhost:9352`
 - [ ] Dans le navigateur, les requêtes RSC utilisent des URLs absolues avec HTTPS
 - [ ] Il n'y a plus d'erreurs 404 sur les routes RSC
 
 ## Notes importantes
 
-- **Le message de démarrage Next.js** (`Local: http://localhost:9352`) est normal et n'indique pas un problème
+- **Le message de démarrage Next.js** (`Local: https://localhost:9352`) est normal et n'indique pas un problème
 - **Les variables `NEXT_PUBLIC_*` sont "baked" dans le build** : elles doivent être définies au moment du build
 - **Un simple redémarrage ne suffit pas** : si le build a été fait avec de mauvaises variables, il faut rebuild
 - **Vérifier dans le navigateur** : c'est la seule vraie vérification que les URLs sont correctes

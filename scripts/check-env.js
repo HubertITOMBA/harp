@@ -81,8 +81,8 @@ if (hasErrors) {
   console.log('\n💡 Solution :');
   console.log('  1. Créez un fichier .env à la racine du projet');
   console.log('  2. Ajoutez les variables requises :');
-  console.log('     AUTH_URL=http://portails.orange-harp.fr:9352');
-  console.log('     NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352');
+  console.log('     AUTH_URL=https://localhost:9352');
+  console.log('     NEXT_PUBLIC_SERVER_URL=https://localhost:9352');
   console.log('     AUTH_TRUST_HOST=true');
   console.log('     AUTH_SECRET=votre-secret-très-long-et-aléatoire');
   console.log('  3. Rebuild l\'application : npm run build');

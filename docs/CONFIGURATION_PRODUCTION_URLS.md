@@ -13,15 +13,15 @@ Ajoutez ces variables dans votre fichier `.env` en production :
 ```env
 # URL de base de l'application (sans slash final)
 # HTTPS est maintenant activé par défaut (certificats installés)
-AUTH_URL=https://portails.orange-harp.fr:9352
-# Si vous utilisez encore HTTP (non recommandé) :
-# AUTH_URL=http://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
+# Si vous utilisez encore HTTP (non recommandé, déconseillé pour la sécurité) :
+# AUTH_URL=http://localhost:9352
 
 # URL publique du serveur (pour Next.js RSC)
 # HTTPS est maintenant activé par défaut (certificats installés)
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
-# Si vous utilisez encore HTTP (non recommandé) :
-# NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
+# Si vous utilisez encore HTTP (non recommandé, déconseillé pour la sécurité) :
+# NEXT_PUBLIC_SERVER_URL=http://localhost:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true
@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
   
   // Configuration pour la production
   env: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'https://portails.orange-harp.fr:9352',
+    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'https://localhost:9352',
   },
   
   // Si vous utilisez un reverse proxy
@@ -86,8 +86,8 @@ module.exports = {
     args: 'start',
     env: {
       NODE_ENV: 'production',
-      AUTH_URL: 'http://portails.orange-harp.fr:9352',
-      NEXT_PUBLIC_SERVER_URL: 'http://portails.orange-harp.fr:9352',
+      AUTH_URL: 'https://localhost:9352',
+      NEXT_PUBLIC_SERVER_URL: 'https://localhost:9352',
       AUTH_TRUST_HOST: 'true',
       // ... autres variables
     }
@@ -109,8 +109,8 @@ Type=simple
 User=your-user
 WorkingDirectory=/path/to/harp
 Environment="NODE_ENV=production"
-Environment="AUTH_URL=http://portails.orange-harp.fr:9352"
-Environment="NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352"
+Environment="AUTH_URL=https://localhost:9352"
+Environment="NEXT_PUBLIC_SERVER_URL=https://localhost:9352"
 Environment="AUTH_TRUST_HOST=true"
 ExecStart=/usr/bin/npm start
 Restart=always

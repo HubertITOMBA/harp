@@ -36,7 +36,7 @@ function Get-LauncherConfig {
     
     # Retourner une configuration par défaut
     return @{
-        apiUrl = "http://portails.orange-harp.fr:9352"
+        apiUrl = "https://localhost:9352"
         logLevel = "info"
         keepWindowOpenOnError = $true
         keepWindowOpenOnSuccess = $false
@@ -53,7 +53,7 @@ if (-not $API_BASE_URL) {
 }
 if (-not $API_BASE_URL) {
     # Valeur par défaut pour la production (HTTP en mode test)
-    $API_BASE_URL = "http://portails.orange-harp.fr:9352"
+    $API_BASE_URL = "https://localhost:9352"
 }
 
 function Write-Log($message) {

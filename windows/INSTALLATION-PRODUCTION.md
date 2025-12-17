@@ -72,7 +72,7 @@ Les outils doivent être configurés dans la page **`/list/tools`** de l'applica
 
 ### Étape 3: Configurer l'URL de l'API (optionnel)
 
-Par défaut, le launcher utilise l'URL de production `https://portails.orange-harp.fr:9352`.
+Par défaut, le launcher utilise l'URL de production `https://localhost:9352`.
 
 Pour utiliser une autre URL (par exemple en développement), configurer la variable d'environnement :
 
@@ -107,7 +107,7 @@ Pour éviter la boîte de dialogue de confirmation à chaque lancement :
      [
        {
          "protocol": "mylaunch",
-         "allowed_origins": ["https://portails.orange-harp.fr:9352"]
+         "allowed_origins": ["https://localhost:9352"]
        }
      ]
      ```
@@ -123,7 +123,7 @@ Pour éviter la boîte de dialogue de confirmation à chaque lancement :
 "ExternalProtocolDialogShowAlwaysOpenCheckbox"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\AutoLaunchProtocolsFromOrigins]
-"1"="{\"protocol\":\"mylaunch\",\"allowed_origins\":[\"https://portails.orange-harp.fr:9352\"]}"
+"1"="{\"protocol\":\"mylaunch\",\"allowed_origins\":[\"https://localhost:9352\"]}"
 ```
 
 ## Vérification de l'installation

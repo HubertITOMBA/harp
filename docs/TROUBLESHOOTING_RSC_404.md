@@ -13,7 +13,7 @@ Et chaque clic redirige vers la page de login.
 
 ## Cause
 
-Le build a été fait **sans** la variable `NEXT_PUBLIC_SERVER_URL` définie, ou avec une valeur incorrecte. Next.js génère alors des URLs relatives (`:9352/...`) au lieu d'URLs absolues (`https://portails.orange-harp.fr:9352/...`).
+Le build a été fait **sans** la variable `NEXT_PUBLIC_SERVER_URL` définie, ou avec une valeur incorrecte. Next.js génère alors des URLs relatives (`:9352/...`) au lieu d'URLs absolues (`https://localhost:9352/...`).
 
 ## Solution : Rebuild avec les bonnes variables
 
@@ -41,8 +41,8 @@ Assurez-vous que votre fichier `.env` contient :
 
 ```env
 # HTTPS activé (certificats installés)
-AUTH_URL=https://portails.orange-harp.fr:9352
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 AUTH_TRUST_HOST=true
 AUTH_SECRET=votre-secret-très-long-et-aléatoire
 ```
@@ -120,12 +120,12 @@ Après le build, vérifiez que les URLs sont correctes :
 
 ```bash
 # Chercher les URLs dans les fichiers générés
-grep -r "portails.orange-harp.fr" .next/server/app-paths-manifest.json
+grep -r "localhost:9352" .next/server/app-paths-manifest.json
 # ou
 grep -r "https://" .next/server/app-paths-manifest.json
 ```
 
-Si vous ne trouvez pas `https://portails.orange-harp.fr:9352` dans les fichiers, le build n'a pas utilisé les bonnes variables.
+Si vous ne trouvez pas `https://localhost:9352` dans les fichiers, le build n'a pas utilisé les bonnes variables.
 
 ### Étape 5 : Redémarrer l'application
 
@@ -146,7 +146,7 @@ systemctl start harp
 1. Ouvrir la console développeur (F12)
 2. Aller dans l'onglet "Network"
 3. Recharger la page
-4. Vérifier que les requêtes RSC utilisent `https://portails.orange-harp.fr:9352` et non `:9352`
+4. Vérifier que les requêtes RSC utilisent `https://localhost:9352` et non `:9352`
 
 ## Si le problème persiste
 
@@ -155,8 +155,8 @@ systemctl start harp
 **Sur Linux/Mac** :
 ```bash
 rm -rf .next
-export AUTH_URL="https://portails.orange-harp.fr:9352"
-export NEXT_PUBLIC_SERVER_URL="https://portails.orange-harp.fr:9352"
+export AUTH_URL="https://localhost:9352"
+export NEXT_PUBLIC_SERVER_URL="https://localhost:9352"
 export AUTH_TRUST_HOST="true"
 npm run build
 ```
@@ -164,8 +164,8 @@ npm run build
 **Sur Windows (PowerShell)** :
 ```powershell
 Remove-Item -Recurse -Force .next
-$env:AUTH_URL="https://portails.orange-harp.fr:9352"
-$env:NEXT_PUBLIC_SERVER_URL="https://portails.orange-harp.fr:9352"
+$env:AUTH_URL="https://localhost:9352"
+$env:NEXT_PUBLIC_SERVER_URL="https://localhost:9352"
 $env:AUTH_TRUST_HOST="true"
 npm run build
 ```
@@ -175,8 +175,8 @@ npm run build
 Créez un fichier `.env.production` à la racine du projet :
 
 ```env
-AUTH_URL=https://portails.orange-harp.fr:9352
-NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 AUTH_TRUST_HOST=true
 AUTH_SECRET=votre-secret-très-long-et-aléatoire
 ```
@@ -199,11 +199,11 @@ NODE_ENV=production npm run build
 
 ## Checklist de vérification
 
-- [ ] Le fichier `.env` contient `NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9352`
+- [ ] Le fichier `.env` contient `NEXT_PUBLIC_SERVER_URL=https://localhost:9352`
 - [ ] Les variables sont chargées dans l'environnement avant le build
 - [ ] Le dossier `.next` a été supprimé avant le rebuild
 - [ ] Le build a été fait avec `npm run build`
-- [ ] Les fichiers générés contiennent `https://portails.orange-harp.fr:9352`
+- [ ] Les fichiers générés contiennent `https://localhost:9352`
 - [ ] L'application a été redémarrée après le build
 - [ ] Le navigateur utilise des URLs absolues (vérifier dans la console)
 

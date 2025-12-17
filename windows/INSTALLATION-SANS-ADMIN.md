@@ -77,7 +77,7 @@ Le fichier `%LOCALAPPDATA%\HARP\launcher\launcher-config.json` contient :
 ```json
 {
   "version": "1.0",
-  "apiUrl": "https://portails.orange-harp.fr:9352",
+  "apiUrl": "https://localhost:9352",
   "logLevel": "info",
   "keepWindowOpenOnError": true,
   "keepWindowOpenOnSuccess": false,

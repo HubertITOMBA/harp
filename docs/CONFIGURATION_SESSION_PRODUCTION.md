@@ -54,9 +54,9 @@ Assurez-vous que ces variables sont définies dans votre `.env` de production :
 ```env
 # URL de base de l'application (sans slash final)
 # HTTPS est maintenant activé par défaut (certificats installés)
-AUTH_URL=https://portails.orange-harp.fr:9352
+AUTH_URL=https://localhost:9352
 # Si vous utilisez encore HTTP (non recommandé) :
-# AUTH_URL=http://portails.orange-harp.fr:9352
+# AUTH_URL=https://localhost:9352
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true

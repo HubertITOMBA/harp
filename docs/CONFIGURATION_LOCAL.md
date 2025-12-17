@@ -14,10 +14,10 @@ Créez un fichier `.env.local` à la racine du projet (ce fichier sera ignoré p
 # ============================================
 
 # URL de base de l'application en local
-AUTH_URL=http://localhost:9352
+AUTH_URL=https://localhost:9352
 
 # URL publique du serveur (pour Next.js RSC) - OBLIGATOIRE pour le build
-NEXT_PUBLIC_SERVER_URL=http://localhost:9352
+NEXT_PUBLIC_SERVER_URL=https://localhost:9352
 
 # Trust host (requis pour NextAuth)
 AUTH_TRUST_HOST=true
@@ -85,8 +85,8 @@ npm start
 
 | Variable | Local | Production |
 |----------|-------|------------|
-| `AUTH_URL` | `http://localhost:9352` | `http://portails.orange-harp.fr:9352` |
-| `NEXT_PUBLIC_SERVER_URL` | `http://localhost:9352` | `http://portails.orange-harp.fr:9352` |
+| `AUTH_URL` | `https://localhost:9352` | `https://localhost:9352` |
+| `NEXT_PUBLIC_SERVER_URL` | `https://localhost:9352` | `https://localhost:9352` |
 | `NODE_ENV` | `development` | `production` |
 
 ## Fichiers d'environnement
@@ -112,7 +112,7 @@ Next.js charge les fichiers d'environnement dans cet ordre (le dernier écrase l
 2. **Vérifier les requêtes réseau** :
    - Ouvrir l'onglet Network
    - Naviguer dans l'application
-   - Vérifier que les requêtes RSC utilisent `http://localhost:9352` et non `:9352`
+   - Vérifier que les requêtes RSC utilisent `https://localhost:9352` et non `:9352`
 
 3. **Tester la navigation** :
    - Se connecter
@@ -121,12 +121,12 @@ Next.js charge les fichiers d'environnement dans cet ordre (le dernier écrase l
 
 ## Problèmes courants en local
 
-### Les requêtes utilisent `:9352` au lieu de `http://localhost:9352`
+### Les requêtes utilisent `:9352` au lieu de `https://localhost:9352`
 
 **Cause** : `NEXT_PUBLIC_SERVER_URL` n'est pas défini ou le build a été fait sans cette variable.
 
 **Solution** :
-1. Vérifier que `.env.local` contient `NEXT_PUBLIC_SERVER_URL=http://localhost:9352`
+1. Vérifier que `.env.local` contient `NEXT_PUBLIC_SERVER_URL=https://localhost:9352`
 2. Rebuild : `npm run build`
 3. Redémarrer : `npm start`
 

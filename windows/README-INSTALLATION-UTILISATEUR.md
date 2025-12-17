@@ -56,7 +56,7 @@ Le fichier `%LOCALAPPDATA%\HARP\launcher\launcher-config.json` peut être modifi
 ```json
 {
   "version": "1.0",
-  "apiUrl": "https://portails.orange-harp.fr:9352",
+  "apiUrl": "https://localhost:9352",
   "logLevel": "info",
   "keepWindowOpenOnError": true,
   "keepWindowOpenOnSuccess": false,
