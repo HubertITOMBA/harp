@@ -40,102 +40,122 @@ interface EnvInfoProps {
 
 const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
   // Optimisation : Une seule requête avec tous les includes nécessaires
-  const DescEnvs = await prisma.envsharp.findMany({
-    where: {
-      typenvid: typenvid,
-    },
-    include: {
-      statutenv: {
-        select: {
-          id: true,
-          statenv: true,
-          icone: true,
-        },
+  // Ajout de gestion d'erreur pour éviter les crashes du worker
+  let DescEnvs;
+  try {
+    DescEnvs = await prisma.envsharp.findMany({
+      where: {
+        typenvid: typenvid,
       },
-      harpenvinfo: true,
-      harpenvdispo: {
-        orderBy: {
-          fromdate: "desc",
-        },
-        take: 1,
-      },
-      harptypenv: true,
-      releaseenv: true,
-      psoftversion: true,
-      ptoolsversion: true,
-    },
-    orderBy: {
-      env: "asc",
-    },
-  });
-
-  // Récupérer les serveurs pour chaque environnement
-  const envsWithServers = await Promise.all(
-    DescEnvs.map(async (env) => {
-      // Essayer d'abord de récupérer un serveur DB
-      let serverInfo = null;
-      const dbServer = await prisma.harpenvserv.findFirst({
-        where: {
-          envId: env.id,
-          typsrv: "DB",
-        },
-        select: {
-          harpserve: {
-            select: {
-              ip: true,
-              psuser: true,
-              srv: true,
-              pshome: true,
-              os: true,
-              domain: true,
-            },
-          },
-        },
-      });
-      serverInfo = dbServer?.harpserve || null;
-
-      // Si pas de serveur DB, récupérer le premier serveur disponible
-      if (!serverInfo) {
-        const fallbackServer = await prisma.harpenvserv.findFirst({
-          where: {
-            envId: env.id,
-          },
+      include: {
+        statutenv: {
           select: {
-            harpserve: {
-              select: {
-                ip: true,
-                psuser: true,
-                srv: true,
-                pshome: true,
-                os: true,
-                domain: true,
-              },
-            },
+            id: true,
+            statenv: true,
+            icone: true,
           },
-        });
-        serverInfo = fallbackServer?.harpserve || null;
-      }
+        },
+        harpenvinfo: true,
+        harpenvdispo: {
+          orderBy: {
+            fromdate: "desc",
+          },
+          take: 1,
+        },
+        harptypenv: true,
+        releaseenv: true,
+        psoftversion: true,
+        ptoolsversion: true,
+      },
+      orderBy: {
+        env: "asc",
+      },
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des environnements:", error);
+    // Retourner un tableau vide en cas d'erreur pour éviter un crash
+    DescEnvs = [];
+  }
 
-      return {
-        ...env,
-        serverInfo,
-      };
-    })
-  );
-
-  const envCount = await prisma.envsharp.count({
+  // Récupérer les serveurs pour chaque environnement avec gestion d'erreur
+  const envIds = DescEnvs.map(env => env.id);
+  
+  // Récupérer tous les serveurs en une seule requête pour optimiser
+  const allServers = await prisma.harpenvserv.findMany({
     where: {
-      typenvid: typenvid,
+      envId: { in: envIds },
     },
+    select: {
+      envId: true,
+      typsrv: true,
+      harpserve: {
+        select: {
+          ip: true,
+          psuser: true,
+          srv: true,
+          pshome: true,
+          os: true,
+          domain: true,
+        },
+      },
+    },
+    orderBy: [
+      { typsrv: 'asc' }, // Prioriser les serveurs DB
+      { envId: 'asc' },
+    ],
+  }).catch((error) => {
+    console.error("Erreur lors de la récupération des serveurs:", error);
+    return [];
   });
 
-  // Récupérer le nom du menu depuis harpmenus
-  const menu = await prisma.harpmenus.findFirst({
-    where: { display: typenvid },
-    select: { menu: true },
+  // Organiser les serveurs par envId
+  const serversByEnvId = new Map<number, typeof allServers>();
+  allServers.forEach(server => {
+    if (!serversByEnvId.has(server.envId)) {
+      serversByEnvId.set(server.envId, []);
+    }
+    serversByEnvId.get(server.envId)!.push(server);
   });
 
-  const menuName = menu?.menu || `Menu ${typenvid}`;
+  // Associer les serveurs aux environnements
+  const envsWithServers = DescEnvs.map((env) => {
+    const envServers = serversByEnvId.get(env.id) || [];
+    
+    // Prioriser le serveur DB, sinon prendre le premier
+    const dbServer = envServers.find(s => s.typsrv === "DB");
+    const serverInfo = dbServer?.harpserve || envServers[0]?.harpserve || null;
+
+    return {
+      ...env,
+      serverInfo,
+    };
+  });
+
+  // Récupérer le compteur et le menu avec gestion d'erreur
+  let envCount = 0;
+  let menuName = `Menu ${typenvid}`;
+  
+  try {
+    envCount = await prisma.envsharp.count({
+      where: {
+        typenvid: typenvid,
+      },
+    });
+  } catch (error) {
+    console.error("Erreur lors du comptage des environnements:", error);
+    envCount = DescEnvs.length; // Utiliser la longueur du tableau comme fallback
+  }
+
+  try {
+    const menu = await prisma.harpmenus.findFirst({
+      where: { display: typenvid },
+      select: { menu: true },
+    });
+    menuName = menu?.menu || `Menu ${typenvid}`;
+  } catch (error) {
+    console.error("Erreur lors de la récupération du menu:", error);
+    // menuName reste à la valeur par défaut
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-2 sm:p-3 text-[75%]">
