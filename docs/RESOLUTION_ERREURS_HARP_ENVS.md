@@ -29,11 +29,51 @@ Error: Cannot find module '/opt/dynatrace/oneagent/agent/bin/1.325.64.20251114-1
    ```
 
 3. **Solution temporaire : Désactiver Dynatrace pour le processus Next.js :**
+
+   **Option 1 : Utiliser le script de démarrage créé (Recommandé)**
+   
+   Sur Linux/Mac :
    ```bash
-   # Dans le script de démarrage de l'application
+   npm run start:production
+   # ou directement
+   bash scripts/start-production.sh
+   ```
+   
+   Sur Windows (PowerShell) :
+   ```powershell
+   npm run start:production:ps1
+   # ou directement
+   powershell -ExecutionPolicy Bypass -File scripts/start-production.ps1
+   ```
+
+   **Option 2 : Modifier le script npm start dans package.json**
+   
+   Modifier la ligne `"start"` dans `package.json` :
+   ```json
+   "start": "DT_DISABLE_INJECTION=true DT_AGENT_DISABLED=true NODE_OPTIONS=\"\" next start -p 9352"
+   ```
+   
+   Puis démarrer avec :
+   ```bash
+   npm start
+   ```
+
+   **Option 3 : Définir les variables avant de démarrer**
+   
+   Sur Linux/Mac :
+   ```bash
    export DT_DISABLE_INJECTION=true
    export DT_AGENT_DISABLED=true
    unset NODE_OPTIONS
+   npm start
+   ```
+   
+   Sur Windows (PowerShell) :
+   ```powershell
+   $env:DT_DISABLE_INJECTION = "true"
+   $env:DT_AGENT_DISABLED = "true"
+   Remove-Item Env:\NODE_OPTIONS -ErrorAction SilentlyContinue
+   npm start
    ```
 
 4. **Solution permanente : Contacter l'équipe infrastructure**

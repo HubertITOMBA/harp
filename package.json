@@ -8,6 +8,8 @@
     "build:check": "node scripts/check-env.js && npm run build",
     "rebuild:production": "node scripts/rebuild-production.js",
     "start": "next start -p 9352",
+    "start:production": "bash scripts/start-production.sh",
+    "start:production:ps1": "powershell -ExecutionPolicy Bypass -File scripts/start-production.ps1",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "check-env": "node scripts/check-env.js",
