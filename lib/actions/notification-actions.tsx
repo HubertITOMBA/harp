@@ -585,8 +585,13 @@ export async function sendEmail(formData: FormData) {
 
     const validatedData = SendEmailSchema.parse(rawData);
 
-    // Récupérer les emails des destinataires
-    const recipientEmails: Array<{ email: string; name: string }> = [];
+    // Récupérer les emails des destinataires avec leurs informations
+    const recipientEmails: Array<{ 
+      email: string; 
+      name: string; 
+      recipientType: "USER" | "ROLE";
+      recipientId: number;
+    }> = [];
     
     // Récupérer les emails des utilisateurs sélectionnés
     if (validatedData.userIds.length > 0) {
@@ -596,6 +601,7 @@ export async function sendEmail(formData: FormData) {
           email: { not: null },
         },
         select: {
+          id: true,
           email: true,
           name: true,
           netid: true,
@@ -607,6 +613,8 @@ export async function sendEmail(formData: FormData) {
           recipientEmails.push({
             email: user.email,
             name: user.name || user.netid || 'Utilisateur',
+            recipientType: "USER",
+            recipientId: user.id,
           });
         }
       });
@@ -623,9 +631,15 @@ export async function sendEmail(formData: FormData) {
         include: {
           user: {
             select: {
+              id: true,
               email: true,
               name: true,
               netid: true,
+            },
+          },
+          harproles: {
+            select: {
+              id: true,
             },
           },
         },
@@ -638,6 +652,8 @@ export async function sendEmail(formData: FormData) {
             recipientEmails.push({
               email: userRole.user.email,
               name: userRole.user.name || userRole.user.netid || 'Utilisateur',
+              recipientType: "ROLE",
+              recipientId: userRole.harproles.id,
             });
           }
         }
@@ -652,8 +668,36 @@ export async function sendEmail(formData: FormData) {
       };
     }
 
+    const senderId = parseInt(session.user.id, 10);
+
+    // Créer l'enregistrement de l'email envoyé
+    const sentEmail = await db.harpsentemail.create({
+      data: {
+        subject: validatedData.subject,
+        message: validatedData.message,
+        sentBy: senderId,
+        recipients: {
+          create: recipientEmails.map(recipient => ({
+            recipientType: recipient.recipientType,
+            recipientId: recipient.recipientId,
+            email: recipient.email,
+            name: recipient.name,
+            sent: false, // Sera mis à jour après l'envoi
+          })),
+        },
+      },
+      include: {
+        recipients: true,
+      },
+    });
+
     // Envoyer les emails
-    const emailResults: Array<{ email: string; success: boolean }> = [];
+    const emailResults: Array<{ 
+      email: string; 
+      success: boolean; 
+      error?: string;
+      recipientId: number;
+    }> = [];
     
     const emailPromises = recipientEmails.map(async (recipient) => {
       const result = await sendMail({
@@ -671,7 +715,31 @@ export async function sendEmail(formData: FormData) {
         text: `${validatedData.subject}\n\n${validatedData.message}`,
       });
       
-      return { email: recipient.email, success: result.success };
+      // Trouver le recipient correspondant dans la base
+      const dbRecipient = sentEmail.recipients.find(
+        r => r.email === recipient.email && 
+             r.recipientType === recipient.recipientType && 
+             r.recipientId === recipient.recipientId
+      );
+      
+      // Mettre à jour le statut d'envoi
+      if (dbRecipient) {
+        await db.harpsentemailrecipient.update({
+          where: { id: dbRecipient.id },
+          data: {
+            sent: result.success,
+            sentAt: result.success ? new Date() : null,
+            error: result.success ? null : (result.error || "Erreur inconnue"),
+          },
+        });
+      }
+      
+      return { 
+        email: recipient.email, 
+        success: result.success,
+        error: result.error,
+        recipientId: dbRecipient?.id || 0,
+      };
     });
     
     emailResults.push(...await Promise.all(emailPromises));
@@ -684,6 +752,8 @@ export async function sendEmail(formData: FormData) {
       message += `. ${emailsFailed} email${emailsFailed > 1 ? 's n\'ont' : ' n\'a'} pas pu être envoyé${emailsFailed > 1 ? 's' : ''}`;
     }
 
+    revalidatePath("/list/emails");
+
     return { 
       success: emailsSent > 0, 
       message: emailsSent > 0 ? message : "Aucun email n'a pu être envoyé"
@@ -694,5 +764,74 @@ export async function sendEmail(formData: FormData) {
     }
     console.error("Erreur lors de l'envoi de l'email:", error);
     return { success: false, error: "Erreur lors de l'envoi de l'email" };
+  }
+}
+
+/**
+ * Récupère tous les emails envoyés (pour l'administration)
+ * 
+ * @returns Un tableau de tous les emails envoyés avec leurs détails
+ */
+export async function getAllSentEmails() {
+  try {
+    const sentEmails = await db.harpsentemail.findMany({
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            netid: true,
+          },
+        },
+        recipients: {
+          orderBy: {
+            sentAt: 'desc',
+          },
+        },
+      },
+      orderBy: {
+        sentAt: 'desc',
+      },
+    });
+
+    return sentEmails;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de tous les emails envoyés:", error);
+    return [];
+  }
+}
+
+/**
+ * Récupère un email envoyé par son ID
+ * 
+ * @param id - L'ID de l'email à récupérer
+ * @returns L'email trouvé ou null si il n'existe pas
+ */
+export async function getSentEmailById(id: number) {
+  try {
+    const sentEmail = await db.harpsentemail.findUnique({
+      where: { id },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            netid: true,
+          },
+        },
+        recipients: {
+          orderBy: {
+            sentAt: 'desc',
+          },
+        },
+      },
+    });
+
+    return sentEmail;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'email:", error);
+    return null;
   }
 }

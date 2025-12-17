@@ -53,7 +53,7 @@ export async function getUserRoles(userId: number) {
 
   } catch (error) {
     console.error("Erreur lors de la récupération des rôles:", error);
-   // throw new Error("Impossible de récupérer les rôles de l'utilisateur");
+    return ""; // Retourner une chaîne vide en cas d'erreur pour éviter les erreurs 500
   }
 }
 

@@ -32,6 +32,11 @@ export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
       icone: "concierge-bell.png",
     },
     {
+      menu: "Mails",
+      href: "/list/emails",
+      icone: "message.png",
+    },
+    {
       menu: "Chrono-tâche",
       href: "/list/tasks",
       icone: "history.png",

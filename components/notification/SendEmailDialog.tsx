@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Mail, Plus, Users, Shield } from "lucide-react";
+import { Mail, Plus, Users, Shield, CheckSquare, Square } from "lucide-react";
 import { sendEmail, getAllUsersForNotifications, getAllRolesForNotifications } from '@/lib/actions/notification-actions';
 import { toast } from 'react-toastify';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
@@ -46,6 +46,30 @@ export function SendEmailDialog() {
 
     loadOptions();
   }, []);
+
+  // Fonctions pour sélectionner/désélectionner tous les utilisateurs
+  const handleSelectAllUsers = () => {
+    const allUserIds = userOptions.map(option => option.value);
+    setSelectedUserIds(allUserIds);
+  };
+
+  const handleDeselectAllUsers = () => {
+    setSelectedUserIds([]);
+  };
+
+  // Fonctions pour sélectionner/désélectionner tous les rôles
+  const handleSelectAllRoles = () => {
+    const allRoleIds = roleOptions.map(option => option.value);
+    setSelectedRoleIds(allRoleIds);
+  };
+
+  const handleDeselectAllRoles = () => {
+    setSelectedRoleIds([]);
+  };
+
+  // Vérifier si tous les utilisateurs sont sélectionnés
+  const allUsersSelected = userOptions.length > 0 && selectedUserIds.length === userOptions.length;
+  const allRolesSelected = roleOptions.length > 0 && selectedRoleIds.length === roleOptions.length;
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -150,10 +174,44 @@ export function SendEmailDialog() {
 
         {/* Sélection des utilisateurs */}
         <div className="space-y-2">
-          <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Users className="h-4 w-4 text-blue-600" />
-            Utilisateurs
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-600" />
+              Utilisateurs
+              {selectedUserIds.length > 0 && (
+                <span className="text-xs font-normal text-slate-500 ml-1">
+                  ({selectedUserIds.length} sélectionné{selectedUserIds.length > 1 ? 's' : ''})
+                </span>
+              )}
+            </Label>
+            <div className="flex items-center gap-1">
+              {allUsersSelected ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeselectAllUsers}
+                  disabled={isPending || userOptions.length === 0}
+                  className="text-xs"
+                >
+                  <Square className="h-3 w-3 mr-1" />
+                  Désélectionner tous
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllUsers}
+                  disabled={isPending || userOptions.length === 0}
+                  className="text-xs"
+                >
+                  <CheckSquare className="h-3 w-3 mr-1" />
+                  Sélectionner tous
+                </Button>
+              )}
+            </div>
+          </div>
           <MultiSelect
             options={userOptions}
             selected={selectedUserIds}
@@ -167,10 +225,44 @@ export function SendEmailDialog() {
 
         {/* Sélection des rôles */}
         <div className="space-y-2">
-          <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-blue-600" />
-            Rôles
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-blue-600" />
+              Rôles
+              {selectedRoleIds.length > 0 && (
+                <span className="text-xs font-normal text-slate-500 ml-1">
+                  ({selectedRoleIds.length} sélectionné{selectedRoleIds.length > 1 ? 's' : ''})
+                </span>
+              )}
+            </Label>
+            <div className="flex items-center gap-1">
+              {allRolesSelected ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeselectAllRoles}
+                  disabled={isPending || roleOptions.length === 0}
+                  className="text-xs"
+                >
+                  <Square className="h-3 w-3 mr-1" />
+                  Désélectionner tous
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllRoles}
+                  disabled={isPending || roleOptions.length === 0}
+                  className="text-xs"
+                >
+                  <CheckSquare className="h-3 w-3 mr-1" />
+                  Sélectionner tous
+                </Button>
+              )}
+            </div>
+          </div>
           <MultiSelect
             options={roleOptions}
             selected={selectedRoleIds}

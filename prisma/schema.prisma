@@ -236,7 +236,7 @@ model harptypenv {
   typenv   String     @unique @db.VarChar(32)
   href     String?    @db.VarChar(32)
   descr    String?    @db.VarChar(50)
-  typenvid Int        @unique 
+  typenvid Int?       @unique // Temporairement nullable pour la migration
   envsharp envsharp[]
 }
 
@@ -894,6 +894,7 @@ model User {
   session       Session[]
   harpuseroles  harpuseroles[]
   notificationsCreated harpnotification[]
+  emailsSent          harpsentemail[]
   taskItems     harptaskitem[] // Tâches assignées à cet utilisateur
 }
 
@@ -1105,4 +1106,32 @@ model harpnotificationrecipient {
   @@unique([notificationId, recipientType, recipientId])
   @@index([notificationId])
   @@index([recipientType, recipientId])
+}
+
+model harpsentemail {
+  id          Int                      @id @default(autoincrement())
+  subject     String                   @db.VarChar(255)
+  message     String                   @db.Text
+  sentBy      Int
+  sentAt      DateTime                 @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime                 @updatedAt @db.Timestamp(0)
+  sender      User                     @relation(fields: [sentBy], references: [id], onDelete: Cascade)
+  recipients  harpsentemailrecipient[]
+}
+
+model harpsentemailrecipient {
+  id          Int           @id @default(autoincrement())
+  emailId     Int
+  recipientType String      @db.VarChar(10) // "USER" ou "ROLE"
+  recipientId Int           // ID de l'utilisateur ou du rôle
+  email       String        @db.VarChar(255) // Adresse email du destinataire
+  name        String?       @db.VarChar(255) // Nom du destinataire
+  sent        Boolean       @default(false) // Email envoyé avec succès
+  sentAt      DateTime?     @db.Timestamp(0) // Date d'envoi
+  error       String?       @db.Text // Message d'erreur si l'envoi a échoué
+  sentEmail   harpsentemail @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+  @@index([recipientType, recipientId])
+  @@index([email])
 }
