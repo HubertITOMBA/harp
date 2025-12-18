@@ -11,6 +11,7 @@ import { CreateTaskItemDialog } from '@/components/task/CreateTaskItemDialog';
 import { TaskItemsTable } from '@/components/task/TaskItemsTable';
 import { toast } from 'react-toastify';
 import { exportTaskToExcel, exportTaskToPDF } from '@/lib/export-task';
+import { SendTaskEmailDialog } from '@/components/task/SendTaskEmailDialog';
 
 const statusColors = {
   EN_ATTENTE: "bg-gray-500",
@@ -258,18 +259,7 @@ export default function TaskItemsPage() {
                     <FileDown className="h-4 w-4 mr-2" />
                     PDF
                   </Button>
-                  <Button
-                    onClick={() => {
-                      // TODO: Implémenter l'envoi par mail
-                      toast.info("Fonctionnalité d'envoi par mail à venir");
-                    }}
-                    variant="outline"
-                    className="bg-white hover:bg-gray-50"
-                    title="Envoi par mail (à venir)"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Envoyer par mail
-                  </Button>
+                  <SendTaskEmailDialog task={task} />
                   <Button
                     onClick={() => setCreateItemOpen(true)}
                     className="bg-orange-500 hover:bg-orange-600 text-white"

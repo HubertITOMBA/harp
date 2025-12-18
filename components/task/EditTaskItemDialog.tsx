@@ -18,7 +18,6 @@ import { toast } from 'react-toastify';
 interface EditTaskItemDialogProps {
   item: {
     id: number;
-    duration?: number | null;
     startDate?: Date | string | null;
     endDate?: Date | string | null;
     resourceNetid?: string | null;
@@ -175,7 +174,6 @@ export function EditTaskItemDialog({ item, open, onOpenChange }: EditTaskItemDia
       const result = await updateTaskItem({
         id: item.id,
         harpitemId: harpitemId,
-        duration: formData.get("duration") ? parseInt(formData.get("duration") as string) : null,
         startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : null,
         endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : null,
         resourceNetid,
@@ -244,20 +242,6 @@ export function EditTaskItemDialog({ item, open, onOpenChange }: EditTaskItemDia
           <p className="text-xs text-gray-500">
             Sélectionnez un item existant ou tapez pour créer un nouvel item réutilisable automatiquement.
           </p>
-        </div>
-
-        {/* Durée */}
-        <div className="space-y-2">
-          <Label htmlFor="duration" className="text-sm font-semibold text-gray-700">
-            Durée (minutes)
-          </Label>
-          <Input
-            id="duration"
-            name="duration"
-            type="number"
-            defaultValue={item.duration || ""}
-            className="bg-white"
-          />
         </div>
 
         {/* Statut */}

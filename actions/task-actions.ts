@@ -195,7 +195,6 @@ export async function deleteTask(taskId: number) {
 const updateTaskItemSchema = z.object({
   id: z.number(),
   harpitemId: z.number().optional().nullable(), // ID de l'item réutilisable
-  duration: z.number().optional().nullable(),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
   resourceNetid: z.string().optional().nullable(),

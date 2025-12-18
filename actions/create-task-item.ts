@@ -8,7 +8,6 @@ import { updateTaskEffectiveDuration } from "./calculate-task-duration";
 const createTaskItemSchema = z.object({
   taskId: z.number(),
   harpitemId: z.number().optional().nullable(), // ID de l'item réutilisable (requis maintenant)
-  duration: z.number().optional().nullable(),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
   resourceNetid: z.string().optional().nullable(),
@@ -81,7 +80,6 @@ export async function createTaskItem(data: z.infer<typeof createTaskItemSchema>)
       data: {
         taskId: validatedData.taskId,
         harpitemId: harpitemId,
-        duration: validatedData.duration || null,
         startDate: validatedData.startDate || null,
         endDate: validatedData.endDate || null,
         resourceNetid: validatedData.resourceNetid || null,

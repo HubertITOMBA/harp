@@ -140,7 +140,6 @@ export function CreateTaskItemDialog({ taskId, open, onOpenChange }: CreateTaskI
       const result = await createTaskItem({
         taskId: taskId,
         harpitemId: harpitemId,
-        duration: formData.get("duration") ? parseInt(formData.get("duration") as string) : undefined,
         startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : undefined,
         endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : undefined,
         resourceNetid,
@@ -212,20 +211,6 @@ export function CreateTaskItemDialog({ taskId, open, onOpenChange }: CreateTaskI
           <p className="text-xs text-gray-500">
             Sélectionnez un item existant ou tapez pour créer un nouvel item réutilisable automatiquement.
           </p>
-        </div>
-
-        {/* Durée */}
-        <div className="space-y-2">
-          <Label htmlFor="duration" className="text-sm font-semibold text-gray-700">
-            Durée (minutes)
-          </Label>
-          <Input
-            id="duration"
-            name="duration"
-            type="number"
-            className="bg-white"
-            placeholder="Ex: 120"
-          />
         </div>
 
         {/* Statut */}

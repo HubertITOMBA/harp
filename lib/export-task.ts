@@ -91,19 +91,25 @@ export interface Task {
 /**
  * Exporte une chrono-tâche au format Excel
  */
+// Fonction pour calculer trigNetid (3 premiers caractères de resourceNetid en majuscules)
+const getTrigNetid = (resourceNetid: string | null | undefined): string => {
+  if (!resourceNetid) return "";
+  return resourceNetid.substring(0, 3).toUpperCase();
+};
+
 export function exportTaskToExcel(task: Task) {
   try {
     // Préparer les données des items pour Excel
     const itemsData = (task.items || []).map((item) => ({
       "Ordre": item.order,
-      "Titre": item.title,
-      "Durée (min)": item.duration || "N/A",
+      "Tâches": item.harpitem?.descr || item.title || "N/A",
+      "Trig Netid": getTrigNetid(item.resourceNetid) || "N/A",
       "Date début": item.startDate ? formatDateTime(item.startDate) : "N/A",
       "Date fin": item.endDate ? formatDateTime(item.endDate) : "N/A",
       "Temps écoulé": formatElapsedTime(item.startDate, item.endDate),
       "Ressource": item.resourceNetid || "N/A",
       "Statut": statusLabels[item.status] || item.status,
-      "Prédécesseur": item.predecessor?.title || "Aucun",
+      "Prédécesseur": item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
       "Commentaire": item.comment || "",
     }));
 
@@ -112,8 +118,8 @@ export function exportTaskToExcel(task: Task) {
         sheet: "Chrono-tâche",
         columns: [
           { label: "Ordre", value: "Ordre" },
-          { label: "Titre", value: "Titre" },
-          { label: "Durée (min)", value: "Durée (min)" },
+          { label: "Tâches", value: "Tâches" },
+          { label: "Trig Netid", value: "Trig Netid" },
           { label: "Date début", value: "Date début" },
           { label: "Date fin", value: "Date fin" },
           { label: "Temps écoulé", value: "Temps écoulé" },
@@ -227,20 +233,20 @@ export function exportTaskToPDF(task: Task) {
       // Préparer les données pour le tableau
       const tableData = task.items.map((item) => [
         item.order.toString(),
-        item.title,
-        item.duration ? `${item.duration} min` : "N/A",
+        item.harpitem?.descr || item.title || "N/A",
+        getTrigNetid(item.resourceNetid) || "N/A",
         item.startDate ? formatDateTime(item.startDate) : "N/A",
         item.endDate ? formatDateTime(item.endDate) : "N/A",
         formatElapsedTime(item.startDate, item.endDate),
         item.resourceNetid || "N/A",
         statusLabels[item.status] || item.status,
-        item.predecessor?.title || "Aucun",
+        item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
         item.comment || "",
       ]);
       
       autoTable(doc, {
         startY: yPos,
-        head: [["Ordre", "Titre", "Durée", "Début", "Fin", "Écoulé", "Ressource", "Statut", "Prédécesseur", "Commentaire"]],
+        head: [["Ordre", "Tâches", "Trig Netid", "Début", "Fin", "Écoulé", "Ressource", "Statut", "Prédécesseur", "Commentaire"]],
         body: tableData,
         theme: "striped",
         headStyles: {
@@ -253,16 +259,16 @@ export function exportTaskToPDF(task: Task) {
           cellPadding: 2,
         },
         columnStyles: {
-          0: { cellWidth: 15 },
-          1: { cellWidth: 50 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 35 },
-          4: { cellWidth: 35 },
-          5: { cellWidth: 25 },
-          6: { cellWidth: 25 },
-          7: { cellWidth: 25 },
-          8: { cellWidth: 30 },
-          9: { cellWidth: 40 },
+          0: { cellWidth: 15 }, // Ordre
+          1: { cellWidth: 50 }, // Tâches
+          2: { cellWidth: 20 }, // Trig Netid
+          3: { cellWidth: 35 }, // Début
+          4: { cellWidth: 35 }, // Fin
+          5: { cellWidth: 25 }, // Écoulé
+          6: { cellWidth: 25 }, // Ressource
+          7: { cellWidth: 25 }, // Statut
+          8: { cellWidth: 30 }, // Prédécesseur
+          9: { cellWidth: 40 }, // Commentaire
         },
         margin: { left: 14, right: 14 },
       });

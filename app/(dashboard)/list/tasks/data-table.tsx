@@ -37,16 +37,19 @@ DropdownMenuTrigger,
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import React from "react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onVisibleColumnsChange?: (visibleColumns: string[]) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onVisibleColumnsChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -73,6 +76,26 @@ export function DataTable<TData, TValue>({
       rowSelection,
     },
   })
+
+  // Notifier les colonnes visibles quand elles changent
+  useEffect(() => {
+    if (onVisibleColumnsChange) {
+      const allColumns = table.getVisibleLeafColumns();
+      
+      const visibleColumns = allColumns
+        .map(col => {
+          // Utiliser l'ID explicite s'il existe, sinon utiliser l'accessorKey
+          const columnId = col.id || (col.columnDef as any).accessorKey;
+          return columnId;
+        })
+        .filter((id): id is string => {
+          // Filtrer les colonnes système et les valeurs nulles/undefined
+          return !!id && id !== 'select' && id !== 'icone' && id !== 'actions';
+        });
+      
+      onVisibleColumnsChange(visibleColumns);
+    }
+  }, [columnVisibility, onVisibleColumnsChange, table]);
 
   return (
     <div className="space-y-4">

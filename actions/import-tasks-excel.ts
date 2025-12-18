@@ -145,8 +145,7 @@ export async function importTasksFromExcel(fileBuffer: Buffer) {
             Object.keys(row)[2] || "", // Troisième colonne par défaut
           ]) || `Tâche ${i + 1}`;
 
-          const durationStr = getValue(row, ["duree", "durée", "duration", "duree (min)", "durée (min)"]);
-          const duration = durationStr ? parseInt(String(durationStr)) : null;
+          // duration field removed - no longer used
 
           const startDateStr = getValue(row, ["date debut", "date début", "date_debut", "startdate", "start date"]);
           let startDate: Date | null = null;
@@ -187,24 +186,49 @@ export async function importTasksFromExcel(fileBuffer: Buffer) {
 
           const comment = getValue(row, ["commentaire", "comment", "notes", "note"]);
 
-          // Chercher le prédécesseur par titre si spécifié
+          // Chercher ou créer l'item réutilisable (harpitem) à partir du titre
+          let harpitemId: number | null = null;
+          if (itemTitle) {
+            // Chercher d'abord si l'item existe déjà
+            let harpitem = await db.harpitems.findUnique({
+              where: { descr: String(itemTitle) },
+            });
+            
+            // Si l'item n'existe pas, le créer
+            if (!harpitem) {
+              harpitem = await db.harpitems.create({
+                data: { descr: String(itemTitle) },
+              });
+            }
+            
+            harpitemId = harpitem.id;
+          }
+
+          // Chercher le prédécesseur par harpitem si spécifié
           let predecessorId: number | null = null;
           if (predecessorTitle) {
-            const predecessor = await db.harptaskitem.findFirst({
-              where: {
-                taskId: taskId,
-                title: String(predecessorTitle),
-              },
+            // Trouver le harpitem du prédécesseur
+            const predecessorHarpitem = await db.harpitems.findUnique({
+              where: { descr: String(predecessorTitle) },
             });
-            if (predecessor) {
-              predecessorId = predecessor.id;
+            
+            if (predecessorHarpitem) {
+              // Chercher la tâche avec ce harpitem dans la même chrono-tâche
+              const predecessor = await db.harptaskitem.findFirst({
+                where: {
+                  taskId: taskId,
+                  harpitemId: predecessorHarpitem.id,
+                },
+              });
+              if (predecessor) {
+                predecessorId = predecessor.id;
+              }
             }
           }
 
           const itemResult = await createTaskItem({
             taskId: taskId,
-            title: String(itemTitle),
-            duration: duration,
+            harpitemId: harpitemId,
             startDate: startDate,
             endDate: endDate,
             resourceNetid: resourceNetid ? String(resourceNetid) : null,

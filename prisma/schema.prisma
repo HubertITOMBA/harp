@@ -1059,7 +1059,6 @@ model harptaskitem {
   id              Int       @id @default(autoincrement())
   taskId          Int      // ID de la chrono-tâche parente
   harpitemId      Int?     // ID de l'item réutilisable (référence à harpitems)
-  duration        Int?      // Durée en minutes
   startDate       DateTime? @db.DateTime(0) // Date/heure de début
   endDate         DateTime? @db.DateTime(0) // Date/heure de fin
   resourceNetid   String?   @db.VarChar(32) // Trigramme netid de la ressource (user)

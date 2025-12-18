@@ -76,6 +76,7 @@ export const columns: ColumnDef<ListTask>[] = [
     enableHiding: false,
   },
   {
+    id: 'title',
     accessorKey: 'title',
     header: ({ column }) => {
       return (
@@ -94,6 +95,7 @@ export const columns: ColumnDef<ListTask>[] = [
     }
   },
   {
+    id: 'status',
     accessorKey: 'status',
     header: ({ column }) => {
       return (
@@ -117,6 +119,7 @@ export const columns: ColumnDef<ListTask>[] = [
     },
   },
   {
+    id: '_count.items',
     accessorKey: '_count.items',
     header: "Nb tâches",
     cell: ({ row }) => {
@@ -125,6 +128,7 @@ export const columns: ColumnDef<ListTask>[] = [
     },
   },
   {
+    id: 'date',
     accessorKey: 'date',
     header: ({ column }) => {
       return (
@@ -153,6 +157,7 @@ export const columns: ColumnDef<ListTask>[] = [
     },
   },
   {
+    id: 'estimatedDuration',
     accessorKey: 'estimatedDuration',
     header: ({ column }) => {
       return (
@@ -173,6 +178,7 @@ export const columns: ColumnDef<ListTask>[] = [
     },
   },
   {
+    id: 'effectiveDuration',
     accessorKey: 'effectiveDuration',
     header: ({ column }) => {
       return (

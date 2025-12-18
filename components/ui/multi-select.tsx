@@ -26,8 +26,11 @@ export interface MultiSelectOption {
 
 interface MultiSelectProps {
   options: MultiSelectOption[]
-  selected: string[]
-  onChange: (selected: string[]) => void
+  selected?: string[]
+  onChange?: (selected: string[]) => void
+  // Support pour les props alternatives (value/onValueChange)
+  value?: string[]
+  onValueChange?: (selected: string[]) => void
   placeholder?: string
   searchPlaceholder?: string
   emptyMessage?: string
@@ -53,6 +56,8 @@ export function MultiSelect({
   options,
   selected,
   onChange,
+  value,
+  onValueChange,
   placeholder = "Sélectionner...",
   searchPlaceholder = "Rechercher...",
   emptyMessage = "Aucun résultat trouvé.",
@@ -63,20 +68,24 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
 
-  const handleUnselect = (value: string) => {
-    onChange(selected.filter((s) => s !== value))
+  // Utiliser value/onValueChange si fournis, sinon selected/onChange
+  const selectedValues = value || selected || []
+  const handleChange = onValueChange || onChange || (() => {})
+
+  const handleUnselect = (val: string) => {
+    handleChange(selectedValues.filter((s) => s !== val))
   }
 
-  const handleSelect = (value: string) => {
-    if (selected.includes(value)) {
-      handleUnselect(value)
+  const handleSelect = (val: string) => {
+    if (selectedValues.includes(val)) {
+      handleUnselect(val)
     } else {
-      onChange([...selected, value])
+      handleChange([...selectedValues, val])
     }
   }
 
   const selectedOptions = options.filter((option) =>
-    selected.includes(option.value)
+    selectedValues.includes(option.value)
   )
 
   const filteredOptions = options.filter((option) =>
@@ -97,7 +106,7 @@ export function MultiSelect({
           disabled={disabled}
         >
           <div className="flex flex-wrap gap-1 flex-1">
-            {selected.length === 0 && (
+            {selectedValues.length === 0 && (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
             {selectedOptions.slice(0, maxCount).map((option) => (
@@ -133,9 +142,9 @@ export function MultiSelect({
                 </span>
               </Badge>
             ))}
-            {selected.length > maxCount && (
+            {selectedValues.length > maxCount && (
               <Badge variant="secondary" className="mr-1 mb-1">
-                +{selected.length - maxCount} autres
+                +{selectedValues.length - maxCount} autres
               </Badge>
             )}
           </div>
@@ -160,7 +169,7 @@ export function MultiSelect({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selected.includes(option.value)
+                      selectedValues.includes(option.value)
                         ? "opacity-100"
                         : "opacity-0"
                     )}

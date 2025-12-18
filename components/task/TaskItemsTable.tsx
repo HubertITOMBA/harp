@@ -27,7 +27,6 @@ import { toast } from 'react-toastify';
 interface TaskItem {
   id: number;
   harpitemId: number | null;
-  duration: number | null;
   startDate: Date | string | null;
   endDate: Date | string | null;
   resourceNetid: string | null;
@@ -111,9 +110,9 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [visibleColumns, setVisibleColumns] = useState({
     id: true,
-    harpitemId: true,
+    harpitemId: false, // Masqué par défaut
     taches: true, // harpitem.descr
-    resourceNetid: true,
+    resourceNetid: false, // Masqué par défaut
     trigNetid: true,
     predecessorId: true,
     order: true,
@@ -314,7 +313,7 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                 }}
                 onSelect={(e) => e.preventDefault()}
               >
-                Trig Netid
+                Ressource
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={visibleColumns.predecessorId}
@@ -323,7 +322,7 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                 }}
                 onSelect={(e) => e.preventDefault()}
               >
-                Prédécesseur (ID)
+                Tache Avant
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={visibleColumns.order}
@@ -368,7 +367,7 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                 }}
                 onSelect={(e) => e.preventDefault()}
               >
-                Temps écoulé
+                TDurée
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={visibleColumns.actions}
@@ -389,6 +388,7 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
         <Table>
           <TableHeader className="bg-orange-500 text-white">
             <TableRow className="hover:bg-orange-600 h-8">
+              {/* Ordre demandé : ID, Tâches, Prédécesseur, Trig Netid, Ordre, Début, Fin, Temps écoulé, Statut, Actions */}
               {visibleColumns.id && (
                 <TableHead className="text-white py-1 px-2">
                   <Button
@@ -402,31 +402,18 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                   </Button>
                 </TableHead>
               )}
-              {visibleColumns.harpitemId && (
-                <TableHead className="text-white py-1 px-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
-                    onClick={() => handleSort("harpitemId")}
-                  >
-                    ID Item
-                    <ArrowUpDown className="ml-1 h-3 w-3" />
-                  </Button>
-                </TableHead>
-              )}
               {visibleColumns.taches && (
                 <TableHead className="text-white py-1 px-2 text-xs">Tâches</TableHead>
               )}
-              {visibleColumns.resourceNetid && (
+              {visibleColumns.predecessorId && (
                 <TableHead className="text-white py-1 px-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
-                    onClick={() => handleSort("resourceNetid")}
+                    onClick={() => handleSort("predecessorId")}
                   >
-                    Ressource
+                    Tâche Avant
                     <ArrowUpDown className="ml-1 h-3 w-3" />
                   </Button>
                 </TableHead>
@@ -439,20 +426,7 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                     className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
                     onClick={() => handleSort("trigNetid")}
                   >
-                    Trig Netid
-                    <ArrowUpDown className="ml-1 h-3 w-3" />
-                  </Button>
-                </TableHead>
-              )}
-              {visibleColumns.predecessorId && (
-                <TableHead className="text-white py-1 px-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
-                    onClick={() => handleSort("predecessorId")}
-                  >
-                    Prédécesseur
+                    Ressource
                     <ArrowUpDown className="ml-1 h-3 w-3" />
                   </Button>
                 </TableHead>
@@ -496,6 +470,19 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                   </Button>
                 </TableHead>
               )}
+              {visibleColumns.elapsedTime && (
+                <TableHead className="text-white py-1 px-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
+                    onClick={() => handleSort("elapsedTime")}
+                  >
+                    Durée
+                    <ArrowUpDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </TableHead>
+              )}
               {visibleColumns.status && (
                 <TableHead className="text-white py-1 px-2">
                   <Button
@@ -509,21 +496,35 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                   </Button>
                 </TableHead>
               )}
-              {visibleColumns.elapsedTime && (
+              {visibleColumns.actions && (
+                <TableHead className="text-white text-center py-1 px-2 text-xs">Actions</TableHead>
+              )}
+              {/* Colonnes masquées par défaut mais disponibles via le menu Colonnes */}
+              {visibleColumns.harpitemId && (
                 <TableHead className="text-white py-1 px-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
-                    onClick={() => handleSort("elapsedTime")}
+                    onClick={() => handleSort("harpitemId")}
                   >
-                    Temps écoulé
+                    ID Item
                     <ArrowUpDown className="ml-1 h-3 w-3" />
                   </Button>
                 </TableHead>
               )}
-              {visibleColumns.actions && (
-                <TableHead className="text-white text-center py-1 px-2 text-xs">Actions</TableHead>
+              {visibleColumns.resourceNetid && (
+                <TableHead className="text-white py-1 px-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-orange-600 h-auto p-0 text-xs"
+                    onClick={() => handleSort("resourceNetid")}
+                  >
+                    Ressource
+                    <ArrowUpDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -531,21 +532,19 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
             {paginatedItems.length > 0 ? (
               paginatedItems.map((item) => (
                 <TableRow key={item.id} className="hover:bg-gray-50 h-10">
+                  {/* Ordre demandé : ID, Tâches, Prédécesseur, Trig Netid, Ordre, Début, Fin, Temps écoulé, Statut, Actions */}
                   {visibleColumns.id && (
                     <TableCell className="py-1 px-2 text-xs font-medium">{item.id}</TableCell>
-                  )}
-                  {visibleColumns.harpitemId && (
-                    <TableCell className="py-1 px-2 text-xs">{item.harpitemId || "-"}</TableCell>
                   )}
                   {visibleColumns.taches && (
                     <TableCell className="py-1 px-2">
                       <span className="text-xs font-medium">{item.harpitem?.descr || "-"}</span>
                     </TableCell>
                   )}
-                  {visibleColumns.resourceNetid && (
+                  {visibleColumns.predecessorId && (
                     <TableCell className="py-1 px-2">
-                      {item.resourceNetid ? (
-                        <span className="text-xs">{item.resourceNetid}</span>
+                      {item.predecessorId ? (
+                        <span className="text-xs text-gray-600">{item.predecessorId}</span>
                       ) : (
                         <span className="text-gray-400 text-xs">-</span>
                       )}
@@ -555,15 +554,6 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                     <TableCell className="py-1 px-2">
                       {item.resourceNetid ? (
                         <span className="text-xs font-medium">{getTrigNetid(item.resourceNetid)}</span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">-</span>
-                      )}
-                    </TableCell>
-                  )}
-                  {visibleColumns.predecessorId && (
-                    <TableCell className="py-1 px-2">
-                      {item.predecessorId ? (
-                        <span className="text-xs text-gray-600">{item.predecessorId}</span>
                       ) : (
                         <span className="text-gray-400 text-xs">-</span>
                       )}
@@ -606,13 +596,6 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                       )}
                     </TableCell>
                   )}
-                  {visibleColumns.status && (
-                    <TableCell className="py-1 px-2">
-                      <Badge className={`${statusColors[item.status]} text-xs px-1.5 py-0.5`}>
-                        {statusLabels[item.status]}
-                      </Badge>
-                    </TableCell>
-                  )}
                   {visibleColumns.elapsedTime && (
                     <TableCell className="py-1 px-2">
                       {item.startDate && item.endDate ? (
@@ -622,6 +605,13 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                       ) : (
                         <span className="text-gray-400 text-xs">00:00:00</span>
                       )}
+                    </TableCell>
+                  )}
+                  {visibleColumns.status && (
+                    <TableCell className="py-1 px-2">
+                      <Badge className={`${statusColors[item.status]} text-xs px-1.5 py-0.5`}>
+                        {statusLabels[item.status]}
+                      </Badge>
                     </TableCell>
                   )}
                   {visibleColumns.actions && (
@@ -638,7 +628,6 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                         fullItem={{
                           id: item.id,
                           title: item.harpitem?.descr || "",
-                          duration: null,
                           startDate: item.startDate,
                           endDate: item.endDate,
                           resourceNetid: item.resourceNetid,
@@ -651,6 +640,19 @@ export function TaskItemsTable({ items, taskId, onItemUpdated }: TaskItemsTableP
                         }}
                         onItemUpdated={onItemUpdated}
                       />
+                    </TableCell>
+                  )}
+                  {/* Colonnes masquées par défaut mais disponibles via le menu Colonnes */}
+                  {visibleColumns.harpitemId && (
+                    <TableCell className="py-1 px-2 text-xs">{item.harpitemId || "-"}</TableCell>
+                  )}
+                  {visibleColumns.resourceNetid && (
+                    <TableCell className="py-1 px-2">
+                      {item.resourceNetid ? (
+                        <span className="text-xs">{item.resourceNetid}</span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
