@@ -1,10 +1,9 @@
 import React from 'react'
 import { columns } from './columns'
 import { db } from "@/lib/db";
-import { DataTable } from './data-table';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Server } from "lucide-react";
-import { CreateEnvDialog } from '@/components/env/CreateEnvDialog';
+import { EnvListPageClient } from './page-client';
 
 export default async function EnvListPage () {
   const data = await db.envsharp.findMany({
@@ -16,29 +15,68 @@ export default async function EnvListPage () {
     },
   });
 
-  const envCount = data.length;
+  // Récupérer les données harpora pour chaque environnement
+  const envIds = data.map(env => env.id);
+  const harporaData = await db.harpora.findMany({
+    where: {
+      envId: {
+        in: envIds,
+      },
+    },
+    select: {
+      envId: true,
+      orarelease: true,
+      descr: true,
+    },
+    orderBy: {
+      createddt: 'desc', // Prendre le plus récent si plusieurs entrées
+    },
+  });
+
+  // Créer un map pour accéder rapidement aux données harpora par envId
+  // Si plusieurs entrées existent pour un même envId, seule la première (la plus récente) sera conservée
+  const harporaMap = new Map<number, { orarelease: string | null; descr: string | null }>();
+  harporaData.forEach(ora => {
+    if (!harporaMap.has(ora.envId)) {
+      harporaMap.set(ora.envId, { orarelease: ora.orarelease, descr: ora.descr });
+    }
+  });
+
+  // Récupérer les données harpenvserv avec harpserve pour chaque environnement (typsrv = 'DB')
+  const harpenvservData = await db.harpenvserv.findMany({
+    where: {
+      envId: {
+        in: envIds,
+      },
+      typsrv: 'DB',
+    },
+    select: {
+      envId: true,
+      harpserve: {
+        select: {
+          srv: true,
+        },
+      },
+    },
+  });
+
+  // Créer un map pour accéder rapidement au serveur par envId
+  // Si plusieurs entrées existent pour un même envId, seule la première sera conservée
+  const serverMap = new Map<number, string | null>();
+  harpenvservData.forEach(envserv => {
+    if (envserv.envId && !serverMap.has(envserv.envId)) {
+      serverMap.set(envserv.envId, envserv.harpserve?.srv || null);
+    }
+  });
+
+  // Enrichir les données avec les informations harpora et serveur
+  const enrichedData = data.map(env => ({
+    ...env,
+    harpora: harporaMap.get(env.id) || { orarelease: null, descr: null },
+    server: serverMap.get(env.id) || null,
+  }));
+
+  const envCount = enrichedData.length;
   
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="harp-card-header">
-            <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl lg:text-3xl font-bold">
-              <Server className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
-              Tous les environnements
-            </CardTitle>
-            <p className="text-orange-50 text-sm sm:text-base mt-2">
-              {envCount} environnement{envCount > 1 ? "s" : ""} enregistré{envCount > 1 ? "s" : ""}
-            </p>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex justify-end">
-              <CreateEnvDialog />
-            </div>
-            <DataTable columns={columns} data={data} />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+  return <EnvListPageClient data={enrichedData} envCount={envCount} columns={columns} />;
 }

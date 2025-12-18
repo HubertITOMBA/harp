@@ -33,7 +33,7 @@ interface EditEnvDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function EditEnvDialog({ env }: EditEnvDialogProps) {
+export function EditEnvDialog({ env, open, onOpenChange }: EditEnvDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -63,9 +63,13 @@ export function EditEnvDialog({ env }: EditEnvDialogProps) {
     });
   };
 
+  // Si open et onOpenChange sont fournis, on utilise le mode contrôlé (sans trigger)
+  // Sinon, on utilise le mode non contrôlé (avec trigger)
+  const isControlled = open !== undefined && onOpenChange !== undefined;
+
   return (
     <FormDialog
-      trigger={
+      trigger={!isControlled ? (
         <Button
           variant="outline"
           size="sm"
@@ -74,7 +78,7 @@ export function EditEnvDialog({ env }: EditEnvDialogProps) {
         >
           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
-      }
+      ) : undefined}
       title={`Modifier l'environnement ${env.env}`}
       description="Modifiez les informations de l'environnement"
       onSubmit={handleSubmit}
@@ -82,6 +86,8 @@ export function EditEnvDialog({ env }: EditEnvDialogProps) {
       submitIcon={<Pencil className="h-4 w-4" />}
       isPending={isPending}
       maxWidth="2xl"
+      open={open}
+      onOpenChange={onOpenChange}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Nom de l'environnement (lecture seule) */}

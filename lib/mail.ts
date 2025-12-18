@@ -64,6 +64,11 @@ export interface SendMailOptions {
   text?: string;
   cc?: string | string[];
   bcc?: string | string[];
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+  }>;
 }
 
 /**
@@ -110,7 +115,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
       html, 
       text,
       cc,
-      bcc
+      bcc,
+      attachments
     } = options;
 
     // Valider que le contenu est fourni
@@ -145,6 +151,11 @@ export async function sendMail(options: SendMailOptions): Promise<{ success: boo
       text: text || (html ? html.replace(/<[^>]*>/g, '') : undefined),
       cc: ccRecipients,
       bcc: bccRecipients,
+      attachments: attachments?.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType,
+      })),
     };
 
     const sendResult = await transport.sendMail(mailOptions);

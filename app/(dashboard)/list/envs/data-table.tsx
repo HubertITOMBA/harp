@@ -36,34 +36,65 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";  
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { useState } from "react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import React from "react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onVisibleColumnsChange?: (visibleColumns: string[]) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onVisibleColumnsChange,
 }: DataTableProps<TData, TValue>) {
 
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    // Masquer par défaut les colonnes non demandées (aliasql, oraschema, psversion)
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+      aliasql: false,
+      oraschema: false,
+      psversion: false,
+    });
 
     const [rowSelection, setRowSelection] = useState({});
+    const [globalFilter, setGlobalFilter] = useState("");
+
+  // Filtrer les données avec recherche globale (OU logique)
+  const filteredData = useMemo(() => {
+    if (!globalFilter.trim()) return data;
+    
+    const searchValue = globalFilter.toLowerCase();
+    return data.filter((row: any) => {
+      const env = String(row.env || '').toLowerCase();
+      const server = String(row.server || '').toLowerCase();
+      const harprelease = String(row.harprelease || '').toLowerCase();
+      const ptversion = String(row.ptversion || '').toLowerCase();
+      const descr = String(row.harpora?.descr || '').toLowerCase();
+      const orarelease = String(row.harpora?.orarelease || '').toLowerCase();
+      
+      return (
+        env.includes(searchValue) ||
+        server.includes(searchValue) ||
+        harprelease.includes(searchValue) ||
+        ptversion.includes(searchValue) ||
+        descr.includes(searchValue) ||
+        orarelease.includes(searchValue)
+      );
+    });
+  }, [data, globalFilter]);
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-
-
 
       onSortingChange: setSorting,
       onColumnFiltersChange: setColumnFilters,
@@ -78,18 +109,65 @@ export function DataTable<TData, TValue>({
       },
   })
 
+  // Notifier les colonnes visibles quand elles changent
+  React.useEffect(() => {
+    if (onVisibleColumnsChange) {
+      const allColumns = table.getVisibleLeafColumns();
+      
+      // Debug: afficher toutes les colonnes visibles avec leurs IDs et accessorKeys
+      const allColumnsDebug = allColumns.map(col => ({
+        id: col.id,
+        accessorKey: (col.columnDef as any).accessorKey,
+        header: typeof (col.columnDef as any).header === 'function' ? 'function' : (col.columnDef as any).header
+      }));
+      console.log('Toutes les colonnes visibles (détaillé):', JSON.stringify(allColumnsDebug, null, 2));
+      
+      const visibleColumns = allColumns
+        .map(col => {
+          // Utiliser l'ID explicite s'il existe, sinon utiliser l'accessorKey
+          const columnId = col.id || (col.columnDef as any).accessorKey;
+          return columnId;
+        })
+        .filter((id): id is string => {
+          // Filtrer les colonnes système et les valeurs nulles/undefined
+          return !!id && id !== 'select' && id !== 'icone' && id !== 'actions';
+        });
+      
+      // Debug: afficher les colonnes visibles filtrées avec détails
+      console.log('Colonnes visibles filtrées (IDs):', visibleColumns);
+      console.log('Mapping disponible:', Object.keys({
+        'env': true,
+        'harpora.descr': true,
+        'harpora.orarelease': true,
+        'ptversion': true,
+        'harprelease': true,
+        'server': true,
+        'anonym': true,
+        'edi': true,
+        'aliasql': true,
+        'oraschema': true,
+        'psversion': true,
+      }));
+      
+      onVisibleColumnsChange(visibleColumns);
+    }
+  }, [columnVisibility, onVisibleColumnsChange, table]);
+
   return (
     <>
      <div className="flex items-center justify-between text-gray-500 font-semibold">
      <div className="flex items-center py-4 ">
-        <Input
-          placeholder="Filtrer par environnement..."
-          value={(table.getColumn("env")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("env")?.setFilterValue(event.target.value)
-          }
-          className="rounded-lg max-w-sm"
-        />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Rechercher par Base, Description, Serveur, Release, Ptools, Ora Release..."
+            value={globalFilter}
+            onChange={(event) => {
+              setGlobalFilter(event.target.value);
+            }}
+            className="pl-10 rounded-lg max-w-sm h-8 text-xs"
+          />
+        </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -125,10 +203,10 @@ export function DataTable<TData, TValue>({
       <Table className="min-w-full divide-y divide-gray-200">
         <TableHeader className="bg-harpOrange text-white text-center text-xs sm:text-sm font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="h-8 sm:h-9">
+            <TableRow key={headerGroup.id} className="h-7">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1 sm:py-1.5">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center py-0.5">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -147,11 +225,11 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200 h-8 sm:h-9"
+                className="hover:bg-harpSkyLight transition-colors duration-200 h-7"
                 
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-1 sm:py-1.5">
+                  <TableCell key={cell.id} className="py-0.5">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
