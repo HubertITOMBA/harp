@@ -6,6 +6,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Animation pour le message défilant */
+@keyframes scroll {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-scroll-message {
+  animation: scroll 15s linear;
+}
+
+.animate-scroll-message:hover {
+  animation-play-state: paused;
+}
+
 html,
 body,
 :root {

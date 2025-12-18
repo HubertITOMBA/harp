@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLastActiveTaskForUser } from "@/lib/actions/task-home-actions";
+import { getAllActiveMessages } from "@/lib/actions/message-actions";
+import { ScrollingMessage } from "@/components/home/ScrollingMessage";
 
 export const metadata = {
   title: 'Accueil - Portail HARP',
@@ -42,6 +44,9 @@ const HomePage = async () => {
 
   // Récupérer la dernière chrono-tâche active de l'utilisateur
   const lastActiveTask = await getLastActiveTaskForUser();
+
+  // Récupérer tous les messages actifs depuis psadm_info
+  const activeMessages = await getAllActiveMessages();
 
   const features = [
     {
@@ -134,6 +139,11 @@ const HomePage = async () => {
                 <Star className="w-4 h-4 mr-2 text-orange-500" />
                 Bienvenue, {session.user.name || session.user.email}
               </Badge>
+
+              {/* Message défilant */}
+              {activeMessages && activeMessages.length > 0 && (
+                <ScrollingMessage messages={activeMessages.map(m => m.msg || "").filter(msg => msg.trim() !== "")} />
+              )}
 
               {/* Lien vers la dernière chrono-tâche active */}
               {lastActiveTask && (
