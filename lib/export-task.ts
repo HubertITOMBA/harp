@@ -1,4 +1,4 @@
-import xlsx, { IJsonSheet } from "json-as-xlsx";
+import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -97,46 +97,78 @@ const getTrigNetid = (resourceNetid: string | null | undefined): string => {
   return resourceNetid.substring(0, 3).toUpperCase();
 };
 
-export function exportTaskToExcel(task: Task) {
+export async function exportTaskToExcel(task: Task) {
   try {
-    // Préparer les données des items pour Excel
-    const itemsData = (task.items || []).map((item) => ({
-      "Ordre": item.order,
-      "Tâches": item.harpitem?.descr || item.title || "N/A",
-      "Trig Netid": getTrigNetid(item.resourceNetid) || "N/A",
-      "Date début": item.startDate ? formatDateTime(item.startDate) : "N/A",
-      "Date fin": item.endDate ? formatDateTime(item.endDate) : "N/A",
-      "Temps écoulé": formatElapsedTime(item.startDate, item.endDate),
-      "Ressource": item.resourceNetid || "N/A",
-      "Statut": statusLabels[item.status] || item.status,
-      "Prédécesseur": item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
-      "Commentaire": item.comment || "",
-    }));
+    // Créer un nouveau workbook et worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Chrono-tâche");
 
-    const columns: IJsonSheet[] = [
-      {
-        sheet: "Chrono-tâche",
-        columns: [
-          { label: "Ordre", value: "Ordre" },
-          { label: "Tâches", value: "Tâches" },
-          { label: "Trig Netid", value: "Trig Netid" },
-          { label: "Date début", value: "Date début" },
-          { label: "Date fin", value: "Date fin" },
-          { label: "Temps écoulé", value: "Temps écoulé" },
-          { label: "Ressource", value: "Ressource" },
-          { label: "Statut", value: "Statut" },
-          { label: "Prédécesseur", value: "Prédécesseur" },
-          { label: "Commentaire", value: "Commentaire" },
-        ],
-        content: itemsData,
-      },
+    // Définir les en-têtes de colonnes
+    const headers = [
+      "Ordre",
+      "Tâches",
+      "Prédécesseur",
+      "Trig Netid",
+      "Date début",
+      "Date fin",
+      "Temps écoulé",
+      "Statut",
+      "Commentaire",
     ];
 
-    const fileName = `Chrono-tache_${task.id}_${task.title.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.xlsx`;
+    // Ajouter les en-têtes avec style (gras, blanc sur fond bleu marine) - formatage cellule par cellule
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 20;
     
-    xlsx(columns, {
-      fileName: fileName,
+    // Formater chaque cellule d'en-tête individuellement
+    headers.forEach((_, index) => {
+      const cell = headerRow.getCell(index + 1); // Les indices commencent à 1
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF001F3F" }, // Bleu marine / Navy
+      };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
     });
+
+    // Préparer et ajouter les données
+    (task.items || []).forEach((item) => {
+      const row = worksheet.addRow([
+        item.order,
+        item.harpitem?.descr || item.title || "N/A",
+        item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
+        getTrigNetid(item.resourceNetid) || "N/A",
+        item.startDate ? formatDateTime(item.startDate) : "N/A",
+        item.endDate ? formatDateTime(item.endDate) : "N/A",
+        formatElapsedTime(item.startDate, item.endDate),
+        statusLabels[item.status] || item.status,
+        item.comment || "",
+      ]);
+      row.alignment = { vertical: "middle" };
+    });
+
+    // Ajuster la largeur des colonnes automatiquement
+    worksheet.columns.forEach((column) => {
+      if (column.header) {
+        column.width = Math.max(column.header.length + 2, 12);
+      }
+    });
+
+    // Générer le fichier et le télécharger
+    const fileName = `Chrono-tache_${task.id}_${task.title.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    // Créer un blob et télécharger
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Erreur lors de l'export Excel:", error);
     throw new Error("Erreur lors de l'export Excel");
@@ -156,42 +188,42 @@ export function exportTaskToPDF(task: Task) {
     
     // En-tête avec fond orange
     doc.setFillColor(...orangeColor);
-    doc.rect(0, 0, 210, 30, "F");
+    doc.rect(0, 0, 210, 25, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("Chrono-tâche", 14, 20);
+    doc.text("Chrono-tâche", 14, 17);
     
     // Informations de la tâche
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    let yPos = 40;
+    let yPos = 33;
     
     doc.setFont("helvetica", "bold");
     doc.text("Titre:", 14, yPos);
     doc.setFont("helvetica", "normal");
     doc.text(task.title, 50, yPos);
-    yPos += 7;
+    yPos += 5;
     
     doc.setFont("helvetica", "bold");
     doc.text("ID:", 14, yPos);
     doc.setFont("helvetica", "normal");
     doc.text(task.id.toString(), 50, yPos);
-    yPos += 7;
+    yPos += 5;
     
     doc.setFont("helvetica", "bold");
     doc.text("Statut:", 14, yPos);
     doc.setFont("helvetica", "normal");
     doc.text(statusLabels[task.status] || task.status, 50, yPos);
-    yPos += 7;
+    yPos += 5;
     
     if (task.date) {
       doc.setFont("helvetica", "bold");
       doc.text("Date prévue:", 14, yPos);
       doc.setFont("helvetica", "normal");
       doc.text(formatDate(task.date), 50, yPos);
-      yPos += 7;
+      yPos += 5;
     }
     
     if (task.estimatedDuration) {
@@ -199,7 +231,7 @@ export function exportTaskToPDF(task: Task) {
       doc.text("Durée estimée:", 14, yPos);
       doc.setFont("helvetica", "normal");
       doc.text(formatDuration(task.estimatedDuration), 50, yPos);
-      yPos += 7;
+      yPos += 5;
     }
     
     if (task.effectiveDuration !== null && task.effectiveDuration !== undefined) {
@@ -207,70 +239,75 @@ export function exportTaskToPDF(task: Task) {
       doc.text("Durée effective:", 14, yPos);
       doc.setFont("helvetica", "normal");
       doc.text(formatDuration(task.effectiveDuration), 50, yPos);
-      yPos += 7;
+      yPos += 5;
     }
     
     if (task.descr) {
-      yPos += 3;
+      yPos += 2;
       doc.setFont("helvetica", "bold");
       doc.text("Description:", 14, yPos);
-      yPos += 7;
+      yPos += 5;
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
       const descrLines = doc.splitTextToSize(task.descr, 180);
       doc.text(descrLines, 14, yPos);
-      yPos += descrLines.length * 5 + 5;
+      yPos += descrLines.length * 4 + 3;
+      doc.setFontSize(10);
     } else {
-      yPos += 5;
+      yPos += 3;
     }
     
     // Tableau des items
     if (task.items && task.items.length > 0) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.text(`Tâches (${task.items.length})`, 14, yPos);
-      yPos += 10;
+      yPos += 7;
       
       // Préparer les données pour le tableau
       const tableData = task.items.map((item) => [
         item.order.toString(),
         item.harpitem?.descr || item.title || "N/A",
+        item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
         getTrigNetid(item.resourceNetid) || "N/A",
         item.startDate ? formatDateTime(item.startDate) : "N/A",
         item.endDate ? formatDateTime(item.endDate) : "N/A",
         formatElapsedTime(item.startDate, item.endDate),
-        item.resourceNetid || "N/A",
         statusLabels[item.status] || item.status,
-        item.predecessor?.title || item.predecessor?.harpitem?.descr || "Aucun",
         item.comment || "",
       ]);
       
       autoTable(doc, {
         startY: yPos,
-        head: [["Ordre", "Tâches", "Trig Netid", "Début", "Fin", "Écoulé", "Ressource", "Statut", "Prédécesseur", "Commentaire"]],
+        head: [["Ordre", "Tâches", "Prédécesseur", "Trig Netid", "Date début", "Date fin", "Temps écoulé", "Statut", "Commentaire"]],
         body: tableData,
         theme: "striped",
         headStyles: {
           fillColor: orangeColor,
           textColor: [255, 255, 255],
           fontStyle: "bold",
+          fontSize: 7,
+          cellPadding: 1.5,
         },
         styles: {
-          fontSize: 8,
-          cellPadding: 2,
+          fontSize: 6,
+          cellPadding: 1,
+          overflow: "linebreak",
+          cellWidth: "wrap",
         },
         columnStyles: {
-          0: { cellWidth: 15 }, // Ordre
-          1: { cellWidth: 50 }, // Tâches
-          2: { cellWidth: 20 }, // Trig Netid
-          3: { cellWidth: 35 }, // Début
-          4: { cellWidth: 35 }, // Fin
-          5: { cellWidth: 25 }, // Écoulé
-          6: { cellWidth: 25 }, // Ressource
-          7: { cellWidth: 25 }, // Statut
-          8: { cellWidth: 30 }, // Prédécesseur
-          9: { cellWidth: 40 }, // Commentaire
+          0: { cellWidth: 10 }, // Ordre
+          1: { cellWidth: 32 }, // Tâches
+          2: { cellWidth: 22 }, // Prédécesseur
+          3: { cellWidth: 14 }, // Trig Netid
+          4: { cellWidth: 26 }, // Date début
+          5: { cellWidth: 26 }, // Date fin
+          6: { cellWidth: 18 }, // Temps écoulé
+          7: { cellWidth: 18 }, // Statut
+          8: { cellWidth: 28 }, // Commentaire
         },
-        margin: { left: 14, right: 14 },
+        margin: { left: 7, right: 7 },
+        tableWidth: "wrap",
       });
     } else {
       doc.setFont("helvetica", "normal");

@@ -226,9 +226,9 @@ export default function TaskItemsPage() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       try {
-                        exportTaskToExcel(task);
+                        await exportTaskToExcel(task);
                         toast.success("Export Excel réussi");
                       } catch (error) {
                         console.error(error);
