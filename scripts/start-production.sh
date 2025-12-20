@@ -53,7 +53,7 @@ fi
 
 # Démarrer l'application Next.js en mode production
 echo "🚀 Démarrage de l'application HARP en PRODUCTION..."
-echo "   Port: 9052"
+echo "   Port: 9352 (interne - Apache reverse proxy sur 9052)"
 echo "   Mode: Production"
 echo "   Dynatrace: Désactivé"
 echo "   Workers: Désactivés"
@@ -72,5 +72,5 @@ exec env -u NODE_OPTIONS \
   NEXT_PRIVATE_WORKER=0 \
   NEXT_PRIVATE_STANDALONE=true \
   NEXT_TURBOPACK=0 \
-  npx next start -p 9052
+  npx next start -p 9352
 
