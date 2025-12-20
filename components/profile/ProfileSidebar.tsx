@@ -2,10 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, Shield, Bell, LogOut, Home } from 'lucide-react';
+import { User, Shield, Bell, Home, CheckSquare, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { logOut } from '@/actions/logout';
 
 interface ProfileSidebarProps {}
 
@@ -15,11 +14,6 @@ interface ProfileSidebarProps {}
 export function ProfileSidebar({}: ProfileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-
-  const handleLogout = async () => {
-    await logOut();
-    router.push('/auth/signin');
-  };
 
   const menuItems = [
     {
@@ -33,6 +27,12 @@ export function ProfileSidebar({}: ProfileSidebarProps) {
       label: 'Mes rôles',
       icon: Shield,
       href: '/user/profile/roles',
+    },
+    {
+      id: 'tasks',
+      label: 'Mes tâches',
+      icon: CheckSquare,
+      href: '/user/profile/tasks',
     },
     {
       id: 'notifications',
@@ -87,20 +87,19 @@ export function ProfileSidebar({}: ProfileSidebarProps) {
       {/* Séparateur */}
       <div className="border-t border-gray-200 my-4" />
 
-      {/* Bouton Déconnexion */}
-      <form action={handleLogout}>
+      {/* Bouton Retour à l'accueil */}
+      <Link href="/home">
         <Button
-          type="submit"
           variant="ghost"
           className={cn(
             "w-full justify-start xl:justify-start gap-3 h-10 text-sm font-medium transition-colors",
-            "hover:bg-red-50 hover:text-red-700"
+            "hover:bg-orange-50 hover:text-orange-700"
           )}
         >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
-          <span className="hidden xl:inline">Déconnexion</span>
+          <ArrowLeft className="h-4 w-4 flex-shrink-0" />
+          <span className="hidden xl:inline">Retour à l'accueil</span>
         </Button>
-      </form>
+      </Link>
     </nav>
   );
 }

@@ -2,7 +2,7 @@ Pour qu’une application **Next.js** servie par **Apache** sur Linux passe en *
 
 1. **Installer un certificat SSL valide** (Let’s Encrypt, autorité reconnue)
 2. **Configurer Apache** pour servir le site en HTTPS
-3. (Si besoin) **configurer un reverse proxy** vers l’app Next.js
+3. (Si besoin) **configurer un reverse proxy** vers l’app Next.98
 
 Voici les étapes complètes et fiables :
 

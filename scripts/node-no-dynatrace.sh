@@ -1,20 +1,9 @@
 #!/bin/bash
+# Wrapper Node.js qui ignore complètement NODE_OPTIONS injecté par Dynatrace
+# Utilise ce wrapper pour démarrer Node.js sans les options Dynatrace
 
-# Wrapper pour node qui ignore complètement NODE_OPTIONS
-# Utilise node directement sans passer par NODE_OPTIONS
-
-# Supprimer toutes les variables Dynatrace
+# Supprimer complètement NODE_OPTIONS de l'environnement
 unset NODE_OPTIONS
-unset DT_DISABLE_INJECTION
-unset DT_NODE_AGENT
-unset DT_AGENT_NAME
-unset DT_AGENT_PATH
 
-# Récupérer le chemin de node
-NODE_BIN=$(which node)
-
-# Exécuter node avec les arguments passés, mais en ignorant NODE_OPTIONS
-# Utiliser env -i pour créer un environnement complètement vierge
-exec env -i PATH="$PATH" HOME="$HOME" USER="${USER:-$(whoami)}" PWD="$PWD" \
-    "$NODE_BIN" "$@"
-
+# Exécuter Node.js avec les arguments passés, mais sans NODE_OPTIONS
+exec env -u NODE_OPTIONS "$(which node)" "$@"

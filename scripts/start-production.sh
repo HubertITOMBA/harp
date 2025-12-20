@@ -12,8 +12,20 @@ export DT_AGENT_DISABLED=true
 export DT_ONEAGENT_DISABLED=true
 
 # Supprimer NODE_OPTIONS si défini (pour éviter les erreurs Dynatrace)
-unset NODE_OPTIONS
-export NODE_OPTIONS=""
+# Nettoyer NODE_OPTIONS même s'il contient des références à Dynatrace
+if [ -n "${NODE_OPTIONS:-}" ]; then
+  # Supprimer toutes les références à Dynatrace dans NODE_OPTIONS
+  NODE_OPTIONS_CLEANED=$(echo "$NODE_OPTIONS" | sed 's|--require[[:space:]]*/opt/dynatrace[^[:space:]]*||g' | sed 's|-r[[:space:]]*/opt/dynatrace[^[:space:]]*||g' | sed 's|/opt/dynatrace[^[:space:]]*||g' | xargs)
+  if [ -n "$NODE_OPTIONS_CLEANED" ]; then
+    export NODE_OPTIONS="$NODE_OPTIONS_CLEANED"
+  else
+    unset NODE_OPTIONS
+    export NODE_OPTIONS=""
+  fi
+else
+  unset NODE_OPTIONS
+  export NODE_OPTIONS=""
+fi
 
 # Désactiver les workers Next.js pour éviter l'héritage de NODE_OPTIONS
 export NEXT_PRIVATE_WORKER=0
@@ -49,7 +61,10 @@ echo "   NODE_OPTIONS: ${NODE_OPTIONS:-vide}"
 echo "   NODE_ENV: ${NODE_ENV}"
 
 # Utiliser next start directement avec les variables d'environnement
-exec env NODE_ENV=production \
+# Forcer NODE_OPTIONS à être vide même si Dynatrace l'a injecté
+# Utiliser env -u pour supprimer NODE_OPTIONS de l'environnement hérité
+exec env -u NODE_OPTIONS \
+  NODE_ENV=production \
   DT_DISABLE_INJECTION=true \
   DT_AGENT_DISABLED=true \
   DT_ONEAGENT_DISABLED=true \
