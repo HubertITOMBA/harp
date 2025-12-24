@@ -19,11 +19,13 @@ import {
     FormMessage
 } from "@/components/ui/form"
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { login } from "@/actions/login";
 
 
 export const LoginForm = () => {
 
+    const router = useRouter();
     const [error, setError] = useState<string | undefined>("");
     const [success, setSuccess] = useState<string | undefined>("");
     const [isPending, startTransition] = useTransition();
@@ -41,23 +43,28 @@ export const LoginForm = () => {
         setError("");
         setSuccess("");
         
-        startTransition(() => {
-           login(values)
-           .then ((data) => {
+        startTransition(async () => {
+           try {
+            const data = await login(values);
+            
             if (data?.error) {
                form.reset(); 
                setError(data.error);
             }
 
-            if (data?.success) {
+            if (data?.success && data?.redirectTo) {
                 form.reset();   
-             setSuccess(data.success);
+                setSuccess("Connexion réussie !");
+                // Rediriger après un court délai pour permettre l'affichage du message
+                setTimeout(() => {
+                    router.push(data.redirectTo);
+                    router.refresh();
+                }, 500);
             } 
-        }) 
-         .catch((error) => {
+        } catch (error) {
             console.error("Erreur lors de la connexion:", error);
             setError("Une erreur est survenue lors de la connexion. Veuillez réessayer.");
-        })  
+        }  
         }); 
     }
 

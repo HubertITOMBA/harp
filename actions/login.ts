@@ -37,11 +37,41 @@ export const login = async (values: z.infer<typeof LoginSchema>,
    //  return { success: "Connexion effectuée avec succès !"}
 
    try {
-        await signIn("credentials", {
-            netid,
-            password, 
-            redirectTo : DEFAULT_LOGIN_REDIRECT,
-        })
+        // Utiliser redirect: false pour éviter les problèmes avec les Server Actions dans Next.js 15
+        // Note: signIn peut toujours lancer une erreur de redirection même avec redirect: false
+        try {
+            const result = await signIn("credentials", {
+                netid,
+                password, 
+                redirect: false,
+            })
+
+            // Si signIn retourne une erreur, la gérer
+            if (result && typeof result === 'object' && 'error' in result) {
+                return { error: "Informations d'identification invalides !" }
+            }
+
+            // Si la connexion réussit, retourner un succès avec l'URL de redirection
+            return { 
+                success: true, 
+                redirectTo: DEFAULT_LOGIN_REDIRECT 
+            }
+        } catch (signInError: any) {
+            // Gérer spécifiquement les erreurs de redirection de Next.js
+            // Next.js peut lancer une erreur de redirection même avec redirect: false
+            if (signInError?.digest?.startsWith('NEXT_REDIRECT') || 
+                signInError?.message?.includes('NEXT_REDIRECT') ||
+                signInError?.name === 'RedirectError') {
+                // Si c'est une erreur de redirection, la connexion a probablement réussi
+                // Retourner un succès avec l'URL de redirection
+                return { 
+                    success: true, 
+                    redirectTo: DEFAULT_LOGIN_REDIRECT 
+                }
+            }
+            // Relancer l'erreur pour qu'elle soit gérée par le catch externe
+            throw signInError;
+        }
 
   //  console.log("DANS login.ts ==>", password, netid, DEFAULT_LOGIN_REDIRECT);
 

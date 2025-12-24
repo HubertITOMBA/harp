@@ -43,11 +43,25 @@ export default async function HarpLayout ( {
    
    // Récupérer tous les rôles fusionnés de l'utilisateur
    // Fusionne : User.role (rôle principal) + harproles via harpuseroles
-   const allUserRolesArray = await getAllUserRoles();
+   let allUserRolesArray: string[] = [];
+   try {
+     allUserRolesArray = await getAllUserRoles();
+   } catch (error) {
+     console.error("Erreur lors de la récupération des rôles dans le layout:", error);
+     // Continuer avec un tableau vide pour éviter les erreurs 500
+     allUserRolesArray = [];
+   }
    
    // Formater pour compatibilité avec le système Menu existant
    // Format attendu: "ROLE1", "ROLE2", "ROLE3"
-   const roles = formatRolesForMenu(allUserRolesArray);
+   let roles = "";
+   try {
+     roles = formatRolesForMenu(allUserRolesArray);
+   } catch (error) {
+     console.error("Erreur lors du formatage des rôles dans le layout:", error);
+     // Continuer avec une chaîne vide pour éviter les erreurs 500
+     roles = "";
+   }
    
    //  console.log(`[Layout Protected] Rôles fusionnés (${allUserRolesArray.length}):`, allUserRolesArray);
    // console.log(`[Layout Protected] Rôles formatés pour Menu:`, roles);

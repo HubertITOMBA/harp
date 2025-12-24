@@ -1,9 +1,14 @@
-import NextAuth, { DefaultSession } from "next-auth";
+import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { db } from "@/lib/db";
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { getUserById } from "./data/user";
 import { getUserRoles } from "./actions/menurigth";
+
+// Interface pour étendre le type User avec customField
+interface ExtendedUser {
+  customField?: string;
+}
 
 
 
@@ -40,14 +45,14 @@ export const {
           // Utiliser les rôles du token au lieu de refaire une requête à chaque fois
           // Cela améliore considérablement les performances
           if (token.customField && session.user) {
-              session.user.customField = token.customField as string;
+              (session.user as ExtendedUser).customField = typeof token.customField === 'string' ? token.customField : String(token.customField);
           } else if (token.role && session.user) {
               // Fallback : utiliser token.role si customField n'est pas disponible
-              session.user.customField = token.role as string;
+              (session.user as ExtendedUser).customField = typeof token.role === 'string' ? token.role : String(token.role);
           }
 
           if (token.role && session.user) {
-              session.user.role = token.role;
+              session.user.role = typeof token.role === 'string' ? token.role : String(token.role);
           }
 
           if (token.netid && session.user) {
@@ -66,7 +71,7 @@ export const {
         }
        }, 
        
-       async jwt({ token, user, profile, trigger } ) {
+       async jwt({ token, user, trigger } ) {
            // console.log("LE TOKEN USER PROFILE DANS auth.ts ==> ",{token, user, profile});
             
             try {
@@ -77,18 +82,37 @@ export const {
                 
                 // Récupérer les rôles lors de la première connexion
                 try {
+                  if (!user.id) {
+                    console.error("user.id est undefined dans JWT callback");
+                    token.role = "";
+                    token.customField = "";
+                    return token;
+                  }
                   const existingUser = await getUserById(user.id);
                   if (existingUser) {
-                    const userRoles = await getUserRoles(parseInt(user.id));
-                    // S'assurer que userRoles n'est pas undefined
-                    token.role = userRoles || "";
-                    token.customField = userRoles || "";
-                    token.netid = existingUser.netid || null;
-                    token.pkeyfile = existingUser.pkeyfile || null;
+                    // Vérifier que user.id est un nombre valide avant de parser
+                    const userId = parseInt(user.id, 10);
+                    if (!isNaN(userId) && userId > 0) {
+                      const userRoles = await getUserRoles(userId);
+                      // S'assurer que userRoles n'est pas undefined et est une string
+                      const rolesString = typeof userRoles === 'string' ? userRoles : (userRoles || "");
+                      token.role = rolesString;
+                      token.customField = rolesString;
+                      token.netid = existingUser.netid || null;
+                      token.pkeyfile = existingUser.pkeyfile || null;
+                    } else {
+                      console.error("ID utilisateur invalide dans JWT callback:", user.id);
+                      token.role = "";
+                      token.customField = "";
+                    }
+                  } else {
+                    // Utilisateur non trouvé, initialiser avec des valeurs par défaut
+                    token.role = "";
+                    token.customField = "";
                   }
                 } catch (error) {
                   console.error("Erreur lors de la récupération des rôles utilisateur:", error);
-                  // Continuer avec des valeurs par défaut
+                  // Continuer avec des valeurs par défaut pour éviter les erreurs 500
                   token.role = "";
                   token.customField = "";
                 }
@@ -106,18 +130,31 @@ export const {
                 try {
                   const existingUser = await getUserById(token.sub);
 
-                  if (!existingUser) return token;
+                  if (!existingUser) {
+                    // Utilisateur non trouvé, conserver les valeurs existantes
+                    return token;
+                  }
      
-                  const userRoles = await getUserRoles(parseInt(token.sub));
-                  // console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
-                  // S'assurer que userRoles n'est pas undefined
-                  token.role = userRoles || "";
-                  token.customField = userRoles || ""; // Stocker aussi dans customField pour le session callback
-                  token.netid = existingUser.netid || null;
-                  token.pkeyfile = existingUser.pkeyfile || null;
+                  // Vérifier que token.sub est un nombre valide avant de parser
+                  if (token.sub) {
+                    const userId = parseInt(token.sub, 10);
+                    if (!isNaN(userId) && userId > 0) {
+                      const userRoles = await getUserRoles(userId);
+                      // console.log("LE TOKEN ROLES JWT  DANS auth.ts ==> ",{userRoles});
+                      // S'assurer que userRoles n'est pas undefined et est une string
+                      const rolesString = typeof userRoles === 'string' ? userRoles : (userRoles || "");
+                      token.role = rolesString;
+                      token.customField = rolesString; // Stocker aussi dans customField pour le session callback
+                      token.netid = existingUser.netid || null;
+                      token.pkeyfile = existingUser.pkeyfile || null;
+                    } else {
+                      console.error("ID utilisateur invalide dans JWT callback (refresh):", token.sub);
+                      // Conserver les valeurs existantes du token
+                    }
+                  }
                 } catch (error) {
                   console.error("Erreur lors du rafraîchissement des rôles:", error);
-                  // Conserver les valeurs existantes du token en cas d'erreur
+                  // Conserver les valeurs existantes du token en cas d'erreur pour éviter les erreurs 500
                 }
               }
 

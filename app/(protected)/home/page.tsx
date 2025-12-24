@@ -43,10 +43,22 @@ const HomePage = async () => {
   }
 
   // Récupérer la dernière chrono-tâche active de l'utilisateur
-  const lastActiveTask = await getLastActiveTaskForUser();
+  let lastActiveTask = null;
+  try {
+    lastActiveTask = await getLastActiveTaskForUser();
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la dernière chrono-tâche:", error);
+    // Continuer sans la tâche pour éviter les erreurs 500
+  }
 
   // Récupérer tous les messages actifs depuis psadm_info
-  const activeMessages = await getAllActiveMessages();
+  let activeMessages: any[] = [];
+  try {
+    activeMessages = await getAllActiveMessages();
+  } catch (error) {
+    console.error("Erreur lors de la récupération des messages actifs:", error);
+    // Continuer sans les messages pour éviter les erreurs 500
+  }
 
   const features = [
     {
