@@ -77,14 +77,16 @@ const nextConfig: NextConfig = {
   /* config options here */
 
   // Configuration pour la production
-  // Les variables NEXT_PUBLIC_* doivent être définies au moment du build
-  env: {
-    // Utiliser NEXT_PUBLIC_SERVER_URL si défini, sinon AUTH_URL, sinon localhost:9352 par défaut
-    // Utilisation de localhost:9352 partout (dev et production)
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL 
-      || process.env.AUTH_URL 
-      || 'https://localhost:9352',
-  },
+  // ⚠️ IMPORTANT : Les variables NEXT_PUBLIC_* doivent être définies dans .env ou .env.production AVANT le build
+  // Ne pas définir de valeur par défaut ici pour éviter les URLs incorrectes en production
+  // Si NEXT_PUBLIC_SERVER_URL n'est pas défini, Next.js utilisera des URLs relatives (recommandé pour les RSC)
+  // 
+  // Pour la production avec reverse proxy Apache :
+  // NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9052
+  // AUTH_URL=https://portails.orange-harp.fr:9052
+  //
+  // Note: La section env est supprimée pour éviter les valeurs par défaut problématiques
+  // Les variables d'environnement seront utilisées directement par Next.js
 
   // ACTIVER AVANT LE BUILD
   //  XXX output: "export",
