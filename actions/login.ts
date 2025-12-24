@@ -46,14 +46,25 @@ export const login = async (values: z.infer<typeof LoginSchema>,
   //  console.log("DANS login.ts ==>", password, netid, DEFAULT_LOGIN_REDIRECT);
 
     } catch (error) {
+        // Logger l'erreur pour le débogage en production
+        console.error("Erreur lors de la connexion:", error);
+        
         if (error instanceof AuthError) {
             switch (error.type) {
             case "CredentialsSignin":
-                return { error: "Informations d'identification invalides voir login.ts !" }
+                return { error: "Informations d'identification invalides !" }
             default:
-                return { error: "Quelque chose s'est mal passée !" }
+                return { error: "Quelque chose s'est mal passée !" }
             }
         }
-    throw error;
-}
+        
+        // Gérer toutes les autres erreurs (erreurs de base de données, erreurs réseau, etc.)
+        // Ne jamais relancer l'erreur pour éviter les erreurs 500
+        if (error instanceof Error) {
+            console.error("Erreur détaillée:", error.message, error.stack);
+            return { error: "Une erreur est survenue lors de la connexion. Veuillez réessayer." }
+        }
+        
+        return { error: "Quelque chose s'est mal passée !" }
+    }
 };

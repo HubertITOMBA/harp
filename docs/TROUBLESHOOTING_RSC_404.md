@@ -5,7 +5,7 @@
 En production, vous voyez des erreurs comme :
 ```
 :9352/harp/envs?_rsc=1s9fk:1   Failed to load resource: the server responded with a status of 404 (Not Found)
-:9352/list/statenv?_rsc=17hqa:1   Failed to load resource: the server responded with a status of 404 (Not Found)
+:9352/list/tpstatus?_rsc=17hqa:1   Failed to load resource: the server responded with a status of 404 (Not Found)
 :9352/profile?_rsc=17hqa:1   Failed to load resource: the server responded with a status of 404 (Not Found)
 ```
 

@@ -75,7 +75,17 @@ export const columns: ColumnDef<MenuHarp>[] = [
   },
   {
     accessorKey: 'icone',
-    header: 'Icône',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Icône
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    },
     cell: ({ row }) => (
       row.original.icone && row.original.icone !== "" ? (
         <Image 
@@ -98,23 +108,73 @@ export const columns: ColumnDef<MenuHarp>[] = [
   },
   {
     accessorKey: 'href',
-    header: 'URL'
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          URL
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    }
   },
   {
     accessorKey: 'role',
-    header: 'Rôle'
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Rôle
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    }
   },
   {
     accessorKey: 'display',
-    header: 'Ordre'
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Ordre
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    }
   },
   {
     accessorKey: 'level',
-    header: 'Niveau'
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Niveau
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    }
   },
   {
     accessorKey: 'active',
-    header: 'Statut',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant='ghost'
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Statut
+          <ArrowUpDown className='ml-2 h-4 w-4' />
+        </Button>
+      )
+    },
     cell: ({ row }) => (
       <span className={row.original.active === 1 ? "text-green-600" : "text-red-600"}>
         {row.original.active === 1 ? "Actif" : "Inactif"}

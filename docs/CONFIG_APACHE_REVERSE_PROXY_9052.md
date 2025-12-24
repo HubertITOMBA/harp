@@ -121,6 +121,26 @@ sudo systemctl restart apache2
 
 ### 1. Vérifier que Next.js écoute sur le port 9352
 
+Lorsque vous démarrez Next.js avec `npm run start`, vous verrez un message comme :
+
+```
+▲ Next.js 15.5.9
+- Local:        http://localhost:9352
+- Network:      http://10.173.8.125:9352
+
+✓ Starting...
+✓ Ready in 1219ms
+```
+
+**⚠️ Ce message est normal et informatif** - Il indique simplement où Next.js écoute en interne. Cela ne signifie **PAS** que les utilisateurs doivent accéder directement à ce port.
+
+- **Local** : Accès depuis la machine locale uniquement
+- **Network** : Adresse IP de la machine sur le réseau local (pour information)
+
+**Important** : Les utilisateurs doivent accéder à l'application via Apache sur le port **9052**, pas directement sur le port 9352.
+
+Pour vérifier que Next.js écoute bien :
+
 ```bash
 netstat -tlnp | grep 9352
 # ou
@@ -131,6 +151,8 @@ Vous devriez voir :
 ```
 tcp  0  0  127.0.0.1:9352  0.0.0.0:*  LISTEN  <pid>/node
 ```
+
+Cela confirme que Next.js écoute uniquement sur localhost (127.0.0.1), ce qui est correct pour un reverse proxy.
 
 ### 2. Vérifier qu'Apache écoute sur le port 9052
 
@@ -147,24 +169,116 @@ tcp  0  0  0.0.0.0:9052  0.0.0.0:*  LISTEN  <pid>/apache2
 
 ### 3. Tester l'accès
 
-- **Accès direct à Next.js** : `http://localhost:9352` (devrait fonctionner)
-- **Accès via Apache** : `http://localhost:9052` (devrait rediriger vers Next.js)
+- **Accès direct à Next.js** : `http://localhost:9352` (devrait fonctionner, accès interne uniquement)
+- **Accès via Apache** : `http://10.173.8.125:9052` ou `http://localhost:9052` (devrait rediriger vers Next.js)
+
+### 4. Vérifier la configuration des variables d'environnement
+
+Vérifiez que votre fichier `.env.production` contient bien le port 9052 :
+
+```bash
+# Vérifier les variables d'environnement
+grep -E "AUTH_URL|NEXT_PUBLIC_SERVER_URL" .env.production
+```
+
+Vous devriez voir :
+```env
+AUTH_URL=http://10.173.8.125:9052
+NEXT_PUBLIC_SERVER_URL=http://10.173.8.125:9052
+```
+
+**⚠️ Si vous voyez le port 9352 dans ces variables, c'est incorrect !** Les variables d'environnement doivent utiliser le port 9052.
+
+### 5. Checklist de configuration
+
+Avant de déployer, vérifiez que :
+
+- [ ] Next.js démarre sur le port 9352 (vérifier avec `netstat -tlnp | grep 9352`)
+- [ ] Apache écoute sur le port 9052 (vérifier avec `netstat -tlnp | grep 9052`)
+- [ ] Les scripts dans `package.json` utilisent le port 9352
+- [ ] Les scripts `start-production.sh` et `start-production.ps1` utilisent le port 9352
+- [ ] Le fichier `.env.production` contient `AUTH_URL` avec le port 9052
+- [ ] Le fichier `.env.production` contient `NEXT_PUBLIC_SERVER_URL` avec le port 9052
+- [ ] Les deux variables d'environnement utilisent la même URL (même IP/domaine, même port)
+- [ ] `AUTH_TRUST_HOST=true` est défini dans `.env.production`
 
 ## Variables d'environnement Next.js
 
-Assurez-vous que votre fichier `.env` contient :
+### ⚠️ IMPORTANT : Distinction entre port interne et port externe
+
+Il y a une distinction cruciale à comprendre :
+
+- **Port 9352 (interne)** : Utilisé par les scripts et la configuration Next.js pour démarrer l'application
+- **Port 9052 (externe)** : Utilisé dans les variables d'environnement car c'est l'URL accessible par les utilisateurs
+
+### Configuration dans les fichiers de code (port 9352)
+
+Les fichiers suivants doivent **rester sur le port 9352** (port interne) :
+
+- `package.json` : `"dev": "next dev --turbopack -p 9352"` et `"start": "next start -p 9352"`
+- `scripts/start-production.sh` : `npx next start -p 9352`
+- `scripts/start-production.ps1` : `npx next start -p 9352`
+- `next.config.ts` : Valeur par défaut `'https://localhost:9352'` (sera surchargée par les variables d'environnement)
+
+**Ces fichiers ne doivent PAS être modifiés** - ils définissent où Next.js écoute en interne.
+
+### Configuration dans `.env.production` (port 9052)
+
+Le fichier `.env.production` doit utiliser le **port 9052** (port externe accessible par les utilisateurs) :
 
 ```env
-# URL interne (Next.js écoute sur 9352)
-AUTH_URL=https://localhost:9352
-NEXT_PUBLIC_SERVER_URL=https://localhost:9352
+# ⚠️ IMPORTANT : Utiliser le port 9052 (externe) et non le port 9352 (interne)
+# Ces URLs doivent correspondre à l'URL accessible par les utilisateurs via Apache
 
-# Si vous utilisez un domaine externe via Apache
+# Si vous utilisez une IP avec le port 9052
+AUTH_URL=http://10.173.8.125:9052
+NEXT_PUBLIC_SERVER_URL=http://10.173.8.125:9052
+
+# OU si vous utilisez un nom de domaine avec le port 9052
+# AUTH_URL=http://votre-domaine.com:9052
+# NEXT_PUBLIC_SERVER_URL=http://votre-domaine.com:9052
+
+# OU si vous utilisez HTTPS avec un nom de domaine
 # AUTH_URL=https://votre-domaine.com:9052
 # NEXT_PUBLIC_SERVER_URL=https://votre-domaine.com:9052
 
 AUTH_TRUST_HOST=true
 ```
+
+### Pourquoi cette distinction ?
+
+1. **Next.js écoute en interne sur le port 9352** : Les scripts de démarrage lancent Next.js sur ce port
+2. **Les utilisateurs accèdent via Apache sur le port 9052** : Apache fait le reverse proxy vers Next.js
+3. **Les variables d'environnement doivent pointer vers l'URL utilisateur** : `AUTH_URL` et `NEXT_PUBLIC_SERVER_URL` sont utilisées pour générer les URLs dans le navigateur et les callbacks d'authentification
+
+### Exemple de configuration complète
+
+**Fichier `.env.production`** :
+```env
+# URL accessible par les utilisateurs (via Apache sur le port 9052)
+AUTH_URL=http://10.173.8.125:9052
+NEXT_PUBLIC_SERVER_URL=http://10.173.8.125:9052
+AUTH_TRUST_HOST=true
+```
+
+**Résultat** :
+- Next.js démarre sur `localhost:9352` (interne, via les scripts)
+- Apache écoute sur `0.0.0.0:9052` (externe)
+- Les utilisateurs accèdent via `http://10.173.8.125:9052`
+- Les URLs générées par Next.js utilisent `http://10.173.8.125:9052` (depuis les variables d'environnement)
+
+### ❌ Configuration incorrecte (à éviter)
+
+```env
+# ❌ INCORRECT : Utiliser le port 9352 dans les variables d'environnement
+AUTH_URL=http://10.173.8.125:9352
+NEXT_PUBLIC_SERVER_URL=http://localhost:9352
+```
+
+**Problèmes** :
+- Les utilisateurs accèdent via le port 9052, mais les URLs générées pointent vers 9352
+- Les callbacks d'authentification échouent car ils pointent vers le mauvais port
+- Les requêtes RSC (React Server Components) échouent car elles utilisent le mauvais port
 
 ## Dépannage
 
@@ -207,9 +321,57 @@ ProxyPassReverse /ws ws://127.0.0.1:9352/ws
 
 ## Notes importantes
 
-- **Port 9352** : Port interne, accessible uniquement depuis localhost
-- **Port 9052** : Port externe, accessible depuis l'extérieur via Apache
-- **Sécurité** : Le port 9352 ne doit pas être exposé directement sur Internet
+### Ports
+
+- **Port 9352 (interne)** : 
+  - Port utilisé par Next.js pour écouter en interne
+  - Configuré dans `package.json`, `scripts/start-production.sh`, `scripts/start-production.ps1`
+  - Accessible uniquement depuis localhost
+  - **Ne doit PAS être modifié** dans les fichiers de code
+
+- **Port 9052 (externe)** : 
+  - Port utilisé par Apache pour le reverse proxy
+  - Accessible depuis l'extérieur
+  - **Doit être utilisé** dans les variables d'environnement (`.env.production`)
+
+### Sécurité
+
+- **Le port 9352 ne doit pas être exposé directement sur Internet**
 - **Firewall** : Configurez le firewall pour autoriser uniquement le port 9052 depuis l'extérieur
-- **Variables d'environnement** : Les variables `AUTH_URL` et `NEXT_PUBLIC_SERVER_URL` doivent correspondre à l'URL accessible par les utilisateurs (port 9052 ou domaine)
+- Le port 9352 doit être accessible uniquement depuis localhost (127.0.0.1)
+
+### Variables d'environnement
+
+- **Règle importante** : Les variables `AUTH_URL` et `NEXT_PUBLIC_SERVER_URL` doivent :
+  - ✅ Pointer vers l'URL accessible par les utilisateurs (port 9052 ou domaine)
+  - ✅ Être identiques entre elles
+  - ✅ Utiliser le même protocole (http ou https)
+  - ❌ **NE PAS** utiliser le port 9352 (port interne)
+
+### Résumé de l'architecture
+
+```
+┌─────────────────────────────────────────┐
+│  Utilisateurs                           │
+│  Accès via : http://10.173.8.125:9052  │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│  Apache Reverse Proxy                   │
+│  Port 9052 (externe)                    │
+│  → Redirige vers localhost:9352         │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│  Next.js Application                    │
+│  Port 9352 (interne)                    │
+│  Scripts : package.json, start-*.sh/ps1 │
+└─────────────────────────────────────────┘
+
+Configuration :
+- Fichiers de code : Port 9352 (interne)
+- .env.production : Port 9052 (externe)
+```
 

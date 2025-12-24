@@ -133,7 +133,7 @@ export const genererMenus = async () => {
         { display: 3, level: 1, menu:  'Self-service', href: '', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Serveurs', href: '/list/servers', descr: '', icone: 'server.png', active: 1, role: 'TMA_LOCAL'},
         { display: 8, level: 1, menu:  'Statacm', href: 'http://statacm.adsaft.ft.net:8080', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
-        { display: 0, level: 2, menu:  'Statut env.', href: '/list/statenv', descr: '', icone: 'shieldcheck.png', active: 1, role: 'TMA_LOCAL'},
+        { display: 0, level: 2, menu:  'Statut env.', href: '/list/tpstatus', descr: '', icone: 'shieldcheck.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types d\'application', href: '/list/appli', descr: '', icone: 'puzzle.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types d\'environnement', href: '/list/menuenv', descr: '', icone: 'menuenv.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Types de serveur', href: '/list/tpserv', descr: '', icone: 'server-cog.png', active: 1, role: 'TMA_LOCAL'},

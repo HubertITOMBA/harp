@@ -22,6 +22,9 @@ export const metadata = {
 }
     
 export default function Home() {
+
+  console.log(process.env.NEXT_PUBLIC_SERVER_URL);
+
   return (
     <>
       {/* Initialisation automatique de la migration */}
