@@ -7,7 +7,7 @@ import FooterLayout from "@/components/home/FooterLayout";
 import HarpBandeau from "@/components/home/HarpBandeau";
 import { Toaster } from "@/components/ui/toaster";
 import { ToastContainerWrapper } from "@/components/ui/toast-container-wrapper";
-import { APP_DESCRIPTION, APP_NAME, SERVER_URL, } from "@/lib/constants";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
 
 const montserrat = localFont({
@@ -21,30 +21,20 @@ const montserrat = localFont({
 
 
 
-// metadataBase est nécessaire pour que Next.js génère des URLs absolues pour les RSC
-// Cela évite les erreurs 404 sur les routes RSC en production
-// SERVER_URL vient de NEXT_PUBLIC_SERVER_URL défini au moment du build
-let metadataBaseUrl: URL | undefined = undefined;
-try {
-  if (SERVER_URL && SERVER_URL !== 'http://localhost:3000' && typeof SERVER_URL === 'string') {
-    // Vérifier que SERVER_URL est une URL valide avant de créer l'objet URL
-    if (SERVER_URL.startsWith('http://') || SERVER_URL.startsWith('https://')) {
-      metadataBaseUrl = new URL(SERVER_URL);
-    }
-  }
-} catch (error) {
-  // En cas d'erreur (URL invalide), on laisse metadataBaseUrl à undefined
-  // Cela n'empêchera pas l'application de fonctionner, mais les URLs RSC seront relatives
-  console.warn('Impossible de créer metadataBaseUrl depuis SERVER_URL:', SERVER_URL, error);
-}
-
+// ⚠️ IMPORTANT : Ne pas utiliser metadataBase pour les RSC derrière un reverse proxy
+// Next.js recommande d'utiliser des URLs relatives pour les RSC en production
+// avec un reverse proxy. L'utilisation de metadataBase force des URLs absolues
+// qui peuvent causer des erreurs 404 intermittentes.
+// 
+// Pour les RSC, Next.js utilisera automatiquement des URLs relatives basées sur
+// la requête actuelle, ce qui fonctionne mieux avec Apache reverse proxy.
 export const metadata: Metadata = {
   title: {
     template: `%s | Portail TMA Harp`,
     default: APP_NAME,
   },
   description: APP_DESCRIPTION,
-  ...(metadataBaseUrl && { metadataBase: metadataBaseUrl }),
+  // Ne pas définir metadataBase pour permettre l'utilisation d'URLs relatives pour les RSC
 };
 
 export default function RootLayout({

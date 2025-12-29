@@ -112,6 +112,9 @@ const nextConfig: NextConfig = {
         '127.0.0.1:9352',
       ],
     },
+    // Forcer l'utilisation d'URLs relatives pour les RSC (recommandé pour reverse proxy)
+    // Cela évite les erreurs 404 intermittentes sur les requêtes RSC
+    optimizePackageImports: ['lucide-react'],
   },
 
   // Configuration Webpack uniquement pour la production (build)
