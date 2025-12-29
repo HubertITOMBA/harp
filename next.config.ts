@@ -102,6 +102,16 @@ const nextConfig: NextConfig = {
   experimental: {
     workerThreads: false,
     cpus: 1,
+    // Configuration pour les Server Actions derrière un reverse proxy
+    // Autoriser les origines avec et sans port pour éviter les erreurs de validation
+    serverActions: {
+      allowedOrigins: [
+        'portails.orange-harp.fr:9052',
+        'portails.orange-harp.fr',
+        'localhost:9352',
+        '127.0.0.1:9352',
+      ],
+    },
   },
 
   // Configuration Webpack uniquement pour la production (build)
