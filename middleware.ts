@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import { NextResponse } from "next/server";
 import authConfig from '@/auth.config';
 import { 
     DEFAULT_LOGIN_REDIRECT,
@@ -25,6 +26,14 @@ export default auth(async (req) => {
 
   //  console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
  //   console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
+
+    // Redirections canoniques (évitent 404 sur /profile et /harp/envs)
+    if (nextUrl.pathname === "/profile") {
+        return NextResponse.redirect(new URL("/user/profile", nextUrl));
+    }
+    if (nextUrl.pathname === "/harp/envs" || nextUrl.pathname === "/harp/envs/") {
+        return NextResponse.redirect(new URL("/list/envs", nextUrl));
+    }
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
     const isApiRoute = nextUrl.pathname.startsWith("/api/");

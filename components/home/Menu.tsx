@@ -16,7 +16,7 @@ const menuItems = [
        {
           icon: "/ressources/user-pen.png",
           label: "Profile",
-          href: "/profile",
+          href: "/user/profile",
           visible: ["PSADMIN", "admin", "teacher", "student", "parent"],
         },
         {

@@ -110,6 +110,7 @@ const nextConfig: NextConfig = {
         'portails.orange-harp.fr',
         'localhost:9352',
         '127.0.0.1:9352',
+        '10.173.8.125:9352', // production sans proxy (accès direct au port)
       ],
     },
     // Forcer l'utilisation d'URLs relatives pour les RSC (recommandé pour reverse proxy)

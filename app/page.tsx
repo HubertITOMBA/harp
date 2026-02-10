@@ -13,7 +13,16 @@ import {
   Settings, 
   CheckCircle,
   ArrowRight,
-  Star
+  Star,
+  Bell,
+  MessageSquare,
+  Clock,
+  Menu as MenuIcon,
+  Link as LinkIcon,
+  FileText,
+  Server,
+  Globe,
+  Wrench
 } from "lucide-react"
 
 export const metadata = {
@@ -22,9 +31,6 @@ export const metadata = {
 }
     
 export default function Home() {
-
-  console.log(process.env.NEXT_PUBLIC_SERVER_URL);
-
   return (
     <>
       {/* Initialisation automatique de la migration */}
@@ -92,70 +98,103 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Feature 1 - Notifications */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Bell className="h-8 w-8 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Notifications</h3>
+                <p className="text-gray-600 text-sm">Système de notifications en temps réel pour rester informé des événements importants</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 2 - Messagerie */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Messagerie</h3>
+                <p className="text-gray-600 text-sm">Communication centralisée avec gestion des messages actifs et archivés</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 3 - Chrono-tâche */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Chrono-tâche</h3>
+                <p className="text-gray-600 text-sm">Suivi précis du temps avec gestion des tâches et calcul automatique des durées</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 4 - Menus */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <MenuIcon className="h-8 w-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Gestion des Menus</h3>
+                <p className="text-gray-600 text-sm">Configuration personnalisée des menus de navigation avec contrôle d'accès par rôles</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 5 - Liens */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <LinkIcon className="h-8 w-8 text-indigo-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Ressources & Liens</h3>
+                <p className="text-gray-600 text-sm">Accès rapide à tous vos liens et ressources essentielles organisés et catégorisés</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 6 - Journal */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Journal d'Activité</h3>
+                <p className="text-gray-600 text-sm">Traçabilité complète des actions avec historique détaillé et recherche avancée</p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 7 - Utilisateurs */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
               <CardContent className="p-6 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <Users className="h-8 w-8 text-orange-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Gestion des Utilisateurs</h3>
-                <p className="text-gray-600">Administration complète des comptes utilisateurs et des rôles</p>
+                <p className="text-gray-600 text-sm">Administration complète des comptes utilisateurs, rôles et permissions</p>
               </CardContent>
             </Card>
 
-            {/* Feature 2 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            {/* Feature 8 - Sécurité */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
               <CardContent className="p-6 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <Shield className="h-8 w-8 text-gray-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Sécurité Avancée</h3>
-                <p className="text-gray-600">Protection des données avec authentification robuste</p>
+                <p className="text-gray-600 text-sm">Protection des données avec authentification robuste et contrôle d'accès granulaire</p>
               </CardContent>
             </Card>
 
-            {/* Feature 3 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            {/* Feature 9 - Environnements */}
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300">
               <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Database className="h-8 w-8 text-orange-600" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Globe className="h-8 w-8 text-teal-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Base de Données</h3>
-                <p className="text-gray-600">Gestion centralisée et synchronisation des données</p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 4 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <BarChart3 className="h-8 w-8 text-gray-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Tableaux de Bord</h3>
-                <p className="text-gray-600">Analyses et rapports en temps réel</p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 5 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Settings className="h-8 w-8 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Configuration</h3>
-                <p className="text-gray-600">Paramétrage flexible selon vos besoins</p>
-              </CardContent>
-            </Card>
-
-            {/* Feature 6 */}
-            <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <CheckCircle className="h-8 w-8 text-gray-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Qualité Assurée</h3>
-                <p className="text-gray-600">Processus validés et conformes aux standards</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Environnements</h3>
+                <p className="text-gray-600 text-sm">Gestion centralisée des environnements PeopleSoft et configurations</p>
               </CardContent>
             </Card>
           </div>

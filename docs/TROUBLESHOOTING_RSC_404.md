@@ -214,3 +214,57 @@ NODE_ENV=production npm run build
 - **Supprimer `.next` est essentiel** : cela force Next.js à régénérer toutes les URLs
 - **Vérifier dans le navigateur** : les URLs doivent être absolues (`https://...`) et non relatives (`:9352/...`)
 
+---
+
+## Production sans reverse proxy (accès direct au port 9352)
+
+Si vous accédez à l’application par l’IP du serveur (ex. `http://10.173.8.125:9352`) sans proxy, et que vous voyez :
+- `Failed to load resource: net::ERR_CONNECTION_REFUSED` sur `localhost:9352`
+- 404 sur `harp/envs`, `profile`, `list/statenv`, et déconnexion / retour à l’accueil au clic
+
+**Cause** : le build a figé `NEXT_PUBLIC_SERVER_URL` (et donc les URLs RSC) en `http://localhost:9352`. Dans le navigateur, les requêtes partent vers *votre* machine (localhost), pas vers le serveur (10.173.8.125).
+
+### Solution recommandée : URLs relatives
+
+Pour que les requêtes RSC et auth utilisent la même origine que la page (peu importe l’IP ou le host) :
+
+1. **Dans `.env.production`** : ne pas définir `NEXT_PUBLIC_SERVER_URL` (ou le laisser vide). Définir uniquement l’URL utilisée par les utilisateurs pour NEXTAUTH :
+
+```env
+NODE_ENV=production
+AUTH_URL=http://10.173.8.125:9352
+NEXTAUTH_URL=http://10.173.8.125:9352
+# Ne pas définir NEXT_PUBLIC_SERVER_URL pour utiliser des URLs relatives
+# NEXT_PUBLIC_BASE_URL et NEXT_PUBLIC_SERVER_URL optionnels dans ce cas
+AUTH_TRUST_HOST=true
+```
+
+2. **Rebuild** après modification des variables `NEXT_PUBLIC_*` :
+
+```bash
+rm -rf .next
+npm run build
+```
+
+3. **Démarrer en écoutant sur toutes les interfaces** si les clients ne sont pas sur la même machine :
+
+```json
+"start": "next start -p 9352 -H 0.0.0.0"
+```
+
+(Si vous gardez `-H 127.0.0.1`, seules les connexions depuis la machine du serveur fonctionneront.)
+
+4. **Origine autorisée** : `10.173.8.125:9352` est déjà ajouté dans `next.config.ts` (`serverActions.allowedOrigins`). Si vous utilisez un autre host ou IP, ajoutez-le aussi.
+
+### Alternative : URL absolue figée
+
+Si vous voulez une URL absolue figée au build, mettez **exactement** l’URL par laquelle les utilisateurs ouvrent l’app :
+
+```env
+NEXT_PUBLIC_SERVER_URL=http://10.173.8.125:9352
+NEXTAUTH_URL=http://10.173.8.125:9352
+AUTH_URL=http://10.173.8.125:9352
+```
+
+Puis `rm -rf .next` et `npm run build`. Toute autre URL (ex. localhost, autre IP) provoquera les mêmes erreurs qu’avant.
+

@@ -1,6 +1,7 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "TMA Harp";
 export const APP_DESCRIPTION = process.env.NEXT_PUBLIC_APP_DESCRIPTION ||"Portail TMA Harp built with next.js by Hubert ITOMBA";
-export const SERVER_URL =  process.env.NEXT_PUBLIC_SERVER_URL || "https://localhost:9352";
+// Vide = URLs relatives (recommandé en prod sans proxy). Sinon utilise l’URL absolue du build.
+export const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
 
 

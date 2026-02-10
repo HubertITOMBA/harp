@@ -15,7 +15,9 @@ import {
   Menu as MenuIcon,
   Mail,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,12 +64,60 @@ const HomePage = async () => {
 
   const features = [
     {
+      icon: Bell,
+      title: "Notifications",
+      description: "Système de notifications en temps réel pour rester informé des événements importants",
+      href: "/list/notifications",
+      color: "from-orange-100 to-orange-200",
+      iconColor: "text-orange-600",
+    },
+    {
+      icon: MessageSquare,
+      title: "Messagerie",
+      description: "Communication centralisée avec gestion des messages actifs et archivés",
+      href: "/list/messages",
+      color: "from-blue-100 to-blue-200",
+      iconColor: "text-blue-600",
+    },
+    {
+      icon: Clock,
+      title: "Chrono-tâche",
+      description: "Suivi précis du temps avec gestion des tâches et calcul automatique des durées",
+      href: "/list/tasks",
+      color: "from-green-100 to-green-200",
+      iconColor: "text-green-600",
+    },
+    {
+      icon: MenuIcon,
+      title: "Gestion des Menus",
+      description: "Configuration personnalisée des menus de navigation avec contrôle d'accès par rôles",
+      href: "/list/menus",
+      color: "from-purple-100 to-purple-200",
+      iconColor: "text-purple-600",
+    },
+    {
+      icon: LinkIcon,
+      title: "Ressources & Liens",
+      description: "Accès rapide à tous vos liens et ressources essentielles organisés et catégorisés",
+      href: "/list/links",
+      color: "from-indigo-100 to-indigo-200",
+      iconColor: "text-indigo-600",
+    },
+    {
+      icon: FileText,
+      title: "Journal d'Activité",
+      description: "Traçabilité complète des actions avec historique détaillé et recherche avancée",
+      href: "/list/journal",
+      color: "from-amber-100 to-amber-200",
+      iconColor: "text-amber-600",
+    },
+    {
       icon: Globe,
       title: "Environnements",
       description: "Consultez et gérez les environnements PeopleSoft disponibles",
-      href: "/harp/envs",
-      color: "from-orange-100 to-orange-200",
-      iconColor: "text-orange-600",
+      href: "/list/envs",
+      color: "from-teal-100 to-teal-200",
+      iconColor: "text-teal-600",
     },
     {
       icon: Server,
@@ -108,30 +158,6 @@ const HomePage = async () => {
       href: "/list/tools",
       color: "from-gray-100 to-gray-200",
       iconColor: "text-gray-600",
-    },
-    {
-      icon: LinkIcon,
-      title: "Liens",
-      description: "Accédez aux liens et ressources utiles",
-      href: "/list/links",
-      color: "from-orange-100 to-orange-200",
-      iconColor: "text-orange-600",
-    },
-    {
-      icon: MenuIcon,
-      title: "Menus",
-      description: "Configurez les menus de navigation du portail",
-      href: "/list/menus",
-      color: "from-gray-100 to-gray-200",
-      iconColor: "text-gray-600",
-    },
-    {
-      icon: FileText,
-      title: "Journal",
-      description: "Consultez l'historique des actions et événements",
-      href: "/list/journal",
-      color: "from-orange-100 to-orange-200",
-      iconColor: "text-orange-600",
     },
   ];
 
@@ -233,7 +259,7 @@ const HomePage = async () => {
               const Icon = feature.icon;
               return (
                 <Link key={index} href={feature.href}>
-                  <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm h-full cursor-pointer">
+                  <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:border-orange-300 h-full cursor-pointer">
                     <CardContent className="p-6">
                       <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                         <Icon className={`h-8 w-8 ${feature.iconColor}`} />
@@ -241,7 +267,7 @@ const HomePage = async () => {
                       <h3 className="text-xl font-semibold text-gray-900 mb-2 text-center">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600 text-center mb-4">
+                      <p className="text-gray-600 text-sm text-center mb-4">
                         {feature.description}
                       </p>
                       <div className="flex items-center justify-center text-orange-600 group-hover:text-orange-700 transition-colors">
@@ -269,7 +295,46 @@ const HomePage = async () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <Link href="/list/notifications">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="w-full h-auto py-6 border-orange-300 hover:bg-orange-50 hover:border-orange-400 text-orange-700"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Bell className="h-6 w-6" />
+                  <span className="font-semibold">Notifications</span>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/list/messages">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="w-full h-auto py-6 border-blue-300 hover:bg-blue-50 hover:border-blue-400 text-blue-700"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <MessageSquare className="h-6 w-6" />
+                  <span className="font-semibold">Messagerie</span>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/list/tasks">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="w-full h-auto py-6 border-green-300 hover:bg-green-50 hover:border-green-400 text-green-700"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Clock className="h-6 w-6" />
+                  <span className="font-semibold">Chrono-tâche</span>
+                </div>
+              </Button>
+            </Link>
+
             <Link href="/user/profile">
               <Button 
                 variant="outline" 
@@ -283,11 +348,11 @@ const HomePage = async () => {
               </Button>
             </Link>
 
-            <Link href="/harp/envs">
+            <Link href="/list/envs">
               <Button 
                 variant="outline" 
                 size="lg"
-                className="w-full h-auto py-6 border-orange-300 hover:bg-orange-50 hover:border-orange-400 text-orange-700"
+                className="w-full h-auto py-6 border-teal-300 hover:bg-teal-50 hover:border-teal-400 text-teal-700"
               >
                 <div className="flex flex-col items-center gap-2">
                   <Globe className="h-6 w-6" />
@@ -300,7 +365,7 @@ const HomePage = async () => {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="w-full h-auto py-6 border-orange-300 hover:bg-orange-50 hover:border-orange-400 text-orange-700"
+                className="w-full h-auto py-6 border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700"
               >
                 <div className="flex flex-col items-center gap-2">
                   <Wrench className="h-6 w-6" />
@@ -313,11 +378,24 @@ const HomePage = async () => {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="w-full h-auto py-6 border-orange-300 hover:bg-orange-50 hover:border-orange-400 text-orange-700"
+                className="w-full h-auto py-6 border-amber-300 hover:bg-amber-50 hover:border-amber-400 text-amber-700"
               >
                 <div className="flex flex-col items-center gap-2">
                   <FileText className="h-6 w-6" />
                   <span className="font-semibold">Journal</span>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/list/menus">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="w-full h-auto py-6 border-purple-300 hover:bg-purple-50 hover:border-purple-400 text-purple-700"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <MenuIcon className="h-6 w-6" />
+                  <span className="font-semibold">Menus</span>
                 </div>
               </Button>
             </Link>
@@ -422,7 +500,7 @@ const HomePage = async () => {
                 </li>
                 <li>
                   <Link 
-                    href="/harp/envs" 
+                    href="/list/envs" 
                     className="text-gray-300 hover:text-orange-400 transition-colors text-sm flex items-center gap-2 group"
                   >
                     <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
