@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,40 +10,61 @@ import { getUserNotifications } from '@/lib/actions/notification-actions';
 export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const errorLoggedRef = useRef(false);
+  const consecutiveErrorsRef = useRef(0);
 
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
     async function loadNotifications() {
       try {
         const notifications = await getUserNotifications();
-        const unread = notifications.filter(n => 
-          n.recipients && n.recipients.some((r: any) => !r.read)
+        consecutiveErrorsRef.current = 0;
+        const unread = notifications.filter(n =>
+          n.recipients && n.recipients.some((r: unknown) => (r as { read?: boolean }).read === false)
         ).length;
         setUnreadCount(unread);
       } catch (error) {
-        console.error("Erreur lors du chargement des notifications:", error);
         setUnreadCount(0);
+        consecutiveErrorsRef.current += 1;
+        // Ne loguer qu'une fois pour éviter de spammer la console (ex. en prod si Server Action renvoie une redirection)
+        if (!errorLoggedRef.current) {
+          errorLoggedRef.current = true;
+          console.warn("Notifications indisponibles (session ou réseau):", error instanceof Error ? error.message : error);
+        }
+        // Après 2 échecs consécutifs, arrêter le polling (évite "unexpected response" en boucle)
+        if (consecutiveErrorsRef.current >= 2 && intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
       } finally {
         setLoading(false);
       }
     }
 
     loadNotifications();
-    
-    // Recharger toutes les 30 secondes
-    const interval = setInterval(loadNotifications, 30000);
-    
-    return () => clearInterval(interval);
+
+    // Recharger toutes les 30 secondes (tant que pas d'échecs répétés)
+    intervalId = setInterval(loadNotifications, 30000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
-  // Écouter les événements de revalidation
+  // Recharger au retour sur l'onglet (et réinitialiser le compteur d'erreurs pour réessayer le polling)
   useEffect(() => {
     const handleFocus = () => {
-      getUserNotifications().then(notifications => {
-        const unread = notifications.filter(n => 
-          n.recipients && n.recipients.some((r: any) => !r.read)
-        ).length;
-        setUnreadCount(unread);
-      });
+      errorLoggedRef.current = false;
+      consecutiveErrorsRef.current = 0;
+      getUserNotifications()
+        .then(notifications => {
+          const unread = notifications.filter(n =>
+            n.recipients && n.recipients.some((r: unknown) => (r as { read?: boolean }).read === false)
+          ).length;
+          setUnreadCount(unread);
+        })
+        .catch(() => setUnreadCount(0));
     };
 
     window.addEventListener('focus', handleFocus);
