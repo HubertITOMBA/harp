@@ -266,5 +266,5 @@ NEXTAUTH_URL=http://10.173.8.125:9352
 AUTH_URL=http://10.173.8.125:9352
 ```
 
-Puis `rm -rf .next` et `npm run build`. Toute autre URL (ex. localhost, autre IP) provoquera les mêmes erreurs qu’avant.
+Puis `rm -rf .next` et `npm run build`. Si le 404 persiste, voir [PRODUCTION_SANS_PROXY_404_PERSISTANT.md](./PRODUCTION_SANS_PROXY_404_PERSISTANT.md). Toute autre URL (ex. localhost, autre IP) provoquera les mêmes erreurs qu’avant.
 

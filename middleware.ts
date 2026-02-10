@@ -34,6 +34,10 @@ export default auth(async (req) => {
     if (nextUrl.pathname === "/harp/envs" || nextUrl.pathname === "/harp/envs/") {
         return NextResponse.redirect(new URL("/list/envs", nextUrl));
     }
+    // Menu DB peut avoir un lien /list/statenv ; la route réelle est /list/tpstatus
+    if (nextUrl.pathname === "/list/statenv" || nextUrl.pathname === "/list/statenv/") {
+        return NextResponse.redirect(new URL("/list/tpstatus", nextUrl));
+    }
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
     const isApiRoute = nextUrl.pathname.startsWith("/api/");

@@ -6,10 +6,12 @@
 
 const requiredVars = [
   'AUTH_URL',
-  'NEXT_PUBLIC_SERVER_URL',
   'AUTH_SECRET',
   'AUTH_TRUST_HOST'
 ];
+
+// Optionnel : si défini, il est "baked" au build (RSC/Server Actions). Si non défini, Next.js utilise des URLs relatives (recommandé en prod sans proxy).
+const optionalPublicUrlVar = 'NEXT_PUBLIC_SERVER_URL';
 
 const optionalVars = [
   'DATABASE_URL',
@@ -31,33 +33,15 @@ requiredVars.forEach(varName => {
     hasErrors = true;
   } else {
     // Masquer les valeurs sensibles
-    const displayValue = varName.includes('SECRET') 
-      ? '***' + value.slice(-4) 
+    const displayValue = varName.includes('SECRET')
+      ? '***' + value.slice(-4)
       : value;
     console.log(`  ✅ ${varName}: ${displayValue}`);
-    
-    // Vérifications spécifiques
+
     if (varName === 'AUTH_URL' && !value.startsWith('http')) {
       console.log(`     ⚠️  L'URL doit commencer par http:// ou https://`);
       hasWarnings = true;
     }
-    
-    if (varName === 'NEXT_PUBLIC_SERVER_URL') {
-      if (value.includes('localhost')) {
-        console.log(`     ⚠️  Attention : utilise localhost (peut causer des problèmes en production)`);
-        hasWarnings = true;
-      }
-      if (!value.startsWith('http')) {
-        console.log(`     ⚠️  L'URL doit commencer par http:// ou https://`);
-        hasWarnings = true;
-      }
-      // Note: HTTP est utilisé selon demande admin jusqu'à la fin du développement
-      // if (process.env.NODE_ENV === 'production' && value.startsWith('http://') && !value.includes('localhost')) {
-      //   console.log(`     ⚠️  En production, HTTPS est recommandé (certificats installés)`);
-      //   hasWarnings = true;
-      // }
-    }
-    
     if (varName === 'AUTH_TRUST_HOST' && value !== 'true') {
       console.log(`     ⚠️  Doit être 'true' en production`);
       hasWarnings = true;
@@ -65,7 +49,25 @@ requiredVars.forEach(varName => {
   }
 });
 
-console.log('\n📋 Variables optionnelles :');
+// NEXT_PUBLIC_SERVER_URL : optionnel (recommandé de ne PAS le définir en prod sans proxy pour utiliser des URLs relatives)
+console.log(`\n📋 ${optionalPublicUrlVar} (optionnel, "baked" au build) :`);
+const publicUrl = process.env[optionalPublicUrlVar];
+if (!publicUrl) {
+  console.log(`  ⚪ Non définie → Next.js utilisera des URLs relatives (recommandé si accès par IP, ex. http://10.173.8.125:9352)`);
+} else {
+  console.log(`  ✅ ${optionalPublicUrlVar}: ${publicUrl}`);
+  if (publicUrl.includes('localhost') && process.env.NODE_ENV === 'production') {
+    console.log(`     ⚠️  localhost en production : les requêtes RSC partiront vers la machine du client, pas le serveur → 404 / déconnexion.`);
+    console.log(`     💡 Pour accès par IP : retirez cette variable ou mettez l'URL réelle (ex. http://10.173.8.125:9352), puis rm -rf .next && npm run build`);
+    hasWarnings = true;
+  }
+  if (!publicUrl.startsWith('http')) {
+    console.log(`     ⚠️  L'URL doit commencer par http:// ou https://`);
+    hasWarnings = true;
+  }
+}
+
+console.log('\n📋 Autres variables optionnelles :');
 optionalVars.forEach(varName => {
   const value = process.env[varName];
   if (value) {
