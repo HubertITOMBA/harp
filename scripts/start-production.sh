@@ -53,7 +53,7 @@ fi
 
 # Démarrer l'application Next.js en mode production
 echo "🚀 Démarrage de l'application HARP en PRODUCTION..."
-echo "   Port: 9352 (interne - Apache reverse proxy sur 9052)"
+echo "   Port: 9352"
 echo "   Mode: Production"
 echo "   Dynatrace: Désactivé"
 echo "   Workers: Désactivés"

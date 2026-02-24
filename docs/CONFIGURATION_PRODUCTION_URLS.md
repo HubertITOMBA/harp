@@ -1,5 +1,7 @@
 # Configuration des URLs en Production
 
+> **Protocole** : L'application est configurée pour **HTTP uniquement** (pas de HTTPS). Voir [`docs/CONFIGURATION_HTTP_UNIQUEMENT.md`](CONFIGURATION_HTTP_UNIQUEMENT.md) pour les détails.
+
 ## Problème
 
 En production, le navigateur essaie de se connecter à `localhost:9352` au lieu de l'URL de production, causant des erreurs `ERR_CONNECTION_REFUSED`.
@@ -8,20 +10,15 @@ En production, le navigateur essaie de se connecter à `localhost:9352` au lieu 
 
 ### 1. Variables d'environnement requises
 
-Ajoutez ces variables dans votre fichier `.env` en production :
+Ajoutez ces variables dans votre fichier `.env` en production. **Toutes les URLs doivent être en HTTP** (`http://`) :
 
 ```env
-# URL de base de l'application (sans slash final)
-# HTTPS est maintenant activé par défaut (certificats installés)
-AUTH_URL=https://localhost:9352
-# Si vous utilisez encore HTTP (non recommandé, déconseillé pour la sécurité) :
-# AUTH_URL=http://localhost:9352
+# URL de base de l'application (sans slash final) - HTTP uniquement
+AUTH_URL="http://votre-serveur:9352"
+# Exemple : AUTH_URL="http://portails.orange-harp.fr:9352"
 
-# URL publique du serveur (pour Next.js RSC)
-# HTTPS est maintenant activé par défaut (certificats installés)
-NEXT_PUBLIC_SERVER_URL=https://localhost:9352
-# Si vous utilisez encore HTTP (non recommandé, déconseillé pour la sécurité) :
-# NEXT_PUBLIC_SERVER_URL=http://localhost:9352
+# URL publique du serveur (pour Next.js RSC) - même valeur que AUTH_URL
+NEXT_PUBLIC_SERVER_URL="http://votre-serveur:9352"
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true
@@ -29,20 +26,15 @@ AUTH_TRUST_HOST=true
 
 ### 2. Configuration Next.js (optionnel mais recommandé)
 
-Si le problème persiste, ajoutez dans `next.config.ts` :
+Si le problème persiste, ajoutez dans `next.config.ts` (en gardant des URLs **HTTP**) :
 
 ```typescript
 const nextConfig: NextConfig = {
   // ... autres configurations
   
-  // Configuration pour la production
   env: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'https://localhost:9352',
+    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:9352',
   },
-  
-  // Si vous utilisez un reverse proxy
-  // basePath: '', // Si votre app est à la racine
-  // trailingSlash: false,
 };
 ```
 
@@ -86,8 +78,8 @@ module.exports = {
     args: 'start',
     env: {
       NODE_ENV: 'production',
-      AUTH_URL: 'https://localhost:9352',
-      NEXT_PUBLIC_SERVER_URL: 'https://localhost:9352',
+      AUTH_URL: 'http://votre-serveur:9352',
+      NEXT_PUBLIC_SERVER_URL: 'http://votre-serveur:9352',
       AUTH_TRUST_HOST: 'true',
       // ... autres variables
     }
@@ -109,8 +101,8 @@ Type=simple
 User=your-user
 WorkingDirectory=/path/to/harp
 Environment="NODE_ENV=production"
-Environment="AUTH_URL=https://localhost:9352"
-Environment="NEXT_PUBLIC_SERVER_URL=https://localhost:9352"
+Environment="AUTH_URL=http://votre-serveur:9352"
+Environment="NEXT_PUBLIC_SERVER_URL=http://votre-serveur:9352"
 Environment="AUTH_TRUST_HOST=true"
 ExecStart=/usr/bin/npm start
 Restart=always
@@ -121,11 +113,12 @@ WantedBy=multi-user.target
 
 ## Notes importantes
 
-- **AUTH_URL** : Utilisé par NextAuth pour générer les URLs de callback
-- **NEXT_PUBLIC_SERVER_URL** : Utilisé par Next.js pour les requêtes RSC côté client
-- **AUTH_TRUST_HOST** : Doit être `true` en production pour que NextAuth accepte l'host
-- Les variables `NEXT_PUBLIC_*` sont exposées au client, ne pas y mettre de secrets
-- Après modification des variables d'environnement, **toujours redémarrer l'application**
+- **Protocole HTTP uniquement** : l'application n'utilise pas HTTPS. Voir [`CONFIGURATION_HTTP_UNIQUEMENT.md`](CONFIGURATION_HTTP_UNIQUEMENT.md).
+- **AUTH_URL** : Doit être **exactement** l’URL affichée dans le navigateur (même hôte et port). Sinon, la session peut être ignorée par le middleware et les liens (ex. Paramètres → /settings) rediriger vers la page de connexion, et **erreur CORS sur la déconnexion** (redirection vers localhost bloquée). Détails : dépannage « Erreur CORS sur la déconnexion » dans [`CONFIGURATION_HTTP_UNIQUEMENT.md`](CONFIGURATION_HTTP_UNIQUEMENT.md). Utilisé par NextAuth pour les callbacks et les cookies (toujours en `http://`).
+- **NEXT_PUBLIC_SERVER_URL** : Utilisé par Next.js pour les requêtes RSC côté client.
+- **AUTH_TRUST_HOST** : Doit être `true` en production pour que NextAuth accepte l'host.
+- Les variables `NEXT_PUBLIC_*` sont exposées au client, ne pas y mettre de secrets.
+- Après modification des variables d'environnement, **toujours redémarrer l'application**.
 
 ## Dépannage
 

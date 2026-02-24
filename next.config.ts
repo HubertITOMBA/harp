@@ -82,8 +82,8 @@ const nextConfig: NextConfig = {
   // Si NEXT_PUBLIC_SERVER_URL n'est pas défini, Next.js utilisera des URLs relatives (recommandé pour les RSC)
   // 
   // Pour la production avec reverse proxy Apache :
-  // NEXT_PUBLIC_SERVER_URL=https://portails.orange-harp.fr:9052
-  // AUTH_URL=https://portails.orange-harp.fr:9052
+  // NEXT_PUBLIC_SERVER_URL=http://portails.orange-harp.fr:9352
+  // AUTH_URL=http://portails.orange-harp.fr:9352
   //
   // Note: La section env est supprimée pour éviter les valeurs par défaut problématiques
   // Les variables d'environnement seront utilisées directement par Next.js
@@ -106,7 +106,7 @@ const nextConfig: NextConfig = {
     // Autoriser les origines avec et sans port pour éviter les erreurs de validation
     serverActions: {
       allowedOrigins: [
-        'portails.orange-harp.fr:9052',
+        'portails.orange-harp.fr:9352',
         'portails.orange-harp.fr',
         'localhost:9352',
         '127.0.0.1:9352',

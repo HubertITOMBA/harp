@@ -31,7 +31,7 @@ export default async function HarpLayout ( {
          <div className="text-center">
            <h1 className="text-2xl font-bold mb-4">Session expirée</h1>
            <p className="text-muted-foreground mb-4">Veuillez vous reconnecter</p>
-           <Link href="/auth/signin" className="text-primary hover:underline">
+           <Link href="/login" className="text-primary hover:underline">
              Se connecter
            </Link>
          </div>

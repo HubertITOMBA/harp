@@ -11,7 +11,7 @@ En production, l'application affiche les erreurs suivantes :
 
 2. **WebSocket HMR error** :
    ```
-   WebSocket connection to 'wss://portails.orange-harp.fr:9052/_next/webpack-hmr' failed: 
+   WebSocket connection to 'wss://portails.orange-harp.fr:9352/_next/webpack-hmr' failed: 
    Error during WebSocket handshake: Unexpected response code: 404
    ```
 

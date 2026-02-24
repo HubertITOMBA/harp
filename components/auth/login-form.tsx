@@ -21,9 +21,13 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/actions/login";
+import { useSearchParams } from "next/navigation";
 
+type LoginFormProps = { callbackUrl?: string | null };
 
-export const LoginForm = () => {
+export const LoginForm = ({ callbackUrl: callbackUrlProp }: LoginFormProps = {}) => {
+    const searchParams = useSearchParams();
+    const callbackUrl = callbackUrlProp ?? searchParams.get("callbackUrl") ?? undefined;
 
     const router = useRouter();
     const [error, setError] = useState<string | undefined>("");
@@ -45,7 +49,7 @@ export const LoginForm = () => {
         
         startTransition(async () => {
            try {
-            const data = await login(values);
+            const data = await login(values, callbackUrl);
             
             if (data?.error) {
                form.reset(); 

@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server";
 import authConfig from '@/auth.config';
 import { 
@@ -9,20 +10,32 @@ import {
   } from "@/routes";
 import { isMigrationInProgress } from "@/lib/init-full-migration";
 
-// Configuration pour la production (HTTP ou HTTPS)
-// Utiliser la même configuration que auth.ts pour la cohérence
+// Configuration pour la production (HTTP uniquement)
+const useSecureCookies = process.env.AUTH_URL?.startsWith('https://') ?? false;
 const middlewareAuthConfig = {
   ...authConfig,
-  // Activer les cookies sécurisés si on utilise HTTPS (par défaut: true pour HTTPS)
-  useSecureCookies: process.env.AUTH_URL?.startsWith('https://') ?? true,
-  trustHost: true, // Requis pour NextAuth v5 en production
+  useSecureCookies,
+  trustHost: true,
 };
 
 const { auth } = NextAuth(middlewareAuthConfig);
 
+/** Vérifie la session : req.auth (auth wrapper) ou getToken (fallback pour Edge/HTTP). */
+async function isAuthenticated(req: { auth: unknown; nextUrl: { protocol: string }; cookies: { get: (n: string) => { value: string } | undefined } }) {
+  if (req.auth) return true;
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return false;
+  const token = await getToken({
+    req: req as Parameters<typeof getToken>[0]["req"],
+    secret,
+    secureCookie: req.nextUrl.protocol === "https:",
+  });
+  return !!token;
+}
+
 export default auth(async (req) => {
     const { nextUrl } = req;
-    const isLoggedIn = !!req.auth;
+    const isLoggedIn = await isAuthenticated(req);
 
   //  console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
  //   console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
@@ -73,8 +86,12 @@ export default auth(async (req) => {
         return null;
     }
 
+    // Non connecté sur une route protégée : rediriger vers /login avec callbackUrl
+    // pour que l'utilisateur revienne sur la page demandée après login (ex. /settings).
     if (!isLoggedIn && !isPublicRoute) {
-        return Response.redirect(new URL("/", nextUrl));
+        const loginUrl = new URL("/login", nextUrl.origin);
+        loginUrl.searchParams.set("callbackUrl", nextUrl.pathname + nextUrl.search);
+        return Response.redirect(loginUrl);
     }
   
    return null;

@@ -22,24 +22,20 @@ Créez un fichier nommé `.env` (sans extension) à la racine du projet `C:\TOOL
 
 ### 2. Ajouter les variables requises
 
-**Pour la production**, copiez ce contenu dans votre fichier `.env` et adaptez les valeurs :
+**Pour la production**, copiez ce contenu dans votre fichier `.env` et adaptez les valeurs. L'application est configurée pour **HTTP uniquement** (voir [`CONFIGURATION_HTTP_UNIQUEMENT.md`](CONFIGURATION_HTTP_UNIQUEMENT.md)) :
 
 ```env
 # ============================================
 # AUTHENTIFICATION (OBLIGATOIRE)
 # ============================================
 
-# URL de base de l'application (sans slash final)
-# En production : HTTPS activé (certificats installés)
-AUTH_URL=https://localhost:9352
-# Si vous utilisez encore HTTP (non recommandé) :
-# AUTH_URL=https://localhost:9352
+# URL de base de l'application (sans slash final) - HTTP uniquement
+AUTH_URL="http://localhost:9352"
+# En production : AUTH_URL="http://votre-serveur:9352"
 
 # URL publique du serveur (pour Next.js RSC) - OBLIGATOIRE pour le build
-# Doit être identique à AUTH_URL en production
-NEXT_PUBLIC_SERVER_URL=https://localhost:9352
-# Si vous utilisez encore HTTP (non recommandé) :
-# NEXT_PUBLIC_SERVER_URL=https://localhost:9352
+# Doit être identique à AUTH_URL
+NEXT_PUBLIC_SERVER_URL="http://localhost:9352"
 
 # Trust host (requis pour NextAuth en production)
 AUTH_TRUST_HOST=true

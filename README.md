@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Documentation projet (HARP)
+
+- **Configuration HTTP uniquement** : [`docs/CONFIGURATION_HTTP_UNIQUEMENT.md`](docs/CONFIGURATION_HTTP_UNIQUEMENT.md) — l'application n'utilise que le protocole HTTP (pas de HTTPS) ; variables d'environnement et cookies de session.
+
 ## Getting Started
 
 First, run the development server:

@@ -8,10 +8,15 @@ import { AuthError } from "next-auth";
 import { getUserByEmail, getUserByNetId } from "@/data/user";
 
 
-export const login = async (values: z.infer<typeof LoginSchema>,
-  //  callbackUrl?: string | null,
+/** Redirection valide : chemin local commençant par / (évite open redirect) */
+function isValidRedirect(path: string): boolean {
+  return typeof path === "string" && path.startsWith("/") && !path.startsWith("//");
+}
+
+export const login = async (
+  values: z.infer<typeof LoginSchema>,
+  callbackUrl?: string | null,
 ) => {
-  
     const validatedFields = LoginSchema.safeParse(values);
     
      if (!validatedFields.success) {
@@ -52,9 +57,10 @@ export const login = async (values: z.infer<typeof LoginSchema>,
             }
 
             // Si la connexion réussit, retourner un succès avec l'URL de redirection
+            const redirectTo = callbackUrl && isValidRedirect(callbackUrl) ? callbackUrl : DEFAULT_LOGIN_REDIRECT;
             return { 
                 success: true, 
-                redirectTo: DEFAULT_LOGIN_REDIRECT 
+                redirectTo 
             }
         } catch (signInError: any) {
             // Gérer spécifiquement les erreurs de redirection de Next.js
@@ -62,11 +68,10 @@ export const login = async (values: z.infer<typeof LoginSchema>,
             if (signInError?.digest?.startsWith('NEXT_REDIRECT') || 
                 signInError?.message?.includes('NEXT_REDIRECT') ||
                 signInError?.name === 'RedirectError') {
-                // Si c'est une erreur de redirection, la connexion a probablement réussi
-                // Retourner un succès avec l'URL de redirection
+                const redirectTo = callbackUrl && isValidRedirect(callbackUrl) ? callbackUrl : DEFAULT_LOGIN_REDIRECT;
                 return { 
                     success: true, 
-                    redirectTo: DEFAULT_LOGIN_REDIRECT 
+                    redirectTo 
                 }
             }
             // Relancer l'erreur pour qu'elle soit gérée par le catch externe
