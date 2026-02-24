@@ -130,6 +130,9 @@ En ne définissant **jamais** `AUTH_URL` avec une URL `https://`, on reste en HT
 5. **Session perdue à chaque clic de menu (production)**  
    Le middleware utilise un fallback avec `getToken` (next-auth/jwt) quand `req.auth` est null : la session est lue depuis le cookie JWT avec `secureCookie: false` (HTTP). S'assurer que **`AUTH_SECRET`** est défini en production. Si le problème continue, vérifier `AUTH_URL` et les cookies comme au point 1.
 
+6. **Problème aléatoire (parfois connecté, parfois redirigé vers /login, sans erreur console)**  
+   Les redirections vers `/login` utilisent désormais l’**origine côté client** (`Host` / `X-Forwarded-Host`) au lieu de `nextUrl.origin`, pour éviter tout cas où le serveur verrait localhost. Pour tracer quand la session n’est pas vue par le middleware, activer le mode debug : dans le `.env` du serveur, ajouter **`DEBUG_AUTH=1`**, redémarrer, reproduire le problème puis consulter les logs du serveur. Vous verrez des lignes `[DEBUG_AUTH] path=... isLoggedIn=false ...` pour chaque requête où l’utilisateur est considéré non connecté. Remettre `DEBUG_AUTH=0` ou supprimer la variable après diagnostic.
+
 ---
 
 ## Dépannage : erreur CORS sur la déconnexion (logout)

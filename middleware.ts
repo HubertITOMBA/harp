@@ -20,6 +20,20 @@ const middlewareAuthConfig = {
 
 const { auth } = NextAuth(middlewareAuthConfig);
 
+const DEBUG_AUTH = process.env.DEBUG_AUTH === "1" || process.env.DEBUG_AUTH === "true";
+
+/** Origine côté client (Host / X-Forwarded-Host) pour éviter redirections vers localhost. */
+function getClientOrigin(req: Request): string {
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  if (host) return `${proto}://${host}`;
+  try {
+    return new URL(req.url).origin;
+  } catch {
+    return "http://localhost:9352";
+  }
+}
+
 /** Vérifie la session : req.auth (auth wrapper) ou getToken (fallback pour Edge/HTTP). */
 async function isAuthenticated(req: { auth: unknown; nextUrl: { protocol: string }; cookies: { get: (n: string) => { value: string } | undefined } }) {
   if (req.auth) return true;
@@ -37,8 +51,9 @@ export default auth(async (req) => {
     const { nextUrl } = req;
     const isLoggedIn = await isAuthenticated(req);
 
-  //  console.log("ROUTE dans middleware.ts: ", req.nextUrl.pathname);
- //   console.log("IL EST CONNECTE  dans middleware.ts: ", isLoggedIn);
+    if (DEBUG_AUTH && !nextUrl.pathname.startsWith("/_next") && !nextUrl.pathname.startsWith("/api")) {
+      console.log(`[DEBUG_AUTH] path=${nextUrl.pathname} isLoggedIn=${isLoggedIn} hasReqAuth=${!!req.auth}`);
+    }
 
     // Redirections canoniques (évitent 404 sur /profile et /harp/envs)
     if (nextUrl.pathname === "/profile") {
@@ -86,10 +101,11 @@ export default auth(async (req) => {
         return null;
     }
 
-    // Non connecté sur une route protégée : rediriger vers /login avec callbackUrl
-    // pour que l'utilisateur revienne sur la page demandée après login (ex. /settings).
+    // Non connecté sur une route protégée : rediriger vers /login (même origine côté client)
+    // pour éviter redirection vers localhost et erreurs aléatoires (Host / X-Forwarded-Host).
     if (!isLoggedIn && !isPublicRoute) {
-        const loginUrl = new URL("/login", nextUrl.origin);
+        const origin = getClientOrigin(req);
+        const loginUrl = new URL("/login", origin);
         loginUrl.searchParams.set("callbackUrl", nextUrl.pathname + nextUrl.search);
         return Response.redirect(loginUrl);
     }
