@@ -131,7 +131,9 @@ En ne définissant **jamais** `AUTH_URL` avec une URL `https://`, on reste en HT
    Le middleware utilise un fallback avec `getToken` (next-auth/jwt) quand `req.auth` est null : la session est lue depuis le cookie JWT avec `secureCookie: false` (HTTP). S'assurer que **`AUTH_SECRET`** est défini en production. Si le problème continue, vérifier `AUTH_URL` et les cookies comme au point 1.
 
 6. **Problème aléatoire (parfois connecté, parfois redirigé vers /login, sans erreur console)**  
-   Les redirections vers `/login` utilisent l’**origine côté client** (`Host` / `X-Forwarded-Host`). Pour diagnostiquer quand la session n’est pas vue, utiliser **DEBUG_AUTH** (voir section suivante).
+   - **Cause identifiée (logs DEBUG_AUTH)** : juste après la déconnexion, une requête vers une page protégée (ex. `/settings`) peut être envoyée **sans** le cookie de session (prefetch Next.js ou onglet/second requête). Le middleware répond alors par une redirection vers `/login`.
+   - **Correctif** : **`prefetch={false}`** a été ajouté sur les liens du menu latéral (`MenuDashClient`). Les pages protégées ne sont plus préchargées ; la navigation ne part qu’au clic, avec le cookie de session. Cela évite les requêtes « fantômes » sans session après logout ou lors du chargement de la page de login.
+   - Les redirections vers `/login` utilisent l’**origine côté client** (`Host` / `X-Forwarded-Host`). Pour diagnostiquer, utiliser **DEBUG_AUTH** (voir section suivante).
 
 ---
 

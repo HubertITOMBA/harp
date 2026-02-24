@@ -58,6 +58,7 @@ export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
               <TooltipTrigger asChild>
                 <Link 
                   href={staticMenu.href}
+                  prefetch={false}
                   className="flex items-center justify-center xl:justify-start gap-1 md:gap-2 text-xs px-1 md:px-2 py-1 md:py-2 rounded-xl hover:bg-orange-300 transition-colors w-full xl:w-auto"
                 >
                   {staticMenu.icone && staticMenu.icone !== "" && staticMenu.icone !== "N" ? (
@@ -84,6 +85,7 @@ export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
                 <TooltipTrigger asChild>
                   <Link 
                     href={`${item.href}`}
+                    prefetch={false}
                     className="flex items-center justify-center xl:justify-start gap-1 md:gap-2 text-xs px-1 md:px-2 py-1 md:py-2 rounded-xl hover:bg-orange-300 transition-colors w-full xl:w-auto"
                   >
                     {item.icone && item.icone !== "" && item.icone !== "N" ? (
@@ -109,7 +111,8 @@ export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
                 <Tooltip key={item.label}>
                   <TooltipTrigger asChild>
                     <Link 
-                      href={item.href} 
+                      href={item.href}
+                      prefetch={false}
                       className="flex text-xs justify-center xl:justify-start gap-1 md:gap-2 rounded-md hover:text-orange-500 transition-colors"
                     >
                       <Image src={item.icon} alt={item.label} width={16} height={16} className="flex-shrink-0" />  
