@@ -144,19 +144,21 @@ En ne définissant **jamais** `AUTH_URL` avec une URL `https://`, on reste en HT
 **Correctif appliqué dans le code** (`app/logout/route.ts`) :
 
 - Appel à **`signOut({ redirect: false })`** pour que NextAuth nettoie la session (cookie) sans effectuer elle‑même la redirection (évite d’utiliser `AUTH_URL` pour la cible).
-- Redirection explicite vers **la même origine** que la requête : lecture de `request.url`, construction de l’URL de la page de connexion avec `new URL("/login", url.origin)`, puis `NextResponse.redirect(loginUrl)`.
+- Redirection vers **l’origine côté client** : utilisation des en-têtes **`Host`** ou **`X-Forwarded-Host`** (et `X-Forwarded-Proto`) pour construire l’URL de redirection, au lieu de `request.url` qui peut être `localhost` côté serveur. Ainsi la réponse envoie bien `Location: http://10.173.8.125:9352/login` (ou l’IP/hôte utilisé par le navigateur), ce qui évite `localhost:9352/login` et l’erreur **ERR_CONNECTION_REFUSED**.
 
-Ainsi, la déconnexion redirige toujours vers `/login` sur l’origine courante (ex. `http://172.24.250.48:9352/login`), sans erreur CORS.
+La déconnexion redirige donc vers `/login` sur l’hôte visible par le client, sans CORS ni connexion refusée.
 
-**Recommandation en production** : Définir **`AUTH_URL`** (et `NEXT_PUBLIC_SERVER_URL`, `NEXTAUTH_URL_INTERNAL`) avec l’URL réelle d’accès au site (même hôte et port que dans la barre d’adresse), par exemple :
+**Recommandation en production** : Dans le `.env` (ou `.env.production`) du serveur, définir **toutes** les URLs avec l’URL réelle d’accès (même hôte et port que dans la barre d’adresse), par exemple pour `http://10.173.8.125:9352` :
 
 ```env
-AUTH_URL=http://172.24.250.48:9352
-NEXT_PUBLIC_SERVER_URL=http://172.24.250.48:9352
-NEXTAUTH_URL_INTERNAL=http://172.24.250.48:9352
+AUTH_URL=http://10.173.8.125:9352
+NEXTAUTH_URL=http://10.173.8.125:9352
+NEXT_PUBLIC_SERVER_URL=http://10.173.8.125:9352
+NEXTAUTH_URL_INTERNAL=http://10.173.8.125:9352
 ```
 
-Cela évite d’autres redirections ou callbacks pointant vers localhost et limite les problèmes CORS ou de session.
+- **`NEXT_PUBLIC_SERVER_URL`** ne doit pas rester vide en production : les variables `NEXT_PUBLIC_*` sont figées au **build**. Si elle était vide au build, ajouter la valeur dans le `.env`, puis **refaire un build** (`npm run build`) avant de redémarrer.
+- Cela évite redirections vers localhost, erreurs CORS et problèmes de session.
 
 ---
 
