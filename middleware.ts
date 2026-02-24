@@ -107,7 +107,11 @@ export default auth(async (req) => {
         const origin = getClientOrigin(req);
         const loginUrl = new URL("/login", origin);
         loginUrl.searchParams.set("callbackUrl", nextUrl.pathname + nextUrl.search);
-        return Response.redirect(loginUrl);
+        const res = NextResponse.redirect(loginUrl);
+        if (DEBUG_AUTH) {
+          res.headers.set("X-Debug-Auth", `path=${nextUrl.pathname};isLoggedIn=false;hasReqAuth=${!!req.auth}`);
+        }
+        return res;
     }
   
    return null;

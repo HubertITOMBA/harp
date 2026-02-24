@@ -131,7 +131,41 @@ En ne définissant **jamais** `AUTH_URL` avec une URL `https://`, on reste en HT
    Le middleware utilise un fallback avec `getToken` (next-auth/jwt) quand `req.auth` est null : la session est lue depuis le cookie JWT avec `secureCookie: false` (HTTP). S'assurer que **`AUTH_SECRET`** est défini en production. Si le problème continue, vérifier `AUTH_URL` et les cookies comme au point 1.
 
 6. **Problème aléatoire (parfois connecté, parfois redirigé vers /login, sans erreur console)**  
-   Les redirections vers `/login` utilisent désormais l’**origine côté client** (`Host` / `X-Forwarded-Host`) au lieu de `nextUrl.origin`, pour éviter tout cas où le serveur verrait localhost. Pour tracer quand la session n’est pas vue par le middleware, activer le mode debug : dans le `.env` du serveur, ajouter **`DEBUG_AUTH=1`**, redémarrer, reproduire le problème puis consulter les logs du serveur. Vous verrez des lignes `[DEBUG_AUTH] path=... isLoggedIn=false ...` pour chaque requête où l’utilisateur est considéré non connecté. Remettre `DEBUG_AUTH=0` ou supprimer la variable après diagnostic.
+   Les redirections vers `/login` utilisent l’**origine côté client** (`Host` / `X-Forwarded-Host`). Pour diagnostiquer quand la session n’est pas vue, utiliser **DEBUG_AUTH** (voir section suivante).
+
+---
+
+## Utilisation de DEBUG_AUTH (diagnostic session)
+
+Quand la session n’est pas reconnue de façon aléatoire (redirection vers /login sans erreur en console), vous pouvez activer un mode debug pour voir **quelles requêtes** sont considérées comme non authentifiées.
+
+### Où positionner DEBUG_AUTH
+
+- **Fichier** : le **`.env`** à la racine du projet (sur le serveur de production, le même que celui chargé par `scripts/load-env.sh`).
+- **Ligne à ajouter** :
+  ```env
+  DEBUG_AUTH=1
+  ```
+  (ou `DEBUG_AUTH=true`)
+
+### Comment l’utiliser
+
+1. Sur le serveur de production, éditer le `.env` et ajouter la ligne **`DEBUG_AUTH=1`**.
+2. Redémarrer l’application (par ex. `scripts/start-production.sh`) pour que la variable soit chargée.
+3. Reproduire le problème (naviguer, cliquer sur un menu, etc.) jusqu’à ce que vous soyez redirigé vers `/login`.
+4. **Voir le résultat du debug** :
+   - **Dans le navigateur** (le plus fiable) : ouvrir les **Outils développeur (F12)** → onglet **Réseau / Network**. Trouver la requête qui a reçu une **redirection 307** vers `/login`. Cliquer dessus et regarder les **en-têtes de la réponse** : si DEBUG_AUTH est actif, vous verrez un en-tête **`X-Debug-Auth`** avec par ex. `path=/settings;isLoggedIn=false;hasReqAuth=false`. Cela confirme que le middleware a considéré cette requête comme non authentifiée.
+   - **Dans les logs du serveur** : le middleware peut aussi écrire des lignes `[DEBUG_AUTH] path=... isLoggedIn=...` dans la console. Selon l’environnement (Edge Runtime), ces logs ne s’affichent pas toujours dans le terminal ; d’où l’usage de l’en-tête `X-Debug-Auth` en priorité.
+5. Après diagnostic, **désactiver** en mettant `DEBUG_AUTH=0` dans le `.env` ou en supprimant la ligne, puis redémarrer.
+
+### Résumé
+
+| Où       | Valeur        |
+|----------|---------------|
+| Fichier  | `.env` (racine du projet, côté serveur) |
+| Variable | `DEBUG_AUTH=1` ou `DEBUG_AUTH=true` |
+| Redémarrage | Oui, après modification du `.env` |
+| Où voir  | Navigateur → F12 → Network → requête en 307 vers /login → en-tête **X-Debug-Auth** |
 
 ---
 
