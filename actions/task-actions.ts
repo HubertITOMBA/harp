@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateTaskEffectiveDuration } from "./calculate-task-duration";
+import { notifyUserAboutTaskAssignment } from "@/lib/actions/notification-actions";
 
 // Schéma de validation pour créer une chrono-tâche
 const CreateTaskSchema = z.object({
@@ -257,6 +258,28 @@ export async function updateTaskItem(data: z.infer<typeof updateTaskItemSchema>)
 
     // Mettre à jour la durée effective de la chrono-tâche
     await updateTaskEffectiveDuration(updated.taskId);
+
+    // Notifier la ressource désignée (notification + email)
+    if (updated.resourceNetid?.trim()) {
+      const [task, harpitem] = await Promise.all([
+        db.harptask.findUnique({
+          where: { id: updated.taskId },
+          select: { title: true },
+        }),
+        updated.harpitemId
+          ? db.harpitems.findUnique({
+              where: { id: updated.harpitemId },
+              select: { descr: true },
+            })
+          : null,
+      ]);
+      await notifyUserAboutTaskAssignment({
+        resourceNetid: updated.resourceNetid.trim(),
+        chronoTitle: task?.title ?? "Chrono-tâche",
+        taskItemDescr: harpitem?.descr ?? "Tâche",
+        isNew: false,
+      });
+    }
 
     revalidatePath(`/list/tasks/${updated.taskId}`);
     revalidatePath(`/list/tasks`);

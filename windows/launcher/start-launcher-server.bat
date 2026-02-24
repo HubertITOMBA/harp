@@ -5,25 +5,32 @@ REM Ce script peut être ajouté au démarrage Windows de l'utilisateur
 setlocal
 
 REM Chercher le launcher dans plusieurs emplacements possibles
-REM PRIORITÉ: W:\portal (home directory réseau) > LOCALAPPDATA > TEMP
+REM PRIORITÉ: D:\apps\portal\launcher (production) > W:\portal > LOCALAPPDATA > TEMP
 set LAUNCHER_DIR=
 set SERVER_SCRIPT=
 
-REM PRIORITÉ 1: Essayer W:\portal\HARP\launcher d'abord (home directory réseau)
+REM PRIORITÉ 1: Production - D:\apps\portal\launcher
+if exist "D:\apps\portal\launcher\launcher-server.ps1" (
+    set LAUNCHER_DIR=D:\apps\portal\launcher
+    set SERVER_SCRIPT=D:\apps\portal\launcher\launcher-server.ps1
+    goto :found
+)
+
+REM PRIORITÉ 2: W:\portal\HARP\launcher (home directory réseau)
 if exist "W:\portal\HARP\launcher\launcher-server.ps1" (
     set LAUNCHER_DIR=W:\portal\HARP\launcher
     set SERVER_SCRIPT=W:\portal\HARP\launcher\launcher-server.ps1
     goto :found
 )
 
-REM PRIORITÉ 2: Si pas trouvé, essayer LOCALAPPDATA
+REM PRIORITÉ 3: LOCALAPPDATA
 if exist "%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1" (
     set LAUNCHER_DIR=%LOCALAPPDATA%\HARP\launcher
     set SERVER_SCRIPT=%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1
     goto :found
 )
 
-REM PRIORITÉ 3: Si pas trouvé, essayer le dossier temp système
+REM PRIORITÉ 4: TEMP
 if exist "%TEMP%\HARP\launcher\launcher-server.ps1" (
     set LAUNCHER_DIR=%TEMP%\HARP\launcher
     set SERVER_SCRIPT=%TEMP%\HARP\launcher\launcher-server.ps1
@@ -34,6 +41,15 @@ REM Si aucun fichier trouvé, afficher un message d'erreur détaillé
 echo ERREUR: Le serveur launcher n'est pas installe
 echo.
 echo Emplacements verifies:
+if exist "D:\apps\portal\launcher\launcher-server.ps1" (
+    echo   [OK] D:\apps\portal\launcher - launcher-server.ps1 present
+) else (
+    if exist "D:\apps\portal\launcher" (
+        echo   [MANQUANT] D:\apps\portal\launcher existe mais launcher-server.ps1 absent
+    ) else (
+        echo   [MANQUANT] D:\apps\portal\launcher n'existe pas
+    )
+)
 if exist "W:\portal\HARP\launcher" (
     echo   [OK] W:\portal\HARP\launcher existe
     if exist "W:\portal\HARP\launcher\launcher-server.ps1" (
@@ -57,9 +73,9 @@ if exist "%LOCALAPPDATA%\HARP\launcher" (
 )
 
 echo.
-echo SOLUTION: Executez install-launcher-server.ps1 depuis D:\apps\portail\launcher
-echo   Exemple: cd D:\apps\portail\launcher
-echo            .\install-launcher-server.ps1 -AddToStartup
+echo SOLUTION: En production, copiez les fichiers dans D:\apps\portal\launcher puis:
+echo   cd D:\apps\portal\launcher
+echo   .\install-launcher-server.ps1 -InstallPath "D:\apps\portal\launcher" -AddToStartup
 pause
 exit /b 1
 

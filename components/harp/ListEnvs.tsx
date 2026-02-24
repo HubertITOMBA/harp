@@ -213,6 +213,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Link
                         href={envsharp.url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-lg sm:text-xl font-bold text-harpOrange hover:underline flex items-center gap-1.5"
                       >
                         {envsharp.env}
@@ -306,6 +308,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             {envsharp.harprelease && (
                               <Link
                                 href={envsharp.url || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-sm font-bold text-harpOrange hover:underline"
                               >
                                 {envsharp.harprelease}
@@ -385,6 +389,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
                           <Link
                             href={envsharp.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="font-semibold text-harpOrange hover:underline"
                           >
                             {envsharp.ptversion || "N/A"}

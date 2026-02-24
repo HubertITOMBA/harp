@@ -107,7 +107,7 @@ if (Test-Path $configPath) {
     # Créer un fichier de configuration par défaut
     $defaultConfig = @{
         version = "1.0"
-        apiUrl = "https://localhost:9352"
+        apiUrl = "http://localhost:9352"
         logLevel = "info"
         keepWindowOpenOnError = $true
         keepWindowOpenOnSuccess = $false

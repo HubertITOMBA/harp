@@ -252,6 +252,76 @@ export async function createNotification(formData: FormData) {
 }
 
 /**
+ * Envoie une notification et un email à la ressource désignée (par netid) lors de l'ajout ou de la modification d'une tâche à une chrono-tâche.
+ * Utilisé depuis /list/tasks lors de createTaskItem et updateTaskItem.
+ *
+ * @param params.resourceNetid - Netid de la ressource désignée (destinataire)
+ * @param params.chronoTitle - Titre de la chrono-tâche
+ * @param params.taskItemDescr - Description de la tâche (item)
+ * @param params.isNew - true = tâche ajoutée, false = tâche modifiée
+ */
+export async function notifyUserAboutTaskAssignment(params: {
+  resourceNetid: string;
+  chronoTitle: string;
+  taskItemDescr: string;
+  isNew: boolean;
+}) {
+  const { resourceNetid, chronoTitle, taskItemDescr, isNew } = params;
+  if (!resourceNetid?.trim()) return;
+
+  try {
+    const session = await auth();
+    const createdBy = session?.user?.id ? parseInt(session.user.id, 10) : null;
+    if (!createdBy || isNaN(createdBy)) return;
+
+    const user = await db.user.findUnique({
+      where: { netid: resourceNetid.trim() },
+      select: { id: true, email: true, name: true, netid: true },
+    });
+    if (!user) return;
+
+    const title = isNew
+      ? "Une tâche vous a été assignée"
+      : "Une tâche vous concernant a été modifiée";
+    const message = isNew
+      ? `Une nouvelle tâche vous a été assignée dans la chrono-tâche "${chronoTitle}" : ${taskItemDescr}. Consultez le portail pour plus de détails.`
+      : `La tâche "${taskItemDescr}" de la chrono-tâche "${chronoTitle}" a été modifiée. Consultez le portail pour plus de détails.`;
+
+    const notification = await db.harpnotification.create({
+      data: {
+        title,
+        message,
+        createdBy,
+        recipients: {
+          create: [{ recipientType: "USER", recipientId: user.id, read: false }],
+        },
+      },
+    });
+
+    if (user.email) {
+      await sendMail({
+        to: user.email,
+        subject: `[Portail HARP] ${title}`,
+        html: `
+          <h2>${title}</h2>
+          <p>${message.replace(/\n/g, "<br>")}</p>
+          <p style="margin-top: 20px; color: #666; font-size: 12px;">
+            Cette notification a été envoyée depuis le Portail HARP.
+          </p>
+        `,
+        text: `${title}\n\n${message}`,
+      });
+    }
+
+    revalidatePath("/list/notifications");
+    revalidatePath("/user/profile");
+    revalidatePath("/list/tasks");
+  } catch (err) {
+    console.error("Erreur lors de la notification de la ressource désignée:", err);
+  }
+}
+
+/**
  * Met à jour une notification existante
  * 
  * @param notificationId - L'ID de la notification à mettre à jour

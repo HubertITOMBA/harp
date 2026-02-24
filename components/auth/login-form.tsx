@@ -4,6 +4,7 @@ import * as z from "zod";
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
 import { CardWrapper } from "./card-wrapper";
 import { LoginSchema } from "@/schemas";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ export const LoginForm = ({ callbackUrl: callbackUrlProp }: LoginFormProps = {})
             if (data?.error) {
                form.reset(); 
                setError(data.error);
+               toast.error(data.error);
             }
 
             if (data?.success && data?.redirectTo) {

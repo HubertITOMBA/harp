@@ -37,6 +37,13 @@ export const login = async (
             return { error: "Le netid saisi n'existe pas !" }
          }
 
+        // Vérifier si le compte est désactivé (mot de passe préfixé par DISABLED_)
+        if (existingUser.password.startsWith("DISABLED_")) {
+            return {
+                error: "Votre compte est désactivé. Veuillez contacter l'administrateur pour recouvrer l'accès.",
+            };
+        }
+
 
 
    //  return { success: "Connexion effectuée avec succès !"}

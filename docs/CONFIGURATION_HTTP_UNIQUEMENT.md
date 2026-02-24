@@ -201,6 +201,28 @@ NEXTAUTH_URL_INTERNAL=http://10.173.8.125:9352
 
 ---
 
+## Dépannage : message ou URL qui affiche le port 9052 (launcher)
+
+**Symptôme** : Lors du lancement d’une application externe (depuis l’API `app/api/launcher/tool/route.ts` ou le menu), un message ou une URL affiche encore le **port 9052** alors que l’application n’utilise que le **port 9352**.
+
+**Cause** : Dans le dépôt, tout est configuré en **9352** (et en HTTP). Le port 9052 n’apparaît plus dans le code. Si vous voyez encore 9052, la source est **côté poste utilisateur** :
+
+1. **Fichier de configuration du launcher**  
+   Le launcher Windows lit l’URL de l’API dans un fichier de config. Si ce fichier a été créé par une ancienne installation, il peut encore contenir `9052`.  
+   - **Emplacements** : `W:\portal\HARP\launcher\launcher-config.json` ou `%LOCALAPPDATA%\HARP\launcher\launcher-config.json` (selon l’installation).  
+   - **À faire** : Ouvrir le fichier et mettre `apiUrl` à `http://votre-serveur:9352` (ou `http://localhost:9352` en dev). Puis redémarrer le serveur launcher si besoin.
+
+2. **Variable d’environnement**  
+   Le script launcher utilise `HARP_API_URL` s’il est défini.  
+   - **À faire** : Vérifier sur le poste (variable utilisateur ou machine) qu’elle pointe vers `http://...:9352` et non vers un ancien `...:9052`.
+
+3. **Réinstallation du launcher**  
+   Pour repartir sur une config à jour : réexécuter les scripts d’installation depuis le dépôt actuel (ex. `install-launcher-server.ps1` ou `install-launcher-user.ps1` dans `windows/launcher/`). Les configs par défaut créées utilisent désormais **9352** et **HTTP**.
+
+**Résumé** : Aucune occurrence de 9052 dans le code. Corriger la config déployée (fichier launcher ou `HARP_API_URL`) et/ou réinstaller le launcher pour voir 9352 partout.
+
+---
+
 ## Références
 
 - **URLs en production** : `docs/CONFIGURATION_PRODUCTION_URLS.md`

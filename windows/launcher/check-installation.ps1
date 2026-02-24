@@ -5,6 +5,7 @@ Write-Host "`n=== Vérification de l'installation du Launcher HARP ===" -Foregro
 Write-Host ""
 
 $installPaths = @(
+    "D:\apps\portal\launcher",
     "W:\portal\HARP\launcher",
     "$env:LOCALAPPDATA\HARP\launcher",
     "$env:TEMP\HARP\launcher"
@@ -52,9 +53,9 @@ foreach ($installPath in $installPaths) {
 if (-not $foundInstallation) {
     Write-Host "=== Aucune installation complète trouvée ===" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Pour installer le launcher, exécutez:" -ForegroundColor Yellow
-    Write-Host "  cd D:\apps\portail\launcher" -ForegroundColor Gray
-    Write-Host "  .\install-launcher-server.ps1 -AddToStartup" -ForegroundColor Gray
+    Write-Host "Pour installer le launcher (production D:\apps\portal\launcher), exécutez:" -ForegroundColor Yellow
+    Write-Host "  cd D:\apps\portal\launcher" -ForegroundColor Gray
+    Write-Host "  .\install-launcher-server.ps1 -InstallPath \"D:\apps\portal\launcher\" -AddToStartup" -ForegroundColor Gray
     Write-Host ""
 } else {
     Write-Host "=== Installation trouvée et vérifiée ===" -ForegroundColor Green

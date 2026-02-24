@@ -7,12 +7,22 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Charger la configuration depuis un fichier JSON dans le dossier utilisateur
-# PRIORITÉ: W:\portal (home directory réseau) > LOCALAPPDATA
+# Charger la configuration depuis un fichier JSON
+# PRIORITÉ: répertoire du script (ex. D:\apps\portal\launcher) > W:\portal > LOCALAPPDATA
 function Get-LauncherConfig {
-    # PRIORITÉ 1: Chercher dans W:\portal\HARP\launcher
-    $configPath = "W:\portal\HARP\launcher\launcher-config.json"
+    # PRIORITÉ 1: Répertoire du script (ex. D:\apps\portal\launcher en production)
+    if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "launcher-config.json"))) {
+        $configPath = Join-Path $PSScriptRoot "launcher-config.json"
+        try {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            return $config
+        } catch {
+            Write-Host "Erreur lors du chargement de la configuration depuis $PSScriptRoot : $_" -ForegroundColor Yellow
+        }
+    }
     
+    # PRIORITÉ 2: Chercher dans W:\portal\HARP\launcher
+    $configPath = "W:\portal\HARP\launcher\launcher-config.json"
     # Si le fichier de config existe dans W:\portal, le charger
     if (Test-Path $configPath) {
         try {
@@ -23,7 +33,7 @@ function Get-LauncherConfig {
         }
     }
     
-    # PRIORITÉ 2: Si pas trouvé dans W:\portal, chercher dans LOCALAPPDATA
+    # PRIORITÉ 3: Si pas trouvé dans W:\portal, chercher dans LOCALAPPDATA
     $configPath = Join-Path $env:LOCALAPPDATA "HARP\launcher\launcher-config.json"
     if (Test-Path $configPath) {
         try {
@@ -36,7 +46,7 @@ function Get-LauncherConfig {
     
     # Retourner une configuration par défaut
     return @{
-        apiUrl = "https://localhost:9352"
+        apiUrl = "http://localhost:9352"
         logLevel = "info"
         keepWindowOpenOnError = $true
         keepWindowOpenOnSuccess = $false
@@ -53,7 +63,7 @@ if (-not $API_BASE_URL) {
 }
 if (-not $API_BASE_URL) {
     # Valeur par défaut pour la production (HTTP en mode test)
-    $API_BASE_URL = "https://localhost:9352"
+    $API_BASE_URL = "http://localhost:9352"
 }
 
 function Write-Log($message) {

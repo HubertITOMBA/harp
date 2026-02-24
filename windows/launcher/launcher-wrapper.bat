@@ -6,22 +6,29 @@ REM Utilisé dans le registre Windows pour éviter les chemins codés en dur
 setlocal
 
 REM Chercher le launcher dans plusieurs emplacements possibles
-REM PRIORITÉ: W:\portal (home directory réseau) > LOCALAPPDATA > TEMP
+REM PRIORITÉ: D:\apps\portal\launcher (production) > W:\portal > LOCALAPPDATA > TEMP
 set LAUNCHER_PATH=
 
-REM PRIORITÉ 1: Essayer W:\portal\HARP\launcher d'abord (home directory réseau)
-if exist "W:\portal\HARP\launcher\launcher.ps1" (
-    set LAUNCHER_PATH=W:\portal\HARP\launcher\launcher.ps1
+REM PRIORITÉ 1: Production - D:\apps\portal\launcher
+if exist "D:\apps\portal\launcher\launcher.ps1" (
+    set LAUNCHER_PATH=D:\apps\portal\launcher\launcher.ps1
 )
 
-REM PRIORITÉ 2: Si pas trouvé, essayer LOCALAPPDATA
+REM PRIORITÉ 2: W:\portal\HARP\launcher (home directory réseau)
+if "%LAUNCHER_PATH%"=="" (
+    if exist "W:\portal\HARP\launcher\launcher.ps1" (
+        set LAUNCHER_PATH=W:\portal\HARP\launcher\launcher.ps1
+    )
+)
+
+REM PRIORITÉ 3: LOCALAPPDATA
 if "%LAUNCHER_PATH%"=="" (
     if exist "%LOCALAPPDATA%\HARP\launcher\launcher.ps1" (
         set LAUNCHER_PATH=%LOCALAPPDATA%\HARP\launcher\launcher.ps1
     )
 )
 
-REM PRIORITÉ 3: Si pas trouvé, essayer le dossier temp système
+REM PRIORITÉ 4: TEMP
 if "%LAUNCHER_PATH%"=="" (
     if exist "%TEMP%\HARP\launcher\launcher.ps1" (
         set LAUNCHER_PATH=%TEMP%\HARP\launcher\launcher.ps1
