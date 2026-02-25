@@ -1,10 +1,10 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { ArrowUpDown, Eye, Pencil, UserX, UserCheck } from 'lucide-react'
+import { ArrowUpDown, Pencil, UserX, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import { UserActions } from '@/components/user/UserActions';
 
 export type Users = {
@@ -91,7 +91,16 @@ export const columns: ColumnDef<Users>[] = [
 },
 {
   accessorKey: 'prenom',
-  header: 'Prénom',
+  header: ({ column }) => (
+    <Button
+      variant='ghost'
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      className="h-8 text-xs sm:text-sm"
+    >
+      Prénom
+      <ArrowUpDown className='ml-2 h-3 w-3' />
+    </Button>
+  ),
   cell: ({ row }) => {
     return <div className="text-xs sm:text-sm">{row.getValue('prenom') || '-'}</div>
   }
@@ -102,7 +111,16 @@ export const columns: ColumnDef<Users>[] = [
 // },
 {
   accessorKey:  'lastlogin',
-  header: 'Dernière connexion',
+  header: ({ column }) => (
+    <Button
+      variant='ghost'
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      className="h-8 text-xs sm:text-sm"
+    >
+      Dernière connexion
+      <ArrowUpDown className='ml-2 h-3 w-3' />
+    </Button>
+  ),
   cell: ({ row }) => {
     const date = row.getValue('lastlogin') as Date | null;
     if (!date) return <div className="text-xs sm:text-sm text-gray-400">Jamais</div>;
@@ -112,9 +130,50 @@ export const columns: ColumnDef<Users>[] = [
 },
 {
   accessorKey: 'email',
-  header: 'Email',
+  header: ({ column }) => (
+    <Button
+      variant='ghost'
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      className="h-8 text-xs sm:text-sm"
+    >
+      Email
+      <ArrowUpDown className='ml-2 h-3 w-3' />
+    </Button>
+  ),
   cell: ({ row }) => {
     return <div className="text-xs sm:text-sm">{row.getValue('email') || '-'}</div>
+  }
+},
+{
+  id: 'statut',
+  accessorFn: (row) => (row.mdp?.startsWith('DISABLED_') ? 'desactive' : 'actif'),
+  header: ({ column }) => {
+    return (
+      <Button
+        variant='ghost'
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-8 text-xs sm:text-sm"
+      >
+        Statut
+        <ArrowUpDown className='ml-2 h-3 w-3' />
+      </Button>
+    )
+  },
+  cell: ({ row }) => {
+    const isDisabled = row.original.mdp?.startsWith('DISABLED_') ?? false
+    return (
+      <div className="flex justify-center">
+        {isDisabled ? (
+          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-200">
+            Désactivé
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-200">
+            Actif
+          </Badge>
+        )}
+      </div>
+    )
   }
 },
 
@@ -138,6 +197,7 @@ export const columns: ColumnDef<Users>[] = [
   {
     id: 'actions',
     header: () => <div className="text-center">Actions</div>,
+    enableSorting: false,
     cell: ({ row }) => {
       const user = row.original
 

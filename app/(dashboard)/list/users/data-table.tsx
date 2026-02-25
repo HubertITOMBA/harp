@@ -3,6 +3,7 @@
 import {
   ColumnDef,
   ColumnFiltersState,
+  Row,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -52,7 +53,7 @@ export function DataTable<TData, TValue>({
     const [sorting, setSorting] = useState<SortingState>([]) 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) ;
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-
+    const [globalFilter, setGlobalFilter] = useState('')
     const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
@@ -62,20 +63,35 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-
-
-
-      onSortingChange: setSorting,
-      onColumnFiltersChange: setColumnFilters,
-      onColumnVisibilityChange: setColumnVisibility,
-      onRowSelectionChange: setRowSelection,
-
-      state: {
-        sorting,
-        columnFilters,
-        columnVisibility,
-        rowSelection,
-      },
+    globalFilterFn: (row: Row<TData>, _columnId: string, filterValue: string) => {
+      if (!filterValue || String(filterValue).trim() === '') return true
+      const s = String(filterValue).toLowerCase().trim()
+      const obj = row.original as Record<string, unknown>
+      const skipKeys = ['password']
+      return Object.entries(obj).some(([key, value]) => {
+        if (key === 'mdp') {
+          const mdp = value as string | undefined
+          if (mdp?.startsWith?.('DISABLED_')) return 'desactivé'.includes(s) || 'desactive'.includes(s)
+          return 'actif'.includes(s)
+        }
+        if (skipKeys.includes(key)) return false
+        if (value == null) return false
+        if (value instanceof Date) return value.toLocaleString('fr-FR').toLowerCase().includes(s)
+        return String(value).toLowerCase().includes(s)
+      })
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      globalFilter,
+      rowSelection,
+    },
   })
 
   return (
@@ -83,12 +99,10 @@ export function DataTable<TData, TValue>({
      <div className="flex items-center justify-between text-gray-500 font-semibold">
      <div className="flex items-center py-4 ">
         <Input
-          placeholder="Filtrer par NetID..."
-          value={(table.getColumn("netid")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("netid")?.setFilterValue(event.target.value)
-          }
-          className="rounded-lg max-w-sm"
+          placeholder="Rechercher dans toutes les colonnes..."
+          value={globalFilter ?? ""}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          className="rounded-lg max-w-md"
         />
         </div>
         <DropdownMenu>
