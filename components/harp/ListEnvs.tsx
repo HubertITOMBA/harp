@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import Image from "next/image";
-import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { PuttyLink } from "./PuttyLink";
 import { SQLDeveloperLink } from "./SQLDeveloperLink";
@@ -33,6 +32,7 @@ import {
   Activity
 } from "lucide-react";
 import { CopyPasswordButton } from "./CopyPasswordButton";
+import { HarpUrlLink } from "./HarpUrlLink";
 
 interface EnvInfoProps {
   typenvid: number;
@@ -211,17 +211,15 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                   {/* Nom de l'environnement */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <Link
+                      <HarpUrlLink
                         href={envsharp.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="text-lg sm:text-xl font-bold text-harpOrange hover:underline flex items-center gap-1.5"
                       >
                         {envsharp.env}
                         {envsharp.url && (
                           <ExternalLink className="w-3 h-3 text-muted-foreground" />
                         )}
-                      </Link>
+                      </HarpUrlLink>
                       {envsharp.anonym === "N" ? null : (
                         <Badge variant="outline" className="text-xs">
                           <Lock className="w-3 h-3 mr-1" />
@@ -306,14 +304,12 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           <div className="flex items-center gap-2">
                             <span>{envsharp.appli}</span>
                             {envsharp.harprelease && (
-                              <Link
+                              <HarpUrlLink
                                 href={envsharp.url || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
                                 className="text-sm font-bold text-harpOrange hover:underline"
                               >
                                 {envsharp.harprelease}
-                              </Link>
+                              </HarpUrlLink>
                             )}
                           </div>
                         </div>
@@ -387,14 +383,12 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           Version PTools
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <Link
+                          <HarpUrlLink
                             href={envsharp.url || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="font-semibold text-harpOrange hover:underline"
                           >
                             {envsharp.ptversion || "N/A"}
-                          </Link>
+                          </HarpUrlLink>
                         </div>
                       </div>
 
