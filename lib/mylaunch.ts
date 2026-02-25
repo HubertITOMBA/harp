@@ -120,6 +120,45 @@ export function buildMyLaunchUrl(
 }
 
 /**
+ * Construit une URL mylaunch://openurl pour ouvrir une URL dans Edge/Chrome
+ * avec le port 6000 autorisé (évite ERR_UNSAFE_PORT). Le launcher lance le
+ * navigateur avec --explicitly-allowed-ports=6000.
+ */
+export function buildOpenUrlInBrowserUrl(targetUrl: string): string {
+  const searchParams = new URLSearchParams();
+  searchParams.set('url', targetUrl);
+  return `mylaunch://openurl?${searchParams.toString()}`;
+}
+
+/**
+ * Ouvre une URL dans le navigateur (Edge prioritaire, puis Chrome) avec le port 6000
+ * autorisé, via le serveur local ou le protocole mylaunch://. Pas de toast ni message
+ * pour l'utilisateur.
+ */
+export async function launchOpenUrlInBrowser(targetUrl: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    try {
+      const serverUrl = `http://localhost:8765/launch?tool=openurl&url=${encodeURIComponent(targetUrl)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      const response = await fetch(serverUrl, { method: 'GET', signal: controller.signal, cache: 'no-cache' });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = await response.json();
+        return { success: data.success !== false, error: data.error };
+      }
+      throw new Error(`HTTP ${response.status}`);
+    } catch {
+      window.location.href = buildOpenUrlInBrowserUrl(targetUrl);
+      return { success: true };
+    }
+  } catch (error) {
+    console.error('Erreur lors du lancement de l\'URL dans le navigateur:', error);
+    return { success: false, error: 'Impossible d\'ouvrir le lien. Vérifiez que le launcher (mylaunch://) est installé.' };
+  }
+}
+
+/**
  * Lance une application externe via le serveur local ou le protocole mylaunch://
  * 
  * Cette fonction essaie d'abord d'utiliser le serveur HTTP local (port 8765),

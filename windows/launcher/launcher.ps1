@@ -333,6 +333,47 @@ try {
         Write-Host "NetID depuis l'URL: $netid" -ForegroundColor Yellow
     }
 
+    # Cas spécial: ouvrir une URL dans Edge/Chrome avec port 6000 autorisé (évite ERR_UNSAFE_PORT)
+    if ($tool -eq 'openurl') {
+        $targetUrl = $query['url']
+        if (-not $targetUrl -or [string]::IsNullOrWhiteSpace($targetUrl)) {
+            throw "Le parametre 'url' est requis pour openurl"
+        }
+        Write-Host "Ouverture de l'URL dans le navigateur (port 6000 autorise)..." -ForegroundColor Cyan
+        $edgePaths = @(
+            "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+            "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+        )
+        $chromePaths = @(
+            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+        )
+        $browserExe = $null
+        foreach ($p in $edgePaths) {
+            if (Test-Path -LiteralPath $p) { $browserExe = $p; break }
+        }
+        if (-not $browserExe) {
+            foreach ($p in $chromePaths) {
+                if (Test-Path -LiteralPath $p) { $browserExe = $p; break }
+            }
+        }
+        if (-not $browserExe) {
+            throw "Ni Microsoft Edge ni Google Chrome n'ont ete trouves. Installez Edge ou Chrome."
+        }
+        $portArg = "--explicitly-allowed-ports=6000"
+        Write-Log "Lancement navigateur: $browserExe $portArg $targetUrl"
+        Start-Process -FilePath $browserExe -ArgumentList $portArg, $targetUrl
+        Write-Host "Navigateur lance avec l'URL (port 6000 autorise)" -ForegroundColor Green
+        Write-Log "Succes: URL ouverte dans le navigateur"
+        if (-not $config.keepWindowOpenOnSuccess) {
+            $delay = if ($config.windowCloseDelay) { $config.windowCloseDelay } else { 2 }
+            Start-Sleep -Seconds $delay
+        } else {
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        }
+        exit 0
+    }
+
     # Récupérer les informations de l'outil depuis l'API
     Write-Host "Récupération des informations de l'outil depuis la base de données..." -ForegroundColor Cyan
     $toolInfo = Get-ToolInfoFromAPI -tool $tool -netid $netid
