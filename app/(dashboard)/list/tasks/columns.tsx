@@ -1,7 +1,8 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { ArrowUpDown } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowUpDown, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TaskActions } from '@/components/task/TaskActions'
@@ -125,6 +126,37 @@ export const columns: ColumnDef<ListTask>[] = [
     cell: ({ row }) => {
       const count = row.original._count.items;
       return <div className="text-xs sm:text-sm">{count}</div>;
+    },
+  },
+  {
+    id: 'descr',
+    accessorKey: 'descr',
+    header: ({ column }) => (
+      <Button
+        variant='ghost'
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-8 text-xs sm:text-sm"
+      >
+        Description
+        <ArrowUpDown className='ml-2 h-3 w-3' />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const descr = row.original.descr;
+      const truncated = descr && descr.length > 50 ? descr.slice(0, 50) + "…" : descr || "—";
+      return (
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs sm:text-sm text-gray-700 truncate flex-1" title={descr || undefined}>
+            {truncated}
+          </span>
+          <Button variant="ghost" size="sm" asChild className="h-7 px-1.5 shrink-0 text-orange-600 hover:bg-orange-100">
+            <Link href={`/list/tasks/${row.original.id}`} title="Voir la chrono-tâche et lire la description">
+              <Eye className="h-3.5 w-3.5 mr-0.5" />
+              Voir
+            </Link>
+          </Button>
+        </div>
+      );
     },
   },
   {

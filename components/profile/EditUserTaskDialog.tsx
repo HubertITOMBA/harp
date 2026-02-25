@@ -215,6 +215,9 @@ export function EditUserTaskDialog({ task, open, onOpenChange, onTaskUpdated }: 
               <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
               Statut
             </Label>
+            <p className="text-xs text-slate-500">
+              Vous pouvez ajouter un commentaire ci-dessous pour ce statut (optionnel).
+            </p>
             <Select value={status} onValueChange={(value) => setStatus(value as Task["status"])}>
               <SelectTrigger className="w-full border-slate-300 text-slate-900 font-medium focus:border-orange-500 focus:ring-orange-500">
                 <SelectValue />

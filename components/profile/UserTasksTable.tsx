@@ -31,8 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, ArrowUpDown, Maximize2, Minimize2, Search, Filter } from "lucide-react";
+import { Pencil, ArrowUpDown, Maximize2, Minimize2, Search, Filter, FileText } from "lucide-react";
 import { EditUserTaskDialog } from "./EditUserTaskDialog";
+import { TaskDescriptionDialog } from "./TaskDescriptionDialog";
 import { toast } from 'react-toastify';
 
 interface Task {
@@ -114,8 +115,14 @@ const formatElapsedTime = (startDate: Date | string | null | undefined, endDate:
 /**
  * Tableau affichant les tâches de l'utilisateur avec possibilité de modification et tri
  */
+const truncate = (str: string | null | undefined, maxLen: number): string => {
+  if (!str) return "—";
+  return str.length <= maxLen ? str : str.slice(0, maxLen) + "…";
+};
+
 export function UserTasksTable({ tasks }: UserTasksTableProps) {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [descriptionTaskId, setDescriptionTaskId] = useState<number | null>(null);
   const [tasksList, setTasksList] = useState(tasks);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -201,9 +208,25 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
           </Button>
         );
       },
-      cell: ({ row }) => (
-        <div className="text-xs sm:text-sm">{row.original.harpitem?.descr || "N/A"}</div>
-      ),
+      cell: ({ row }) => {
+        const descr = row.original.harpitem?.descr;
+        return (
+          <div className="flex items-center gap-1">
+            <span className="text-xs sm:text-sm flex-1 min-w-0">{truncate(descr, 60) || "N/A"}</span>
+            {descr && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDescriptionTaskId(row.original.id)}
+                className="h-6 w-6 p-0 shrink-0 text-orange-600 hover:bg-orange-100"
+                title="Lire la description complète"
+              >
+                <FileText className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'startDate',
@@ -325,6 +348,20 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
       },
     },
     {
+      id: 'comment',
+      accessorKey: 'comment',
+      size: 180,
+      minSize: 120,
+      maxSize: 300,
+      enableResizing: true,
+      header: () => <div className="text-xs sm:text-sm font-semibold text-white">Commentaire</div>,
+      cell: ({ row }) => (
+        <div className="text-xs sm:text-sm text-gray-600" title={row.original.comment || undefined}>
+          {truncate(row.original.comment, 40)}
+        </div>
+      ),
+    },
+    {
       id: 'actions',
       size: 80,
       minSize: 70,
@@ -377,6 +414,7 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
     onSortingChange: setSorting,
     onColumnSizingChange: setColumnSizing,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: globalFilterFn,
     columnResizeMode: 'onChange',
     enableColumnResizing: true,
@@ -567,7 +605,7 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={8} className="h-24 text-center">
+              <TableCell colSpan={9} className="h-24 text-center">
                 Aucune tâche trouvée.
               </TableCell>
             </TableRow>
@@ -575,6 +613,17 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
         </TableBody>
         </Table>
       </div>
+
+      {/* Dialog description complète */}
+      {descriptionTaskId && (
+        <TaskDescriptionDialog
+          task={tasksList.find(t => t.id === descriptionTaskId)!}
+          open={descriptionTaskId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDescriptionTaskId(null);
+          }}
+        />
+      )}
 
       {/* Dialog de modification */}
       {editingTaskId && (

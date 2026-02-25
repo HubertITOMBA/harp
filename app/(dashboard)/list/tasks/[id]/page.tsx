@@ -164,13 +164,13 @@ export default function TaskItemsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            {/* Description si présente */}
-            {task.descr && (
-              <div className="bg-gray-50 p-4 rounded border mb-6">
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Description</label>
-                <div className="text-gray-900 text-sm">{task.descr}</div>
+            {/* Description de la chrono-tâche (toujours affichée pour pouvoir la lire) */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+              <label className="text-sm font-semibold text-gray-700 mb-2 block">Description de la chrono-tâche</label>
+              <div className="text-gray-900 text-sm whitespace-pre-wrap">
+                {task.descr || "Aucune description renseignée."}
               </div>
-            )}
+            </div>
 
             {/* Barre de progression */}
             {totalItems > 0 && (
