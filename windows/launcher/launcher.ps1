@@ -359,12 +359,13 @@ try {
         )
         $browserExe = $null
         $usePortArg = $true   # --explicitly-allowed-ports=6000 pour Chromium (Chrome/Edge)
+        $isFirefox = $false
         if ($preferredBrowser -eq 'chrome') {
             foreach ($p in $chromePaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; break } }
         } elseif ($preferredBrowser -eq 'msedge') {
             foreach ($p in $edgePaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; break } }
         } elseif ($preferredBrowser -eq 'firefox') {
-            foreach ($p in $firefoxPaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; $usePortArg = $false; break } }
+            foreach ($p in $firefoxPaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; $usePortArg = $false; $isFirefox = $true; break } }
         }
         if (-not $browserExe) {
             foreach ($p in $chromePaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; break } }
@@ -373,15 +374,31 @@ try {
             foreach ($p in $edgePaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; break } }
         }
         if (-not $browserExe) {
-            foreach ($p in $firefoxPaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; $usePortArg = $false; break } }
+            foreach ($p in $firefoxPaths) { if (Test-Path -LiteralPath $p) { $browserExe = $p; $usePortArg = $false; $isFirefox = $true; break } }
         }
         if (-not $browserExe) {
             throw "Aucun navigateur (Chrome, Edge, Firefox) n'a ete trouve. Installez l'un d'entre eux."
+        }
+        # Firefox : profil dédié avec port 6000 autorisé (network.security.ports.banned.override)
+        $firefoxProfilePath = $null
+        if ($isFirefox) {
+            $firefoxProfilePath = Join-Path $env:LOCALAPPDATA "HARP\firefox-port6000-profile"
+            if (-not (Test-Path $firefoxProfilePath)) {
+                New-Item -ItemType Directory -Path $firefoxProfilePath -Force | Out-Null
+            }
+            $userJsPath = Join-Path $firefoxProfilePath "user.js"
+            $userJsContent = "user_pref(""network.security.ports.banned.override"", ""6000"");"
+            if (-not (Test-Path $userJsPath) -or (Get-Content $userJsPath -Raw) -ne $userJsContent) {
+                Set-Content -Path $userJsPath -Value $userJsContent -Encoding UTF8
+            }
         }
         if ($usePortArg) {
             $portArg = "--explicitly-allowed-ports=6000"
             Write-Log "Lancement navigateur: $browserExe $portArg $targetUrl"
             Start-Process -FilePath $browserExe -ArgumentList $portArg, $targetUrl
+        } elseif ($firefoxProfilePath) {
+            Write-Log "Lancement Firefox (profil port 6000): $browserExe -profile `"$firefoxProfilePath`" $targetUrl"
+            Start-Process -FilePath $browserExe -ArgumentList "-profile", $firefoxProfilePath, $targetUrl
         } else {
             Write-Log "Lancement navigateur: $browserExe $targetUrl"
             Start-Process -FilePath $browserExe -ArgumentList $targetUrl
