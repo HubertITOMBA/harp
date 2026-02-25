@@ -119,29 +119,51 @@ export function buildMyLaunchUrl(
   }
 }
 
+/** Navigateur détecté pour openurl (même valeur que le paramètre mylaunch). */
+export type OpenUrlBrowser = 'chrome' | 'msedge' | 'firefox';
+
 /**
- * Construit une URL mylaunch://openurl pour ouvrir une URL dans Edge/Chrome
- * avec le port 6000 autorisé (évite ERR_UNSAFE_PORT). Le launcher lance le
- * navigateur avec --explicitly-allowed-ports=6000.
+ * Détecte le navigateur avec lequel l'application est ouverte (userAgent).
+ * Permet au launcher de lancer le même navigateur avec --explicitly-allowed-ports=6000.
  */
-export function buildOpenUrlInBrowserUrl(targetUrl: string): string {
+export function getCurrentBrowser(): OpenUrlBrowser | null {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) return null;
+  const ua = navigator.userAgent;
+  if (/Edg\//i.test(ua)) return 'msedge';
+  if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) return 'chrome';
+  if (/Firefox\//i.test(ua)) return 'firefox';
+  return null;
+}
+
+/**
+ * Construit une URL mylaunch://openurl pour ouvrir une URL dans le navigateur
+ * avec le port 6000 autorisé. Si browser est fourni, le launcher lance ce navigateur.
+ */
+export function buildOpenUrlInBrowserUrl(targetUrl: string, browser?: OpenUrlBrowser | null): string {
   const searchParams = new URLSearchParams();
   searchParams.set('url', targetUrl);
+  if (browser) searchParams.set('browser', browser);
   return `mylaunch://openurl?${searchParams.toString()}`;
 }
 
 /**
- * Ouvre une URL dans le navigateur (Edge prioritaire, puis Chrome) avec le port 6000
- * autorisé, via le serveur local ou le protocole mylaunch://. Pas de toast ni message
- * pour l'utilisateur.
+ * Ouvre une URL dans le navigateur utilisé pour le portail (détecté ou fourni),
+ * avec le port 6000 autorisé, via le serveur local ou le protocole mylaunch://.
  */
-export async function launchOpenUrlInBrowser(targetUrl: string): Promise<{ success: boolean; error?: string }> {
+export async function launchOpenUrlInBrowser(
+  targetUrl: string,
+  browser?: OpenUrlBrowser | null
+): Promise<{ success: boolean; error?: string }> {
+  const detected = browser ?? getCurrentBrowser();
   try {
     try {
-      const serverUrl = `http://localhost:8765/launch?tool=openurl&url=${encodeURIComponent(targetUrl)}`;
+      const serverUrl = new URL('http://localhost:8765/launch');
+      serverUrl.searchParams.set('tool', 'openurl');
+      serverUrl.searchParams.set('url', targetUrl);
+      if (detected) serverUrl.searchParams.set('browser', detected);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1000);
-      const response = await fetch(serverUrl, { method: 'GET', signal: controller.signal, cache: 'no-cache' });
+      const response = await fetch(serverUrl.toString(), { method: 'GET', signal: controller.signal, cache: 'no-cache' });
       clearTimeout(timeoutId);
       if (response.ok) {
         const data = await response.json();
@@ -149,7 +171,7 @@ export async function launchOpenUrlInBrowser(targetUrl: string): Promise<{ succe
       }
       throw new Error(`HTTP ${response.status}`);
     } catch {
-      window.location.href = buildOpenUrlInBrowserUrl(targetUrl);
+      window.location.href = buildOpenUrlInBrowserUrl(targetUrl, detected);
       return { success: true };
     }
   } catch (error) {

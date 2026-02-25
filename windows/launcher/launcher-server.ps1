@@ -95,6 +95,7 @@ try {
             $portParam = $request.QueryString["port"]
             $sshkey = $request.QueryString["sshkey"]
             $urlParam = $request.QueryString["url"]
+            $browserParam = $request.QueryString["browser"]
             
             if ($tool) {
                 # Construire l'URL mylaunch://
@@ -105,6 +106,7 @@ try {
                 if ($portParam) { $params += "port=$portParam" }
                 if ($sshkey) { $params += "sshkey=$sshkey" }
                 if ($urlParam) { $params += "url=$([System.Uri]::EscapeDataString($urlParam))" }
+                if ($browserParam) { $params += "browser=$([System.Uri]::EscapeDataString($browserParam))" }
                 if ($params.Count -gt 0) {
                     $mylaunchUrl += "?" + ($params -join "&")
                 }
