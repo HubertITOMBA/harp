@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { EditTaskDialog } from './EditTaskDialog';
 import { ActionsDropdown, ActionItem } from '@/components/ui/actions-dropdown';
+import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { deleteTask } from '@/actions/task-actions';
 import { toast } from 'react-toastify';
@@ -40,11 +42,6 @@ export function TaskActions({ task }: TaskActionsProps) {
 
   const actions: ActionItem[] = [
     {
-      label: "Voir",
-      icon: <Eye className="h-4 w-4" />,
-      onClick: () => router.push(`/list/tasks/${task.id}`),
-    },
-    {
       label: "Modifier",
       icon: <Pencil className="h-4 w-4" />,
       onClick: () => setEditOpen(true),
@@ -59,7 +56,18 @@ export function TaskActions({ task }: TaskActionsProps) {
 
   return (
     <>
-      <div className="flex justify-center">
+      <div className="flex items-center justify-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="h-7 w-7 p-0 text-orange-600 hover:bg-orange-100"
+          title="Voir les détails de la chrono-tâche"
+        >
+          <Link href={`/list/tasks/${task.id}`}>
+            <Eye className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
         <ActionsDropdown actions={actions} />
       </div>
       
