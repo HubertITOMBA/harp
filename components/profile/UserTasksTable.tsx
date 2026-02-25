@@ -31,9 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, ArrowUpDown, Maximize2, Minimize2, Search, Filter, FileText } from "lucide-react";
+import { Pencil, ArrowUpDown, Maximize2, Minimize2, Search, Filter, FileText, Eye } from "lucide-react";
 import { EditUserTaskDialog } from "./EditUserTaskDialog";
 import { TaskDescriptionDialog } from "./TaskDescriptionDialog";
+import { ViewUserTaskDialog } from "./ViewUserTaskDialog";
 import { toast } from 'react-toastify';
 
 interface Task {
@@ -122,6 +123,7 @@ const truncate = (str: string | null | undefined, maxLen: number): string => {
 
 export function UserTasksTable({ tasks }: UserTasksTableProps) {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [viewTaskId, setViewTaskId] = useState<number | null>(null);
   const [descriptionTaskId, setDescriptionTaskId] = useState<number | null>(null);
   const [tasksList, setTasksList] = useState(tasks);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -348,33 +350,29 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
       },
     },
     {
-      id: 'comment',
-      accessorKey: 'comment',
-      size: 180,
-      minSize: 120,
-      maxSize: 300,
-      enableResizing: true,
-      header: () => <div className="text-xs sm:text-sm font-semibold text-white">Commentaire</div>,
-      cell: ({ row }) => (
-        <div className="text-xs sm:text-sm text-gray-600" title={row.original.comment || undefined}>
-          {truncate(row.original.comment, 40)}
-        </div>
-      ),
-    },
-    {
       id: 'actions',
-      size: 80,
-      minSize: 70,
-      maxSize: 100,
+      size: 100,
+      minSize: 90,
+      maxSize: 120,
       enableResizing: false,
       header: () => <div className="text-center text-xs sm:text-sm font-semibold text-white">Actions</div>,
       cell: ({ row }) => (
-        <div className="text-center">
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewTaskId(row.original.id)}
+            className="h-7 w-7 p-0 hover:bg-orange-100"
+            title="Voir les détails"
+          >
+            <Eye className="h-3.5 w-3.5 text-orange-600" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setEditingTaskId(row.original.id)}
             className="h-7 w-7 p-0 hover:bg-orange-100"
+            title="Modifier la tâche"
           >
             <Pencil className="h-3.5 w-3.5 text-orange-600" />
           </Button>
@@ -605,7 +603,7 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 Aucune tâche trouvée.
               </TableCell>
             </TableRow>
@@ -614,13 +612,24 @@ export function UserTasksTable({ tasks }: UserTasksTableProps) {
         </Table>
       </div>
 
-      {/* Dialog description complète */}
+      {/* Dialog description complète (depuis le bouton dans la colonne Tâche) */}
       {descriptionTaskId && (
         <TaskDescriptionDialog
           task={tasksList.find(t => t.id === descriptionTaskId)!}
           open={descriptionTaskId !== null}
           onOpenChange={(open) => {
             if (!open) setDescriptionTaskId(null);
+          }}
+        />
+      )}
+
+      {/* Dialog Voir (détails complets) */}
+      {viewTaskId && (
+        <ViewUserTaskDialog
+          task={tasksList.find(t => t.id === viewTaskId)!}
+          open={viewTaskId !== null}
+          onOpenChange={(open) => {
+            if (!open) setViewTaskId(null);
           }}
         />
       )}

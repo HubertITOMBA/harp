@@ -77,8 +77,13 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
     // Parser les rôles de l'utilisateur
     const userRolesArray = parseRolesFromString(droitsUtilisteur);
 
-    // Filtrer les menus accessibles pour le menu mobile
-    const accessibleMenuItems = optionMenu.filter((item) => {
+    // Exclure l'entrée "Accueil" /home du menu dynamique pour éviter le doublon avec HomeLink (desktop) et l'item Accueil (mobile)
+    const isHomeMenu = (item: { menu: string; href: string | null }) =>
+      item.menu === "Accueil" && (item.href === "/home" || item.href?.trim() === "/home");
+    const optionMenuSansAccueil = optionMenu.filter((item) => !isHomeMenu(item));
+
+    // Filtrer les menus accessibles pour le menu mobile (sans doublon Accueil)
+    const accessibleMenuItems = optionMenuSansAccueil.filter((item) => {
       const menuRolesArray = rolesArrayByMenuId.get(item.id) || [];
       return menuRolesArray.length === 0 || hasAnyRole(userRolesArray, menuRolesArray);
     });
@@ -102,7 +107,7 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
               <div className="flex items-center justify-between text-xs font-medium gap-2 md:gap-5">
                 {/* Lien vers la page d'accueil - Utilise un composant client pour navigation fiable */}
                 <HomeLink />
-                {optionMenu.map((item) => {
+                {optionMenuSansAccueil.map((item) => {
                   // Récupérer les rôles autorisés pour ce menu
                   const menuRolesArray = rolesArrayByMenuId.get(item.id) || [];
                   
