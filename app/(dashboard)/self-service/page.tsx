@@ -7,8 +7,9 @@ export const metadata = {
 };
 
 export default async function SelfServicePage() {
-  // Récupérer tous les enregistrements harpora (instances Oracle)
+  // Récupérer les enregistrements harpora (instances Oracle), exclure aliasql contenant PR1
   const harporaRows = await prisma.harpora.findMany({
+    where: { aliasql: { not: { contains: "PR1" } } },
     orderBy: { oracle_sid: "asc" },
   });
 

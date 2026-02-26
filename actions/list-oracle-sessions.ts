@@ -23,21 +23,19 @@ export type ListOracleSessionsResult =
 /**
  * Exécute côté serveur : source du profil psadm puis portail_ssh.ksh
  * pour lister les sessions Oracle sur la cible psoft@ip.
- * Lit le log généré dans LOGS_DIR et retourne les sessions parsées.
+ * -i = aliasql (ex: portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i aliasql -v")
  */
 export async function listOracleSessions(
-  oracleSid: string,
+  aliasql: string,
   ip: string,
 ): Promise<ListOracleSessionsResult> {
-  const sid = (oracleSid || "").trim();
+  const alias = (aliasql || "").trim();
   const targetIp = (ip || "").trim();
-  if (!sid || !targetIp) {
-    return { success: false, error: "oracle_sid et ip sont requis." };
+  if (!alias || !targetIp) {
+    return { success: false, error: "aliasql et ip sont requis." };
   }
 
-  // La commande distante doit être passée entre "" (ex: portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i SID -v")
-  // exec 2>&1 : évite "tee: /dev/stderr: No such device" quand le process n'a pas de TTY (ex. Node child_process)
-  const remoteCmd = `${REMOTE_SCRIPT} -i ${sid} -v`;
+  const remoteCmd = `${REMOTE_SCRIPT} -i ${alias} -v`;
   const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} "${remoteCmd}"'`;
 
   // Log temporaire vers la console pour lire les erreurs (toast tronque le message)
@@ -105,23 +103,23 @@ export type KillOracleSessionResult =
 
 /**
  * Tue une session Oracle sur la cible psoft@ip.
- * Commande : portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i oracle_sid -s sid -l serial#"
+ * Commande : portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i aliasql -s sid -l serial#"
  */
 export async function killOracleSession(
-  oracleSid: string,
+  aliasql: string,
   ip: string,
   sessionSid: string,
   serial: string,
 ): Promise<KillOracleSessionResult> {
-  const instSid = (oracleSid || "").trim();
+  const alias = (aliasql || "").trim();
   const targetIp = (ip || "").trim();
   const sid = (sessionSid || "").trim();
   const serialNum = (serial || "").trim();
-  if (!instSid || !targetIp || !sid || !serialNum) {
-    return { success: false, error: "oracle_sid, ip, sid et serial# sont requis." };
+  if (!alias || !targetIp || !sid || !serialNum) {
+    return { success: false, error: "aliasql, ip, sid et serial# sont requis." };
   }
 
-  const remoteCmd = `${REMOTE_SCRIPT} -i ${instSid} -s ${sid} -l ${serialNum}`;
+  const remoteCmd = `${REMOTE_SCRIPT} -i ${alias} -s ${sid} -l ${serialNum}`;
   const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} "${remoteCmd}"'`;
 
   console.error("[killOracleSession] Commande exécutée:", cmd);

@@ -51,7 +51,7 @@ interface OracleSelfServiceProps {
   sessions?: SessionRow[];
 }
 
-const formatLabel = (r: OracleRecord) => r.oracle_sid;
+const formatLabel = (r: OracleRecord) => r.aliasql;
 
 const sessionsBaseColumns: ColumnDef<SessionRow>[] = [
   { accessorKey: "sid", header: "sid" },
@@ -185,15 +185,15 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
   const [sessionsList, setSessionsList] = useState<SessionRow[]>(sessions);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [killingSessionKey, setKillingSessionKey] = useState<string | null>(null);
-  const [selectedSid, setSelectedSid] = useState<string | null>(
-    records.length > 0 ? records[0].oracle_sid : null,
+  const [selectedAliasql, setSelectedAliasql] = useState<string | null>(
+    records.length > 0 ? records[0].aliasql : null,
   );
 
   const handleListSessions = async () => {
-    if (!current?.oracle_sid || !current?.ip) return;
+    if (!current?.aliasql || !current?.ip) return;
     setSessionsLoading(true);
     try {
-      const result = await listOracleSessions(current.oracle_sid, current.ip);
+      const result = await listOracleSessions(current.aliasql, current.ip);
       if (result.success) {
         setSessionsList(result.sessions);
         toast.success(
@@ -230,34 +230,34 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
     });
   }, [records, search]);
 
-  // Liste sans doublon pour la combo : un seul enregistrement par oracle_sid
-  const uniqueBySid = useMemo(() => {
+  // Liste sans doublon pour la combo : un seul enregistrement par aliasql
+  const uniqueByAliasql = useMemo(() => {
     const map = new Map<string, OracleRecord>();
     for (const r of filtered) {
-      if (!map.has(r.oracle_sid)) {
-        map.set(r.oracle_sid, r);
+      if (!map.has(r.aliasql)) {
+        map.set(r.aliasql, r);
       }
     }
     return Array.from(map.values());
   }, [filtered]);
 
   const current =
-    uniqueBySid.find((r) => r.oracle_sid === selectedSid) ??
-    uniqueBySid[0] ??
+    uniqueByAliasql.find((r) => r.aliasql === selectedAliasql) ??
+    uniqueByAliasql[0] ??
     null;
 
   const handleSelect = (value: string) => {
-    const sid = value && value.trim() !== "" ? value : null;
-    setSelectedSid(sid);
+    const v = value && value.trim() !== "" ? value : null;
+    setSelectedAliasql(v);
   };
 
   const handleKillSession = async (session: SessionRow) => {
-    if (!current?.oracle_sid || !current?.ip) return;
+    if (!current?.aliasql || !current?.ip) return;
     const key = `${session.sid},${session.serial}`;
     setKillingSessionKey(key);
     try {
       const result = await killOracleSession(
-        current.oracle_sid,
+        current.aliasql,
         current.ip,
         session.sid,
         session.serial,
@@ -271,7 +271,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
             (s) => !(s.sid === session.sid && s.serial === session.serial),
           ),
         );
-        listOracleSessions(current.oracle_sid, current.ip).then((listResult) => {
+        listOracleSessions(current.aliasql, current.ip).then((listResult) => {
           if (listResult.success) setSessionsList(listResult.sessions);
         });
       } else {
@@ -302,7 +302,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-              disabled={isKilling || !current?.ip}
+              disabled={isKilling || !current?.aliasql || !current?.ip}
               onClick={() => handleKillSession(s)}
               title={msg}
             >
@@ -326,7 +326,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
             Self-service <span className="text-orange-600">Oracle</span>
           </h1>
           <p className="text-[11px] sm:text-xs text-gray-600">
-            Recherchez un <code className="font-mono">oracle_sid</code> et
+            Recherchez un <code className="font-mono">aliasql</code> et
             consultez les informations associées (alias, schéma, serveur DB).
           </p>
         </div>
@@ -337,7 +337,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
             <CardHeader className="pb-1.5 pt-2 px-2.5">
               <CardTitle className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
                 <Search className="h-3.5 w-3.5 text-orange-600" />
-                Sélection Oracle SID
+                Sélection aliasql
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 px-2.5 pb-2.5">
@@ -349,15 +349,15 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
               />
 
               <Select
-                value={current ? current.oracle_sid : undefined}
+                value={current ? current.aliasql : undefined}
                 onValueChange={handleSelect}
               >
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Choisir un oracle_sid..." />
+                  <SelectValue placeholder="Choisir un aliasql..." />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 text-xs">
-                  {uniqueBySid.map((r) => (
-                    <SelectItem key={r.id} value={r.oracle_sid}>
+                  {uniqueByAliasql.map((r) => (
+                    <SelectItem key={r.id} value={r.aliasql}>
                       {formatLabel(r)}
                     </SelectItem>
                   ))}
@@ -496,7 +496,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
                         variant="outline"
                         className="h-8 text-[11px] sm:text-xs border-orange-200 text-orange-700 hover:bg-orange-50"
                         disabled={
-                          sessionsLoading || !current?.ip || !current?.oracle_sid
+                          sessionsLoading || !current?.ip || !current?.aliasql
                         }
                         onClick={handleListSessions}
                       >
@@ -528,7 +528,7 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
               <Database className="h-3.5 w-3.5 text-orange-600" />
               Sessions Oracle pour{" "}
               <span className="font-mono text-orange-700">
-                {current?.oracle_sid || "oracle_sid sélectionné"}
+                {current?.aliasql || "aliasql sélectionné"}
               </span>
             </CardTitle>
           </CardHeader>
