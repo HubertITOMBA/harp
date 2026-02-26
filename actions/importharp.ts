@@ -280,7 +280,7 @@ export const GenererLesMenus = async () => {
         { display: 0, level: 2, menu:  'Rôles', href: '/list/roles', descr: '', icone: '',active:  1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles serveurs', href: '/list/servrole', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles Utilisateurs', href: '/list/useroles', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
-        { display: 3, level: 1, menu:  'Self-service', href: '', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
+        { display: 3, level: 1, menu:  'Self-service', href: '/self-service', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Serveurs', href: '/list/servers', descr: '', icone: 'server.png', active: 1, role: 'TMA_LOCAL'},
         { display: 8, level: 1, menu:  'Statacm', href: 'http://statacm.adsaft.ft.net:8080', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Historique', href: '/list/histoenv', descr: '', icone: 'shieldcheck.png', active: 1, role: 'TMA_LOCAL'},
