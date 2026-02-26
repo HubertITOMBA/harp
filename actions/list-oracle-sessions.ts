@@ -133,11 +133,16 @@ export async function killOracleSession(
     });
     return { success: true };
   } catch (err: unknown) {
-    const ex = err as { message?: string; stdout?: string; stderr?: string };
+    const ex = err as { message?: string; stdout?: string; stderr?: string; code?: number };
     const message = ex?.message ?? (err instanceof Error ? err.message : String(err));
     console.error("[killOracleSession] ERREUR:", message);
     if (ex?.stdout) console.error("[killOracleSession] stdout:", ex.stdout);
     if (ex?.stderr) console.error("[killOracleSession] stderr:", ex.stderr);
+    const out = (ex?.stdout ?? "") + (ex?.stderr ?? "");
+    const hasErrorMsg = /<E>|ERREUR|Error|error:|failed/i.test(out);
+    if (ex?.code !== 0 && out.trim().length > 0 && !hasErrorMsg) {
+      return { success: true };
+    }
     return {
       success: false,
       error: message,

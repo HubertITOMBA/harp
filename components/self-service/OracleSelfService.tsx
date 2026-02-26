@@ -266,8 +266,14 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
         toast.success(
           `Session (${session.sid}, ${session.serial}) pour le schema ${session.schemaname} terminée.`,
         );
-        const listResult = await listOracleSessions(current.oracle_sid, current.ip);
-        if (listResult.success) setSessionsList(listResult.sessions);
+        setSessionsList((prev) =>
+          prev.filter(
+            (s) => !(s.sid === session.sid && s.serial === session.serial),
+          ),
+        );
+        listOracleSessions(current.oracle_sid, current.ip).then((listResult) => {
+          if (listResult.success) setSessionsList(listResult.sessions);
+        });
       } else {
         toast.error(result.error ?? "Erreur lors du kill de la session.");
       }
