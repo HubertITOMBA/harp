@@ -38,13 +38,20 @@ export async function listOracleSessions(
   // exec 2>&1 : évite "tee: /dev/stderr: No such device" quand le process n'a pas de TTY (ex. Node child_process)
   const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} ${REMOTE_SCRIPT} -i ${sid} -v'`;
 
+  // Log temporaire vers la console pour lire les erreurs (toast tronque le message)
+  console.error("[listOracleSessions] Commande exécutée:", cmd);
+
   try {
     await execAsync(cmd, {
       timeout: TIMEOUT_MS,
       maxBuffer: 2 * 1024 * 1024,
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (err: unknown) {
+    const ex = err as { message?: string; stdout?: string; stderr?: string };
+    const message = ex?.message ?? (err instanceof Error ? err.message : String(err));
+    console.error("[listOracleSessions] ERREUR exécution:", message);
+    if (ex?.stdout) console.error("[listOracleSessions] stdout:", ex.stdout);
+    if (ex?.stderr) console.error("[listOracleSessions] stderr:", ex.stderr);
     return {
       success: false,
       error: `Exécution du script : ${message}`,
@@ -79,6 +86,7 @@ export async function listOracleSessions(
     sessions = parseSessionsLog(content);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("[listOracleSessions] ERREUR lecture log:", message);
     return {
       success: false,
       error: `Lecture du log : ${message}`,
