@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 const PROFILE_PATH = "/home/psadm/.profile";
 const PORTAIL_SCRIPT = "/data/exploit/harpadm/outils/scripts/portail_ssh.ksh";
 const LOGS_DIR = "/data/exploit/harpadm/outils/logs";
-const REMOTE_SCRIPT = "list_ora_sessions.ksh";
+const REMOTE_SCRIPT = "kill_ora_session.ksh";
 const SSH_USER = "psoft";
 const TIMEOUT_MS = 90_000;
 
@@ -35,7 +35,8 @@ export async function listOracleSessions(
     return { success: false, error: "oracle_sid et ip sont requis." };
   }
 
-  const cmd = `bash -c '. ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} ${REMOTE_SCRIPT} -i ${sid} -v'`;
+  // exec 2>&1 : évite "tee: /dev/stderr: No such device" quand le process n'a pas de TTY (ex. Node child_process)
+  const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} ${REMOTE_SCRIPT} -i ${sid} -v'`;
 
   try {
     await execAsync(cmd, {
