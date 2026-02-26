@@ -98,3 +98,49 @@ export async function listOracleSessions(
 
   return { success: true, sessions };
 }
+
+export type KillOracleSessionResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Tue une session Oracle sur la cible psoft@ip.
+ * Commande : portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i oracle_sid -s sid -l serial#"
+ */
+export async function killOracleSession(
+  oracleSid: string,
+  ip: string,
+  sessionSid: string,
+  serial: string,
+): Promise<KillOracleSessionResult> {
+  const instSid = (oracleSid || "").trim();
+  const targetIp = (ip || "").trim();
+  const sid = (sessionSid || "").trim();
+  const serialNum = (serial || "").trim();
+  if (!instSid || !targetIp || !sid || !serialNum) {
+    return { success: false, error: "oracle_sid, ip, sid et serial# sont requis." };
+  }
+
+  const remoteCmd = `${REMOTE_SCRIPT} -i ${instSid} -s ${sid} -l ${serialNum}`;
+  const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} "${remoteCmd}"'`;
+
+  console.error("[killOracleSession] Commande exécutée:", cmd);
+
+  try {
+    await execAsync(cmd, {
+      timeout: TIMEOUT_MS,
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    return { success: true };
+  } catch (err: unknown) {
+    const ex = err as { message?: string; stdout?: string; stderr?: string };
+    const message = ex?.message ?? (err instanceof Error ? err.message : String(err));
+    console.error("[killOracleSession] ERREUR:", message);
+    if (ex?.stdout) console.error("[killOracleSession] stdout:", ex.stdout);
+    if (ex?.stderr) console.error("[killOracleSession] stderr:", ex.stderr);
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}

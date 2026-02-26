@@ -3,10 +3,14 @@
 import { useMemo, useState } from "react";
 import {
   ColumnDef,
+  Row,
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import type { SortingState } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,10 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Database, Loader2, Server, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Database, Loader2, Server, Search, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import type { SessionRow } from "@/lib/parse-sessions-log";
-import { listOracleSessions } from "@/actions/list-oracle-sessions";
+import {
+  killOracleSession,
+  listOracleSessions,
+} from "@/actions/list-oracle-sessions";
 
 type OracleRecord = {
   id: number;
@@ -46,7 +53,7 @@ interface OracleSelfServiceProps {
 
 const formatLabel = (r: OracleRecord) => r.oracle_sid;
 
-const sessionsColumns: ColumnDef<SessionRow>[] = [
+const sessionsBaseColumns: ColumnDef<SessionRow>[] = [
   { accessorKey: "sid", header: "sid" },
   { accessorKey: "serial", header: "serial#" },
   { accessorKey: "username", header: "username" },
@@ -54,56 +61,97 @@ const sessionsColumns: ColumnDef<SessionRow>[] = [
   { accessorKey: "osuser", header: "osuser" },
   { accessorKey: "machine", header: "machine" },
   { accessorKey: "module", header: "module" },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => {
-      const s = row.original;
-      const msg = `Kill de la session (${s.sid}, ${s.serial}) pour le schema (${s.schemaname})`;
-      return (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-          onClick={() => toast.info(msg)}
-          title={msg}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      );
-    },
-  },
 ];
 
 function SessionsTableContent({
   data,
   columns,
+  globalFilter,
+  onGlobalFilterChange,
 }: {
   data: SessionRow[];
   columns: ColumnDef<SessionRow>[];
+  globalFilter: string;
+  onGlobalFilterChange: (value: string) => void;
 }) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onGlobalFilterChange: (updater) => {
+      const v = typeof updater === "function" ? updater(globalFilter) : globalFilter;
+      onGlobalFilterChange(v);
+    },
+    globalFilterFn: (row: Row<SessionRow>, _columnId: string, filterValue: string) => {
+      if (!filterValue || String(filterValue).trim() === "") return true;
+      const q = String(filterValue).toLowerCase().trim();
+      const s = row.original;
+      return [
+        s.sid,
+        s.serial,
+        s.username,
+        s.schemaname,
+        s.osuser,
+        s.machine,
+        s.module,
+      ].some((val) => String(val).toLowerCase().includes(q));
+    },
+    state: { sorting, globalFilter },
   });
+
   return (
     <div className="rounded-md border border-gray-200 overflow-hidden">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="border-b-2 border-orange-300 bg-orange-600 hover:bg-orange-600">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="text-xs font-semibold text-white py-1.5 px-2 whitespace-nowrap"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort();
+                const sortDir = header.column.getIsSorted();
+                return (
+                  <TableHead
+                    key={header.id}
+                    className="text-xs font-semibold text-white py-1.5 px-2 whitespace-nowrap"
+                  >
+                    {header.isPlaceholder ? null : (
+                      <div
+                        role={canSort ? "button" : undefined}
+                        tabIndex={canSort ? 0 : undefined}
+                        className={canSort ? "flex items-center gap-1 cursor-pointer select-none hover:opacity-90" : ""}
+                        onClick={header.column.getToggleSortingHandler()}
+                        onKeyDown={
+                          canSort
+                            ? (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  header.column.toggleSorting();
+                                }
+                              }
+                            : undefined
+                        }
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort && (
+                          <span className="inline-flex">
+                            {sortDir === "asc" ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : sortDir === "desc" ? (
+                              <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-70" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           ))}
         </TableHeader>
@@ -121,7 +169,7 @@ function SessionsTableContent({
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-12 text-center text-gray-500 text-xs py-2">
-                Aucune session.
+                {globalFilter.trim() ? "Aucun résultat pour cette recherche." : "Aucune session."}
               </TableCell>
             </TableRow>
           )}
@@ -136,18 +184,10 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
   const [sessionSearch, setSessionSearch] = useState("");
   const [sessionsList, setSessionsList] = useState<SessionRow[]>(sessions);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [killingSessionKey, setKillingSessionKey] = useState<string | null>(null);
   const [selectedSid, setSelectedSid] = useState<string | null>(
     records.length > 0 ? records[0].oracle_sid : null,
   );
-
-  const filteredSessions = useMemo(() => {
-    const q = sessionSearch.trim().toLowerCase();
-    if (!q) return sessionsList;
-    return sessionsList.filter(
-      (s) =>
-        s.sid.toLowerCase().includes(q) || s.serial.toLowerCase().includes(q),
-    );
-  }, [sessionsList, sessionSearch]);
 
   const handleListSessions = async () => {
     if (!current?.oracle_sid || !current?.ip) return;
@@ -210,6 +250,67 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
     const sid = value && value.trim() !== "" ? value : null;
     setSelectedSid(sid);
   };
+
+  const handleKillSession = async (session: SessionRow) => {
+    if (!current?.oracle_sid || !current?.ip) return;
+    const key = `${session.sid},${session.serial}`;
+    setKillingSessionKey(key);
+    try {
+      const result = await killOracleSession(
+        current.oracle_sid,
+        current.ip,
+        session.sid,
+        session.serial,
+      );
+      if (result.success) {
+        toast.success(
+          `Session (${session.sid}, ${session.serial}) pour le schema ${session.schemaname} terminée.`,
+        );
+        const listResult = await listOracleSessions(current.oracle_sid, current.ip);
+        if (listResult.success) setSessionsList(listResult.sessions);
+      } else {
+        toast.error(result.error ?? "Erreur lors du kill de la session.");
+      }
+    } catch {
+      toast.error("Erreur lors du kill de la session.");
+    } finally {
+      setKillingSessionKey(null);
+    }
+  };
+
+  const sessionsColumns = useMemo<ColumnDef<SessionRow>[]>(() => {
+    return [
+      ...sessionsBaseColumns,
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        cell: ({ row }: { row: { original: SessionRow } }) => {
+          const s = row.original;
+          const key = `${s.sid},${s.serial}`;
+          const isKilling = killingSessionKey === key;
+          const msg = `Kill de la session (${s.sid}, ${s.serial}) pour le schema (${s.schemaname})`;
+          return (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              disabled={isKilling || !current?.ip}
+              onClick={() => handleKillSession(s)}
+              title={msg}
+            >
+              {isKilling ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          );
+        },
+      },
+    ];
+  }, [current, killingSessionKey]);
 
   return (
     <div className="bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-2 sm:p-3 lg:p-4 pb-10">
@@ -427,12 +528,17 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
           </CardHeader>
           <CardContent className="px-2.5 pb-2.5 space-y-1.5">
             <Input
-              placeholder="Rechercher sid ou serial#..."
+              placeholder="Rechercher dans toutes les colonnes..."
               value={sessionSearch}
               onChange={(e) => setSessionSearch(e.target.value)}
               className="h-8 text-xs max-w-xs"
             />
-            <SessionsTableContent data={filteredSessions} columns={sessionsColumns} />
+            <SessionsTableContent
+              data={sessionsList}
+              columns={sessionsColumns}
+              globalFilter={sessionSearch}
+              onGlobalFilterChange={setSessionSearch}
+            />
           </CardContent>
         </Card>
       </div>
