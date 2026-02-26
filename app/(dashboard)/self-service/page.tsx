@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getSessionsFromLog } from "@/lib/parse-sessions-log";
 import { OracleSelfService } from "@/components/self-service/OracleSelfService";
 
 export const metadata = {
@@ -72,6 +73,8 @@ export default async function SelfServicePage() {
     };
   });
 
-  return <OracleSelfService records={records} />;
+  const sessions = getSessionsFromLog();
+
+  return <OracleSelfService records={records} sessions={sessions} />;
 }
 

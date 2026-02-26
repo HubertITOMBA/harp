@@ -101,7 +101,7 @@ export default async function HarpLayout ( {
   const activeSessionCount = 1;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen">
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden">
        <SessionProvider session={session}>
           {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
           <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
@@ -123,8 +123,8 @@ export default async function HarpLayout ( {
             </MobileMenuButton>
           </div>
           
-          {/* Contenu principal */}
-          <div className="flex-1 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] overflow-auto flex flex-col">
+          {/* Contenu principal — seule zone de scroll */}
+          <div className="flex-1 min-w-0 min-h-0 w-full md:w-[calc(100%-70px)] lg:w-[calc(100%-70px)] xl:w-[84%] overflow-y-auto overflow-x-hidden flex flex-col">
             <Navbar   DroitsUser = {roles}/>
             { modal } 
             { children }
