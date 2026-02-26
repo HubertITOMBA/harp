@@ -35,8 +35,10 @@ export async function listOracleSessions(
     return { success: false, error: "oracle_sid et ip sont requis." };
   }
 
+  // La commande distante doit être passée entre "" (ex: portail_ssh.ksh psoft@ip "kill_ora_session.ksh -i SID -v")
   // exec 2>&1 : évite "tee: /dev/stderr: No such device" quand le process n'a pas de TTY (ex. Node child_process)
-  const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} ${REMOTE_SCRIPT} -i ${sid} -v'`;
+  const remoteCmd = `${REMOTE_SCRIPT} -i ${sid} -v`;
+  const cmd = `bash -c 'exec 2>&1; . ${PROFILE_PATH} 2>/dev/null; ${PORTAIL_SCRIPT} ${SSH_USER}@${targetIp} "${remoteCmd}"'`;
 
   // Log temporaire vers la console pour lire les erreurs (toast tronque le message)
   console.error("[listOracleSessions] Commande exécutée:", cmd);
