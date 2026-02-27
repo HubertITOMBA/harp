@@ -5,177 +5,65 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Client } from "ssh2";
 import * as fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 /**
- * Exécute le script refresh_info.ksh sur le serveur Linux via SSH
- * 
- * @returns Un objet avec success (boolean), message (string) en cas de succès, 
- *          ou error (string) en cas d'échec
+ * Exécute le script refresh_info.ksh en local sur le serveur Node,
+ * comme dans la version PHP :
+ *   . ~/.profile ; $HARPSHELL/refresh_info.ksh > $HARPLOG/portail_refresh_info.log 2>&1
+ * Retourne le statut et, si possible, le contenu du log.
  */
 export async function executeRefreshInfo() {
+  const HARPSHELL = "/data/exploit/harpadm/outils/scripts";
+  const HARPLOG = "/data/exploit/harpadm/outils/logs";
+  const LOG_FILE = `${HARPLOG}/portail_refresh_info.log`;
+  const command = `. ~/.profile ; ${HARPSHELL}/refresh_info.ksh > ${LOG_FILE} 2>&1`;
+
+  let success = true;
+  let errorMessage: string | undefined;
+
   try {
-    // Récupérer la session de l'utilisateur
-    const session = await auth();
-    
-    if (!session?.user?.netid) {
-      return { 
-        success: false, 
-        error: "Utilisateur non authentifié. Veuillez vous connecter." 
-      };
-    }
-
-    const netid = session.user.netid;
-    const pkeyfile = session.user.pkeyfile;
-
-    // Récupérer le serveur par défaut depuis la base de données ou utiliser une variable d'environnement
-    // On peut utiliser le premier serveur disponible ou un serveur spécifique
-    const defaultServer = await db.harpserve.findFirst({
-      orderBy: { id: "asc" },
-      select: {
-        ip: true,
-        srv: true,
-      }
+    await execAsync(command, {
+      timeout: 10 * 60 * 1000,
+      maxBuffer: 4 * 1024 * 1024,
     });
-
-    if (!defaultServer) {
-      return { 
-        success: false, 
-        error: "Aucun serveur configuré dans la base de données." 
-      };
+  } catch (err: unknown) {
+    success = false;
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else {
+      errorMessage = String(err);
     }
-
-    // Utiliser l'IP du serveur ou le nom du serveur
-    const host = defaultServer.ip || defaultServer.srv;
-    const port = 22;
-
-    // Variables d'environnement
-    const HARPSHELL = "/data/exploit/harpadm/outils/scripts";
-    const HARPLOG = "/data/exploit/harpadm/outils/logs";
-
-    // Commande à exécuter
-    const command = `. ~/.profile ; ${HARPSHELL}/refresh_info.ksh > ${HARPLOG}/portail_refresh_info.log 2>&1`;
-
-    // Lire la clé SSH privée si disponible
-    let privateKey: Buffer | undefined;
-    if (pkeyfile && fs.existsSync(pkeyfile)) {
-      try {
-        privateKey = fs.readFileSync(pkeyfile);
-      } catch (error) {
-        console.error("Erreur lors de la lecture de la clé SSH:", error);
-        return { 
-          success: false, 
-          error: "Impossible de lire la clé SSH. Vérifiez le chemin de la clé." 
-        };
-      }
-    }
-
-    // Exécuter la commande via SSH
-    return new Promise<{ success: boolean; message?: string; error?: string; log?: string }>((resolve) => {
-      const conn = new Client();
-
-      conn.on("ready", () => {
-        console.log(`[Refresh Info] Connexion SSH établie avec ${host} pour l'utilisateur ${netid}`);
-        
-        conn.exec(command, (err, stream) => {
-          if (err) {
-            conn.end();
-            resolve({ 
-              success: false, 
-              error: `Erreur lors de l'exécution de la commande: ${err.message}` 
-            });
-            return;
-          }
-
-          stream.on("close", (code: number) => {
-            // Une fois le script exécuté, lire le contenu du log distant
-            const logCommand = `cat ${HARPLOG}/portail_refresh_info.log 2>&1 || echo \"[LOG] Fichier ${HARPLOG}/portail_refresh_info.log introuvable.\"`;
-            let logContent = "";
-
-            conn.exec(logCommand, (logErr, logStream) => {
-              if (logErr) {
-                conn.end();
-                if (code === 0) {
-                  resolve({
-                    success: true,
-                    message: `Script refresh_info.ksh exécuté avec succès sur ${host}, mais le log n'a pas pu être lu à distance.`,
-                  });
-                } else {
-                  resolve({
-                    success: false,
-                    error: `Le script s'est terminé avec le code ${code}. Le log n'a pas pu être lu à distance.`,
-                  });
-                }
-                return;
-              }
-
-              logStream.on("data", (data: Buffer) => {
-                logContent += data.toString();
-              });
-
-              logStream.on("close", () => {
-                conn.end();
-                if (code === 0) {
-                  resolve({
-                    success: true,
-                    message: `Script refresh_info.ksh exécuté avec succès sur ${host}.`,
-                    log: logContent,
-                  });
-                } else {
-                  resolve({
-                    success: false,
-                    error: `Le script s'est terminé avec le code ${code}.`,
-                    log: logContent,
-                  });
-                }
-              });
-            });
-          });
-
-          // stdout / stderr du script ne sont pas utilisés ici : tout est consigné dans le log distant
-        });
-      });
-
-      conn.on("error", (err) => {
-        console.error("[Refresh Info] Erreur de connexion SSH:", err);
-        resolve({ 
-          success: false, 
-          error: `Erreur de connexion SSH: ${err.message}` 
-        });
-      });
-
-      // Configuration de la connexion SSH
-      const connectConfig: any = {
-        host,
-        port,
-        username: netid,
-        readyTimeout: 20000,
-      };
-
-      // Ajouter la clé privée si disponible
-      if (privateKey) {
-        connectConfig.privateKey = privateKey;
-      } else {
-        // Si pas de clé, utiliser l'authentification par mot de passe (non recommandé)
-        // ou retourner une erreur
-        resolve({ 
-          success: false, 
-          error: "Aucune clé SSH configurée. Veuillez configurer votre clé SSH dans votre profil." 
-        });
-        return;
-      }
-
-      conn.connect(connectConfig);
-    });
-
-  } catch (error: unknown) {
-    console.error("[Refresh Info] Erreur:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Erreur inconnue lors de l'exécution du script" 
-    };
-  } finally {
-    revalidatePath("/refresh-info");
   }
+
+  let log = "";
+  try {
+    if (fs.existsSync(LOG_FILE)) {
+      log = fs.readFileSync(LOG_FILE, "utf-8");
+    } else {
+      log = `[LOG] Fichier ${LOG_FILE} introuvable.`;
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log = `[LOG] Erreur lors de la lecture de ${LOG_FILE}: ${msg}`;
+  }
+
+  if (success) {
+    return {
+      success: true,
+      message: "Script refresh_info.ksh exécuté avec succès.",
+      log,
+    };
+  }
+
+  return {
+    success: false,
+    error: errorMessage || "Erreur lors de l'exécution de refresh_info.ksh.",
+    log,
+  };
 }
 
 /**
