@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ColumnDef,
   Row,
@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, ArrowUpDown, Database, Loader2, Server, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Database, List, Loader2, Server, Search, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import type { SessionRow } from "@/lib/parse-sessions-log";
 import {
@@ -188,6 +188,15 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
   const [selectedAliasql, setSelectedAliasql] = useState<string | null>(
     records.length > 0 ? records[0].aliasql : null,
   );
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setSessionsList([]);
+  }, [selectedAliasql, search]);
 
   const handleListSessions = async () => {
     if (!current?.aliasql || !current?.ip) return;
@@ -490,11 +499,10 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
                       </div>
                     </div>
 
-                    <div className="flex justify-end mt-1">
+                    <div className="flex justify-end mt-3">
                       <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-[11px] sm:text-xs border-orange-200 text-orange-700 hover:bg-orange-50"
+                        size="default"
+                        className="h-10 px-4 text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 shadow-sm"
                         disabled={
                           sessionsLoading || !current?.ip || !current?.aliasql
                         }
@@ -502,11 +510,14 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
                       >
                         {sessionsLoading ? (
                           <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             Chargement...
                           </>
                         ) : (
-                          "Lister les sessions Oracle"
+                          <>
+                            <List className="h-4 w-4 mr-2" />
+                            Lister les sessions Oracle
+                          </>
                         )}
                       </Button>
                     </div>

@@ -5,8 +5,6 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Client } from "ssh2";
 import * as fs from "fs";
-import { join } from "path";
-import { z } from "zod";
 
 /**
  * Exécute le script refresh_info.ksh sur le serveur Linux via SSH
@@ -72,10 +70,8 @@ export async function executeRefreshInfo() {
     }
 
     // Exécuter la commande via SSH
-    return new Promise<{ success: boolean; message?: string; error?: string }>((resolve) => {
+    return new Promise<{ success: boolean; message?: string; error?: string; log?: string }>((resolve) => {
       const conn = new Client();
-      let stdout = "";
-      let stderr = "";
 
       conn.on("ready", () => {
         console.log(`[Refresh Info] Connexion SSH établie avec ${host} pour l'utilisateur ${netid}`);
@@ -90,29 +86,52 @@ export async function executeRefreshInfo() {
             return;
           }
 
-          stream.on("close", (code: number, signal: string) => {
-            conn.end();
-            
-            if (code === 0) {
-              resolve({ 
-                success: true, 
-                message: `Script refresh_info.ksh exécuté avec succès sur ${host}. Le log est disponible dans ${HARPLOG}/portail_refresh_info.log` 
+          stream.on("close", (code: number) => {
+            // Une fois le script exécuté, lire le contenu du log distant
+            const logCommand = `cat ${HARPLOG}/portail_refresh_info.log 2>&1 || echo \"[LOG] Fichier ${HARPLOG}/portail_refresh_info.log introuvable.\"`;
+            let logContent = "";
+
+            conn.exec(logCommand, (logErr, logStream) => {
+              if (logErr) {
+                conn.end();
+                if (code === 0) {
+                  resolve({
+                    success: true,
+                    message: `Script refresh_info.ksh exécuté avec succès sur ${host}, mais le log n'a pas pu être lu à distance.`,
+                  });
+                } else {
+                  resolve({
+                    success: false,
+                    error: `Le script s'est terminé avec le code ${code}. Le log n'a pas pu être lu à distance.`,
+                  });
+                }
+                return;
+              }
+
+              logStream.on("data", (data: Buffer) => {
+                logContent += data.toString();
               });
-            } else {
-              resolve({ 
-                success: false, 
-                error: `Le script s'est terminé avec le code ${code}. Vérifiez le log: ${HARPLOG}/portail_refresh_info.log` 
+
+              logStream.on("close", () => {
+                conn.end();
+                if (code === 0) {
+                  resolve({
+                    success: true,
+                    message: `Script refresh_info.ksh exécuté avec succès sur ${host}.`,
+                    log: logContent,
+                  });
+                } else {
+                  resolve({
+                    success: false,
+                    error: `Le script s'est terminé avec le code ${code}.`,
+                    log: logContent,
+                  });
+                }
               });
-            }
+            });
           });
 
-          stream.on("data", (data: Buffer) => {
-            stdout += data.toString();
-          });
-
-          stream.stderr.on("data", (data: Buffer) => {
-            stderr += data.toString();
-          });
+          // stdout / stderr du script ne sont pas utilisés ici : tout est consigné dans le log distant
         });
       });
 
@@ -148,7 +167,7 @@ export async function executeRefreshInfo() {
       conn.connect(connectConfig);
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[Refresh Info] Erreur:", error);
     return { 
       success: false, 
@@ -417,7 +436,7 @@ async function processServerFiles(
   onFileProcessed: (count: number) => void,
   onError: (error: string) => void
 ): Promise<{ files: number; envs: number }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const conn = new Client();
     let processedFiles = 0;
     let processedEnvs = 0;
@@ -504,7 +523,7 @@ async function readAndProcessFile(
   rootfile: string,
   onError: (error: string) => void
 ): Promise<number> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const fileName = filePath.split('/').pop() || '';
     const isReleaseFile = fileName.startsWith('release.');
     const isEnvFile = fileName.startsWith('env.');

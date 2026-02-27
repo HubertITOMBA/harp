@@ -13,7 +13,7 @@ export default function RefreshInfoPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isUpdating, startUpdating] = useTransition();
-  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string; log?: string } | null>(null);
   const [updateResult, setUpdateResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   
   // États pour la progression de la mise à jour
@@ -74,7 +74,7 @@ export default function RefreshInfoPage() {
           setExecuteProgress(0);
           setExecuteMessage("");
         }, 3000);
-      } catch (error) {
+      } catch {
         clearInterval(progressInterval);
         clearInterval(messageInterval);
         setExecuteProgress(0);
@@ -135,7 +135,7 @@ export default function RefreshInfoPage() {
           setUpdateMessage("");
           setCurrentServer("");
         }, 3000);
-      } catch (error) {
+      } catch {
         clearInterval(progressInterval);
         clearInterval(messageInterval);
         setUpdateProgress(0);
@@ -219,6 +219,11 @@ export default function RefreshInfoPage() {
                     }`}>
                       {result.success ? result.message : result.error}
                     </p>
+                    {result.log && (
+                      <pre className="mt-3 text-xs bg-slate-900 text-slate-100 rounded-md p-3 max-h-80 overflow-auto whitespace-pre-wrap border border-slate-700">
+                        {result.log}
+                      </pre>
+                    )}
                   </div>
                 </div>
               </div>
