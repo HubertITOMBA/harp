@@ -20,7 +20,8 @@ export async function executeRefreshInfo() {
   const HARPSHELL = "/data/exploit/harpadm/outils/scripts";
   const HARPLOG = "/data/exploit/harpadm/outils/logs";
   const LOG_FILE = `${HARPLOG}/portail_refresh_info.log`;
-  const command = `. ~/.profile ; ${HARPSHELL}/refresh_info.ksh > ${LOG_FILE} 2>&1`;
+  // const command = `. ~/.profile ; ${HARPSHELL}/refresh_info.ksh > ${LOG_FILE} 2>&1`;
+  const command = `. ~/.profile ; ${HARPSHELL}/refresh_info_harp.ksh > ${LOG_FILE} 2>&1`;
 
   let success = true;
   let errorMessage: string | undefined;
