@@ -36,7 +36,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from "lucide-react"
 import { useState, useEffect } from "react"
 import React from "react"
 
@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder="Rechercher par titre..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
@@ -108,6 +108,18 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
+        {(table.getColumn("title")?.getFilterValue() as string) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => table.getColumn("title")?.setFilterValue("")}
+            title="Effacer la recherche"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Effacer
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

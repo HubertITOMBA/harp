@@ -3,8 +3,8 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { Client } from "ssh2";
 import * as fs from "fs";
+import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 
@@ -129,6 +129,32 @@ function parseNumber(numStr: string | null | undefined): number | null {
   return isNaN(num) ? null : num;
 }
 
+// harpenvserv.status référence statutenv.id (FK) : ne jamais écrire un id inexistant
+const statutenvIdCache = new Map<number, boolean>();
+async function isValidStatutenvId(id: number | null): Promise<boolean> {
+  if (id === null) return false;
+  if (statutenvIdCache.has(id)) return statutenvIdCache.get(id)!;
+  const existing = await db.statutenv.findUnique({ where: { id }, select: { id: true } });
+  const ok = Boolean(existing);
+  statutenvIdCache.set(id, ok);
+  return ok;
+}
+
+async function safeUpdateHarpenvservStatusMany(params: {
+  where: Parameters<typeof db.harpenvserv.updateMany>[0]["where"];
+  status: number | null;
+}): Promise<void> {
+  const { where, status } = params;
+  if (!(await isValidStatutenvId(status))) return;
+  await db.harpenvserv.updateMany({ where, data: { status } });
+}
+
+async function safeUpdateHarpenvservStatusOne(params: { id: number; status: number | null }): Promise<void> {
+  const { id, status } = params;
+  if (!(await isValidStatutenvId(status))) return;
+  await db.harpenvserv.update({ where: { id }, data: { status } });
+}
+
 /**
  * Parse une ligne CSV avec séparateur ';'
  */
@@ -171,141 +197,138 @@ function parseCsvLine(line: string): EnvCsvData | null {
   };
 }
 
+/** Dossier des fichiers générés par refresh_info_harp.ksh (env.*, release.*) */
+const FILES_DIR =
+  process.env.PORTAL_HARP_FILES ||
+  (process.platform === "win32"
+    ? "C:\\produits\\portail_harp\\files"
+    : "/produits/portail_harp/files");
+
+export type UpdateEnvFromFilesResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  addedReleases?: string[];
+  updatedEnvs?: string[];
+};
+
 /**
- * Met à jour les environnements depuis les fichiers CSV sur chaque serveur DB
- * Convertit le script PHP portail_upd_env.php en TypeScript
- * Lit les fichiers depuis chaque serveur DB via SSH (scripts/refreshdb/env.*.txt et release.*.txt)
- * 
- * @returns Un objet avec success (boolean), message (string) en cas de succès, 
- *          ou error (string) en cas d'échec
+ * Retourne la liste des fichiers env.* à traiter (pour mise à jour fichier par fichier côté client).
  */
-export async function updateEnvFromFiles() {
+export async function getEnvUpdateFileList(): Promise<
+  { success: true; envFiles: string[] } | { success: false; error: string }
+> {
   try {
-    // Récupérer la session de l'utilisateur
     const session = await auth();
-    
     if (!session?.user?.netid) {
-      return { 
-        success: false, 
-        error: "Utilisateur non authentifié. Veuillez vous connecter." 
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+    if (!fs.existsSync(FILES_DIR)) {
+      return {
+        success: false,
+        error: `Dossier des fichiers introuvable : ${FILES_DIR}.`,
       };
     }
-
-    const netid = session.user.netid;
-    const pkeyfile = session.user.pkeyfile;
-
-    // Récupérer le paramètre ROOTFILE depuis psadm_param
-    const rootfileParam = await db.psadm_param.findUnique({
-      where: { param: 'ROOTFILE' },
-      select: { valeur: true }
-    });
-
-    if (!rootfileParam || !rootfileParam.valeur) {
-      return { 
-        success: false, 
-        error: "Le paramètre ROOTFILE n'est pas configuré dans psadm_param." 
-      };
-    }
-
-    const rootfile = rootfileParam.valeur;
-    console.log(`[Update Env From Files] ROOTFILE: ${rootfile}`);
-
-    // Récupérer tous les serveurs DB (serveurs avec typsrv='DB' ou tous les serveurs)
-    // On récupère les serveurs uniques depuis harpenvserv où typsrv='DB'
-    const dbServers = await db.harpenvserv.findMany({
-      where: { typsrv: 'DB' },
-      include: { harpserve: true },
-      distinct: ['serverId']
-    });
-
-    // Si aucun serveur DB trouvé, utiliser tous les serveurs
-    const servers = dbServers.length > 0 
-      ? dbServers.map(s => s.harpserve).filter(Boolean)
-      : await db.harpserve.findMany({
-          orderBy: { id: "asc" }
-        });
-
-    if (servers.length === 0) {
-      return { 
-        success: false, 
-        error: "Aucun serveur configuré dans la base de données." 
-      };
-    }
-
-    console.log(`[Update Env From Files] ${servers.length} serveur(s) DB trouvé(s)`);
-
-    // Lire la clé SSH privée
-    let privateKey: Buffer | undefined;
-    if (pkeyfile && fs.existsSync(pkeyfile)) {
-      try {
-        privateKey = fs.readFileSync(pkeyfile);
-      } catch (error) {
-        console.error("Erreur lors de la lecture de la clé SSH:", error);
-        return { 
-          success: false, 
-          error: "Impossible de lire la clé SSH. Vérifiez le chemin de la clé." 
-        };
-      }
-    } else {
-      return { 
-        success: false, 
-        error: "Aucune clé SSH configurée. Veuillez configurer votre clé SSH dans votre profil." 
-      };
-    }
-
-    let processedFiles = 0;
-    let processedEnvs = 0;
-    const errors: string[] = [];
-
-    // Traiter chaque serveur DB
-    for (const server of servers) {
-      if (!server) continue;
-
-      const host = server.ip || server.srv;
-      const port = 22;
-
-      console.log(`[Update Env From Files] Traitement du serveur: ${server.srv} (${host})`);
-
-      try {
-        // Se connecter au serveur et lire les fichiers
-        const result = await processServerFiles(
-          host,
-          port,
-          netid,
-          privateKey,
-          rootfile,
-          (envCount) => {
-            processedEnvs += envCount;
-          },
-          (fileCount) => {
-            processedFiles += fileCount;
-          },
-          (error) => {
-            errors.push(`[${server.srv}] ${error}`);
-          }
-        );
-
-        console.log(`[Update Env From Files] Serveur ${server.srv} traité: ${result.files} fichier(s), ${result.envs} environnement(s)`);
-      } catch (error) {
-        const errorMsg = `Erreur lors du traitement du serveur ${server.srv}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[Update Env From Files] ${errorMsg}`);
-        errors.push(errorMsg);
-      }
-    }
-
-    const message = `Traitement terminé: ${processedFiles} fichier(s) traité(s) sur ${servers.length} serveur(s), ${processedEnvs} environnement(s) mis à jour.${errors.length > 0 ? ` ${errors.length} erreur(s) rencontrée(s).` : ''}`;
-    
-    return { 
-      success: errors.length === 0, 
-      message: errors.length === 0 ? message : `${message} Détails: ${errors.join('; ')}`,
-      error: errors.length > 0 ? errors.join('; ') : undefined
-    };
-
+    const allFiles = fs.readdirSync(FILES_DIR);
+    const envFiles = allFiles
+      .filter(
+        (f) =>
+          f.startsWith("env.") &&
+          f.endsWith(".txt") && // ignorer les sauvegardes type .txt.bak
+          fs.statSync(path.join(FILES_DIR, f)).isFile()
+      )
+      .sort();
+    return { success: true, envFiles };
   } catch (error) {
-    console.error("[Update Env From Files] Erreur:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Erreur inconnue lors de la mise à jour des environnements" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue.",
+    };
+  }
+}
+
+/**
+ * Retourne la liste des fichiers release.* à traiter (après les env.*).
+ */
+export async function getReleaseUpdateFileList(): Promise<
+  { success: true; releaseFiles: string[] } | { success: false; error: string }
+> {
+  try {
+    const session = await auth();
+    if (!session?.user?.netid) {
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+    if (!fs.existsSync(FILES_DIR)) {
+      return {
+        success: false,
+        error: `Dossier des fichiers introuvable : ${FILES_DIR}.`,
+      };
+    }
+    const allFiles = fs.readdirSync(FILES_DIR);
+    const releaseFiles = allFiles
+      .filter(
+        (f) =>
+          f.startsWith("release.") &&
+          f.endsWith(".txt") &&
+          fs.statSync(path.join(FILES_DIR, f)).isFile()
+      )
+      .sort();
+    return { success: true, releaseFiles };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue.",
+    };
+  }
+}
+
+/**
+ * Traite un seul fichier env.* et met à jour envsharp pour les environnements déjà présents.
+ * Les env présents dans le fichier mais absents d'envsharp sont ignorés (mise à jour uniquement).
+ */
+export async function processOneEnvFile(fileName: string): Promise<UpdateEnvFromFilesResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.netid) {
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+    if (!fileName.startsWith("env.")) {
+      return { success: false, error: `Fichier invalide : ${fileName}` };
+    }
+    const filePath = path.join(FILES_DIR, fileName);
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      return { success: false, error: `Fichier introuvable : ${fileName}` };
+    }
+
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const errors: string[] = [];
+    const addedReleases: string[] = [];
+    const updatedEnvs: string[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const csvData = parseCsvLine(lines[i]!);
+      if (!csvData?.env?.trim()) continue;
+
+      const result = await processEnvData(csvData);
+      if (result.error) errors.push(result.error);
+      if (result.addedReleases.length) addedReleases.push(...result.addedReleases);
+      if (result.updated && result.env) updatedEnvs.push(result.env);
+    }
+
+    const message = `${updatedEnvs.length} environnement(s) mis à jour dans ${fileName}.`;
+    return {
+      success: errors.length === 0,
+      message,
+      error: errors.length > 0 ? errors.join(" ; ") : undefined,
+      addedReleases: addedReleases.length > 0 ? addedReleases : undefined,
+      updatedEnvs: updatedEnvs.length > 0 ? updatedEnvs : undefined,
+    };
+  } catch (error) {
+    console.error("[Process One Env File] Erreur:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue.",
     };
   } finally {
     revalidatePath("/refresh-info");
@@ -313,208 +336,190 @@ export async function updateEnvFromFiles() {
 }
 
 /**
- * Traite les fichiers CSV d'un serveur DB via SSH
+ * Traite un seul fichier release.* (même format CSV que env.*, mais sans harpora/harpmonitor et avec lastcheckstatus en fin de lot).
  */
-async function processServerFiles(
-  host: string,
-  port: number,
-  netid: string,
-  privateKey: Buffer,
-  rootfile: string,
-  onEnvProcessed: (count: number) => void,
-  onFileProcessed: (count: number) => void,
-  onError: (error: string) => void
-): Promise<{ files: number; envs: number }> {
-  return new Promise((resolve) => {
-    const conn = new Client();
-    let processedFiles = 0;
-    let processedEnvs = 0;
-
-    conn.on("ready", () => {
-      console.log(`[Update Env From Files] Connexion SSH établie avec ${host} pour l'utilisateur ${netid}`);
-      
-      // Commande pour lister les fichiers env.*.txt et release.*.txt
-      const listCommand = `ls -1 ${rootfile}/env.*.txt ${rootfile}/release.*.txt 2>/dev/null || true`;
-      
-      conn.exec(listCommand, (err, stream) => {
-        if (err) {
-          conn.end();
-          onError(`Erreur lors de la liste des fichiers: ${err.message}`);
-          resolve({ files: 0, envs: 0 });
-          return;
-        }
-
-        let fileList = "";
-        
-        stream.on("data", (data: Buffer) => {
-          fileList += data.toString();
-        });
-
-        stream.on("close", async () => {
-          const files = fileList.trim().split('\n').filter(f => f.trim() !== '');
-          
-          if (files.length === 0) {
-            conn.end();
-            console.log(`[Update Env From Files] Aucun fichier trouvé sur ${host}`);
-            resolve({ files: 0, envs: 0 });
-            return;
-          }
-
-          console.log(`[Update Env From Files] ${files.length} fichier(s) trouvé(s) sur ${host}`);
-
-          // Traiter chaque fichier
-          for (const filePath of files) {
-            try {
-              const envCount = await readAndProcessFile(conn, filePath, rootfile, onError);
-              processedEnvs += envCount;
-              processedFiles++;
-            } catch (error) {
-              onError(`Erreur lors du traitement de ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          }
-
-          conn.end();
-          onFileProcessed(processedFiles);
-          onEnvProcessed(processedEnvs);
-          resolve({ files: processedFiles, envs: processedEnvs });
-        });
-
-        stream.stderr.on("data", (data: Buffer) => {
-          console.error(`[Update Env From Files] stderr: ${data.toString()}`);
-        });
-      });
-    });
-
-    conn.on("error", (err) => {
-      console.error(`[Update Env From Files] Erreur de connexion SSH à ${host}:`, err);
-      onError(`Erreur de connexion SSH: ${err.message}`);
-      resolve({ files: 0, envs: 0 });
-    });
-
-    const connectConfig: any = {
-      host,
-      port,
-      username: netid,
-      readyTimeout: 20000,
-      privateKey,
-    };
-
-    conn.connect(connectConfig);
-  });
-}
-
-/**
- * Lit et traite un fichier CSV depuis le serveur via SSH
- */
-async function readAndProcessFile(
-  conn: Client,
-  filePath: string,
-  rootfile: string,
-  onError: (error: string) => void
-): Promise<number> {
-  return new Promise((resolve) => {
-    const fileName = filePath.split('/').pop() || '';
-    const isReleaseFile = fileName.startsWith('release.');
-    const isEnvFile = fileName.startsWith('env.');
-    
-    if (!isReleaseFile && !isEnvFile) {
-      resolve(0);
-      return;
+export async function processOneReleaseFile(fileName: string): Promise<UpdateEnvFromFilesResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.netid) {
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+    if (!fileName.startsWith("release.")) {
+      return { success: false, error: `Fichier invalide : ${fileName}` };
+    }
+    const filePath = path.join(FILES_DIR, fileName);
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      return { success: false, error: `Fichier introuvable : ${fileName}` };
     }
 
-    console.log(`[Update Env From Files] Traitement du fichier: ${fileName}`);
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const errors: string[] = [];
+    const addedReleases: string[] = [];
+    const updatedEnvs: string[] = [];
 
-    // Lire le fichier via SSH
-    const readCommand = `cat ${filePath}`;
-    
-    conn.exec(readCommand, (err, stream) => {
-      if (err) {
-        onError(`Erreur lors de la lecture de ${fileName}: ${err.message}`);
-        resolve(0);
-        return;
-      }
+    for (let i = 1; i < lines.length; i++) {
+      const csvData = parseCsvLine(lines[i]!);
+      if (!csvData?.env?.trim()) continue;
 
-      let fileContent = "";
-      
-      stream.on("data", (data: Buffer) => {
-        fileContent += data.toString();
-      });
+      const result = await processEnvData(csvData, { isRelease: true });
+      if (result.error) errors.push(result.error);
+      if (result.addedReleases.length) addedReleases.push(...result.addedReleases);
+      if (result.updated && result.env) updatedEnvs.push(result.env);
+    }
 
-      stream.on("close", async () => {
-        try {
-          const lines = fileContent.split('\n').filter(line => line.trim() !== '');
-          let envCount = 0;
-
-          if (isReleaseFile) {
-            // Fichier release.* : une seule ligne
-            if (lines.length > 0) {
-              const csvData = parseCsvLine(lines[0]);
-              if (csvData && csvData.env) {
-                await processEnvData(csvData, onError);
-                envCount = 1;
-              }
-            }
-          } else if (isEnvFile) {
-            // Fichier env.* : plusieurs lignes (une par environnement)
-            for (const line of lines) {
-              const csvData = parseCsvLine(line);
-              if (csvData && csvData.env) {
-                await processEnvData(csvData, onError);
-                envCount++;
-              }
-            }
-          }
-
-          console.log(`[Update Env From Files] ${envCount} environnement(s) traité(s) dans ${fileName}`);
-          resolve(envCount);
-        } catch (error) {
-          onError(`Erreur lors du traitement de ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
-          resolve(0);
-        }
-      });
-
-      stream.stderr.on("data", (data: Buffer) => {
-        console.error(`[Update Env From Files] stderr pour ${fileName}: ${data.toString()}`);
-      });
-    });
-  });
+    const message = `${updatedEnvs.length} environnement(s) mis à jour (release) dans ${fileName}.`;
+    return {
+      success: errors.length === 0,
+      message,
+      error: errors.length > 0 ? errors.join(" ; ") : undefined,
+      addedReleases: addedReleases.length > 0 ? addedReleases : undefined,
+      updatedEnvs: updatedEnvs.length > 0 ? updatedEnvs : undefined,
+    };
+  } catch (error) {
+    console.error("[Process One Release File] Erreur:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue.",
+    };
+  } finally {
+    revalidatePath("/refresh-info");
+  }
 }
 
 /**
- * Traite les données d'un environnement et met à jour les tables
+ * Applique l'étape 13 : met à jour harpenvinfo.lastcheckstatus = 1 pour les (envId, datmaj)
+ * dont la dernière ligne harpmonitor indique un statut OK (dbstatus=0 ou asstatus=0 ou prcsunx/nt=0).
+ * À appeler après le traitement de tous les fichiers release.*.
+ */
+export async function applyLastCheckStatus(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.netid) {
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+
+    const monitors = await db.harpmonitor.findMany({
+      orderBy: { monitordt: "desc" },
+      select: {
+        envId: true,
+        monitordt: true,
+        dbstatus: true,
+        nbdom: true,
+        asstatus1: true,
+        asstatus2: true,
+        asstatus3: true,
+        asstatus4: true,
+        asstatus5: true,
+        prcsunxstatus: true,
+        prcsntstatus: true,
+      },
+    });
+
+    const latestByEnv = new Map<number, (typeof monitors)[0]>();
+    for (const m of monitors) {
+      if (!latestByEnv.has(m.envId)) {
+        latestByEnv.set(m.envId, m);
+      }
+    }
+
+    let updated = 0;
+    for (const m of latestByEnv.values()) {
+      const ok =
+        m.dbstatus === 0 ||
+        (m.nbdom === 1 && m.asstatus1 === 0) ||
+        (m.nbdom === 2 && (m.asstatus1 === 0 || m.asstatus2 === 0)) ||
+        (m.nbdom === 3 && (m.asstatus1 === 0 || m.asstatus2 === 0 || m.asstatus3 === 0)) ||
+        (m.nbdom === 4 && (m.asstatus1 === 0 || m.asstatus2 === 0 || m.asstatus3 === 0 || m.asstatus4 === 0)) ||
+        (m.nbdom === 5 &&
+          (m.asstatus1 === 0 || m.asstatus2 === 0 || m.asstatus3 === 0 || m.asstatus4 === 0 || m.asstatus5 === 0)) ||
+        m.prcsunxstatus === 0 ||
+        m.prcsntstatus === 0;
+
+      if (ok) {
+        const r = await db.harpenvinfo.updateMany({
+          where: { envId: m.envId, datmaj: m.monitordt },
+          data: { lastcheckstatus: 1 },
+        });
+        updated += r.count;
+      }
+    }
+
+    console.log(`[Apply Last Check Status] ${updated} enregistrement(s) harpenvinfo avec lastcheckstatus=1`);
+    return { success: true };
+  } catch (error) {
+    console.error("[Apply Last Check Status] Erreur:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue.",
+    };
+  } finally {
+    revalidatePath("/refresh-info");
+  }
+}
+
+/**
+ * Met à jour la base depuis les fichiers locaux env.* (générés par refresh_info_harp.ksh).
+ * Ne traite que les environnements déjà présents dans envsharp.
+ */
+export async function updateEnvFromFiles(): Promise<UpdateEnvFromFilesResult> {
+  try {
+    const list = await getEnvUpdateFileList();
+    if (!list.success) return { success: false, error: list.error };
+
+    const errors: string[] = [];
+    const addedReleases: string[] = [];
+    const updatedEnvs: string[] = [];
+    let processedEnvs = 0;
+
+    for (const fileName of list.envFiles) {
+      const result = await processOneEnvFile(fileName);
+      if (result.updatedEnvs) {
+        updatedEnvs.push(...result.updatedEnvs);
+        processedEnvs += result.updatedEnvs.length;
+      }
+      if (result.addedReleases) addedReleases.push(...result.addedReleases);
+      if (result.error) errors.push(result.error);
+    }
+
+    const message = `Traitement terminé : ${processedEnvs} environnement(s) mis à jour (envsharp).${addedReleases.length ? ` ${addedReleases.length} release(s) ajoutée(s) dans releaseenv.` : ""}${errors.length ? ` ${errors.length} erreur(s).` : ""}`;
+
+    return {
+      success: errors.length === 0,
+      message,
+      error: errors.length > 0 ? errors.join(" ; ") : undefined,
+      addedReleases: addedReleases.length > 0 ? addedReleases : undefined,
+      updatedEnvs: updatedEnvs.length > 0 ? updatedEnvs : undefined,
+    };
+  } catch (error) {
+    console.error("[Update Env From Files] Erreur:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue lors de la mise à jour.",
+    };
+  } finally {
+    revalidatePath("/refresh-info");
+  }
+}
+
+/**
+ * Traite les données d'un environnement et met à jour les tables (harpenvinfo, harpora, etc.).
+ * @param data - Ligne CSV parsée
+ * @param options.isRelease - Si true (fichier release.*), on ne met à jour ni harpora ni harpmonitor, et on applique les null→N/A pour orarelease/ptversion/psversion
  */
 async function processEnvData(
   data: EnvCsvData,
-  onError: (error: string) => void
-): Promise<void> {
+  options: { isRelease?: boolean } = {}
+): Promise<{ updated: boolean; env?: string; addedReleases: string[]; error?: string }> {
+  const isRelease = options.isRelease === true;
+  const addedReleases: string[] = [];
   try {
     const env = data.env.trim();
     if (!env) {
-      return;
+      return { updated: false, addedReleases: [] };
     }
 
     console.log(`[Update Env From Files] Traitement de l'environnement: ${env}`);
-
-    // Traiter la release HARP
-    let harprelease = data.harprelease.trim();
-    if (!harprelease || harprelease[0] !== 'G') {
-      harprelease = 'N/A';
-    }
-
-    // Vérifier/créer la release dans releaseenv (équivalent de psadm_release)
-    const existingRelease = await db.releaseenv.findUnique({
-      where: { harprelease }
-    });
-
-    if (!existingRelease) {
-      await db.releaseenv.create({
-        data: {
-          harprelease,
-          descr: harprelease
-        }
-      });
-      console.log(`[Update Env From Files] Release créée: ${harprelease}`);
-    }
 
     // Récupérer l'environnement depuis envsharp
     const envRecord = await db.envsharp.findUnique({
@@ -523,31 +528,58 @@ async function processEnvData(
     });
 
     if (!envRecord) {
-      onError(`Environnement ${env} non trouvé dans envsharp`);
-      return;
+      // Mise à jour uniquement : ignorer les env absents d'envsharp
+      return { updated: false, env, addedReleases: [] };
     }
 
     const envId = envRecord.id;
+    console.log(`[Update Env From Files] env=${env} -> envId=${envId} récupéré depuis envsharp`);
+
+    // Traiter la release HARP (uniquement si env existe)
+    let harprelease = data.harprelease.trim();
+    if (!harprelease || harprelease[0] !== "G") {
+      harprelease = "N/A";
+    } else {
+      const existingRelease = await db.releaseenv.findUnique({
+        where: { harprelease },
+      });
+      if (!existingRelease) {
+        await db.releaseenv.create({
+          data: { harprelease, descr: harprelease },
+        });
+        addedReleases.push(harprelease);
+        console.log(`[Update Env From Files] Release créée: ${harprelease}`);
+      }
+    }
 
     // Traiter les valeurs null
-    const cobver = data.cobver === 'null' ? 'N/A' : data.cobver.trim();
-    const orarelease = data.orarelease === 'null' ? 'N/A' : data.orarelease.trim();
-    const ptversion = data.ptversion === 'null' ? 'N/A' : data.ptversion.trim();
-    const psversion = data.psversion === 'null' ? 'N/A' : data.psversion.trim();
-    const anonym = data.anonym === 'null' ? 'N' : data.anonym.trim();
-    const edi = data.edi === 'null' ? 'N' : data.edi.trim();
+    const cobverRaw = data.cobver === "null" ? "N/A" : data.cobver.trim();
+    const volum = cobverRaw.slice(0, 60);
+    const orarelease = data.orarelease === "null" ? "N/A" : data.orarelease.trim();
+    const ptversion = data.ptversion === "null" ? "N/A" : data.ptversion.trim();
+    const psversion = data.psversion === "null" ? "N/A" : data.psversion.trim();
+    const anonym = data.anonym === "null" ? "N" : (data.anonym.trim() || "N");
+    const edi = data.edi === "null" ? "N" : (data.edi.trim() || "N");
 
-    // Mettre à jour envsharp
+    // Mettre à jour envsharp (tracer l'ancienne et la nouvelle valeur de harprelease)
+    const beforeEnv = await db.envsharp.findUnique({
+      where: { id: envId },
+      select: { harprelease: true },
+    });
+    console.log(
+      `[Update Env From Files] env=${env} (id=${envId}) harprelease avant='${beforeEnv?.harprelease ?? "NULL"}', après='${harprelease}'`
+    );
+
     await db.envsharp.update({
       where: { id: envId },
       data: {
         harprelease,
-        volum: cobver,
+        volum,
         ptversion,
         psversion,
-        anonym: anonym || 'N',
-        edi: edi || 'N',
-      }
+        anonym,
+        edi,
+      },
     });
 
     // Mettre à jour edi pour FHHPR1 et GASSI_PRODUCTION
@@ -567,22 +599,23 @@ async function processEnvData(
     const deploycbl = data.deploycbl === 'null' ? null : data.deploycbl.trim();
     const pswd_ft_exploit = data.pswd_ft_exploit === 'null' ? null : data.pswd_ft_exploit.trim();
 
-    // Déterminer si c'est un environnement GASSI (mode restreint)
-    const isGassiEnv = ['FHHPR1', 'FHFPR1', 'GASSI_PRODUCTION', 'MY_TOOLS', 'FHHPP2', 'FHFPP2'].includes(env);
+    // harpenvinfo est liée à envsharp par envId ; le nom d'env (FHHPR1, GASSI_PRODUCTION, etc.) est dans envsharp.env.
+    // GASSI = mode restreint (datmaj + modetp/modedt) ; non-GASSI = datmaj + refreshdt + datadt.
+    const isGassiEnv = ['FHHPR1', 'FHFPR1', 'GASSI_PRODUCTION', 'GASSI_DEV', 'MY_TOOLS', 'FHHPP2', 'FHFPP2'].includes(env);
 
     if (isGassiEnv) {
-      // Mode restreint : seulement datmaj et modetp/modedt
+      // Environnements GASSI : datmaj + modetp/modedt (modedt vide si modetp null, comme en PHP)
       await db.harpenvinfo.upsert({
         where: { envId },
         create: {
           envId,
           datmaj: infodt || new Date(),
-          modetp: modetp || '',
+          modetp: modetp ?? '',
           modedt,
         },
         update: {
           datmaj: infodt || new Date(),
-          modetp: modetp || '',
+          modetp: modetp ?? '',
           modedt,
         }
       });
@@ -604,33 +637,37 @@ async function processEnvData(
       });
     }
 
-    // Mettre à jour deploycbldt et pswd_ft_exploit
+    // Mettre à jour deploycbldt, pswd_ft_exploit, refreshdt et datadt pour tous (env.* et release.*)
     await db.harpenvinfo.update({
       where: { envId },
       data: {
         deploycbldt: deploycbl,
         pswd_ft_exploit,
+        refreshdt,
+        datadt,
       }
     });
 
-    // Mettre à jour harpora (Oracle)
-    const harporaRecord = await db.harpora.findFirst({
-      where: { envId, aliasql: env },
-      select: { oracle_sid: true }
-    });
-
-    if (harporaRecord) {
-      await db.harpora.updateMany({
-        where: { 
-          oracle_sid: harporaRecord.oracle_sid,
-          aliasql: env 
-        },
-        data: { orarelease }
+    // Mettre à jour harpora (Oracle) — uniquement pour les fichiers env.*, pas release.*
+    if (!isRelease) {
+      const harporaRecord = await db.harpora.findFirst({
+        where: { envId, aliasql: env },
+        select: { oracle_sid: true }
       });
+
+      if (harporaRecord) {
+        console.log(
+          `[Update Env From Files] harpora pour env=${env}, envId=${envId}, oracle_sid=${harporaRecord.oracle_sid}`
+        );
+        await db.harpora.updateMany({
+          where: { envId, aliasql: env },
+          data: { orarelease },
+        });
+      }
     }
 
-    // Mettre à jour harpmonitor si infodt est présent
-    if (infodt) {
+    // Mettre à jour harpmonitor si infodt est présent — uniquement pour les fichiers env.*, pas release.*
+    if (!isRelease && infodt) {
       const dbstatus = parseNumber(data.dbstatus);
       const nbdom = parseNumber(data.nbdom);
       const asstatus1 = parseNumber(data.asstatus1);
@@ -691,10 +728,7 @@ async function processEnvData(
     const webstatus = parseNumber(data.webstatus);
 
     // Mettre à jour le statut DB
-    await db.harpenvserv.updateMany({
-      where: { envId, typsrv: 'DB' },
-      data: { status: dbstatus }
-    });
+    await safeUpdateHarpenvservStatusMany({ where: { envId, typsrv: 'DB' }, status: dbstatus });
 
     // Mettre à jour les statuts AS
     if (nbdom && nbdom > 1) {
@@ -716,36 +750,25 @@ async function processEnvData(
         else if (lastChar === '5') status = asstatus5;
 
         if (status !== null && server.id) {
-          await db.harpenvserv.update({
-            where: { id: server.id },
-            data: { status }
-          });
+          await safeUpdateHarpenvservStatusOne({ id: server.id, status });
         }
       }
     } else {
       // Single domain : mettre à jour tous les AS avec asstatus1
-      await db.harpenvserv.updateMany({
-        where: { envId, typsrv: 'AS' },
-        data: { status: asstatus1 }
-      });
+      await safeUpdateHarpenvservStatusMany({ where: { envId, typsrv: 'AS' }, status: asstatus1 });
     }
 
-    // Mettre à jour PRCS UNIX
-    // Récupérer les serveurs UNIX depuis harpserve
+    // Mettre à jour PRCS UNIX/LINUX
     const unixServers = await db.harpserve.findMany({
-      where: { os: 'UNIX' },
+      where: { os: { in: ["LINUX", "UNIX"] } },
       select: { id: true }
     });
 
     const unixServerIds = unixServers.map(s => s.id);
     if (unixServerIds.length > 0) {
-      await db.harpenvserv.updateMany({
-        where: { 
-          envId, 
-          typsrv: 'PRCS',
-          serverId: { in: unixServerIds }
-        },
-        data: { status: psunxstatus }
+      await safeUpdateHarpenvservStatusMany({
+        where: { envId, typsrv: 'PRCS', serverId: { in: unixServerIds } },
+        status: psunxstatus
       });
     }
 
@@ -758,27 +781,23 @@ async function processEnvData(
 
     const ntServerIds = ntServers.map(s => s.id);
     if (ntServerIds.length > 0) {
-      await db.harpenvserv.updateMany({
-        where: { 
-          envId, 
-          typsrv: 'PRCS',
-          serverId: { in: ntServerIds }
-        },
-        data: { status: psntstatus }
+      await safeUpdateHarpenvservStatusMany({
+        where: { envId, typsrv: 'PRCS', serverId: { in: ntServerIds } },
+        status: psntstatus
       });
     }
 
     // Mettre à jour WS (Web Server)
-    await db.harpenvserv.updateMany({
-      where: { envId, typsrv: 'WS' },
-      data: { status: webstatus }
-    });
+    await safeUpdateHarpenvservStatusMany({ where: { envId, typsrv: 'WS' }, status: webstatus });
 
     console.log(`[Update Env From Files] Environnement ${env} mis à jour avec succès`);
   } catch (error) {
-    const errorMsg = `Erreur lors du traitement de l'environnement ${data.env}: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMsg = `Erreur lors du traitement de l'environnement ${data.env}: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
     console.error(`[Update Env From Files] ${errorMsg}`);
-    onError(errorMsg);
+    return { updated: false, env: data.env?.trim(), addedReleases: [], error: errorMsg };
   }
+  return { updated: true, env: data.env.trim(), addedReleases, };
 }
 

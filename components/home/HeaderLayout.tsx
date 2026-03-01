@@ -12,7 +12,7 @@ import Image from 'next/image'
 const navigation = [
   // { name: "Environnements", href: '/' },
   { name: "Self-service", href: '/program' },
-  { name: "Recherche", href: '/galery' },
+  { name: "Recherche", href: '/recherche' },
   { name: 'Statacm', href: '/agenda' },
   { name: 'Base de connaissances', href: '/fitness' },
   { name: 'Administration Portail', href: '/padmin' },

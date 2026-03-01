@@ -103,8 +103,8 @@ export default async function HarpLayout ( {
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
        <SessionProvider session={session}>
-          {/* Sidebar - cachée sur mobile, visible avec menu hamburger */}
-          <aside className="hidden md:block w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200">
+          {/* Sidebar - cachée sur mobile, visible avec menu hamburger, défilable */}
+          <aside className="hidden md:flex md:flex-col md:min-h-0 md:overflow-y-auto w-[70px] lg:w-[70px] xl:w-[16%] p-2 md:p-2 lg:p-2 xl:p-4 bg-white border-r border-gray-200 flex-shrink-0">
             <Link href="/" className="flex flex-col items-center xl:items-start">
               <h1 className="text-2xl md:text-3xl lg:text-3xl xl:text-6xl 2xl:text-8xl font-bold text-harpOrange">h<span className="text-gray-400">a</span>rp</h1>
               <h2 className="mx-1 md:mx-2 text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 hidden xl:block">Human Ressources <span className="text-sm md:text-base lg:text-lg font-bold text-harpOrange">&</span> Payroll</h2>   

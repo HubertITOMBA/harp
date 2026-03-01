@@ -36,7 +36,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from "lucide-react"
 import { useState } from "react"
 
 interface DataTableProps<TData, TValue> {
@@ -90,7 +90,6 @@ export function DataTable<TData, TValue>({
             onChange={(event) => {
               const value = event.target.value;
               setGlobalFilter(value);
-              // Filtrer sur toutes les colonnes pertinentes
               table.getColumn("srv")?.setFilterValue(value);
               table.getColumn("ip")?.setFilterValue(value);
               table.getColumn("pshome")?.setFilterValue(value);
@@ -101,6 +100,24 @@ export function DataTable<TData, TValue>({
             className="pl-10 rounded-lg max-w-sm h-8 text-xs"
           />
         </div>
+        {globalFilter && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => {
+              setGlobalFilter("");
+              ["srv", "ip", "pshome", "os", "domain", "psuser"].forEach((col) =>
+                table.getColumn(col)?.setFilterValue(undefined)
+              );
+            }}
+            title="Effacer la recherche"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Effacer
+          </Button>
+        )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { executeRefreshInfo, updateEnvFromFiles } from "@/actions/refresh-info";
+import { executeRefreshInfo, getEnvUpdateFileList, processOneEnvFile, getReleaseUpdateFileList, processOneReleaseFile, applyLastCheckStatus } from "@/actions/refresh-info";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -14,7 +14,7 @@ export default function RefreshInfoPage() {
   const [isPending, startTransition] = useTransition();
   const [isUpdating, startUpdating] = useTransition();
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string; log?: string } | null>(null);
-  const [updateResult, setUpdateResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [updateResult, setUpdateResult] = useState<{ success: boolean; message?: string; error?: string; updatedEnvs?: string[]; addedReleases?: string[] } | null>(null);
   
   // États pour la progression de la mise à jour
   const [updateProgress, setUpdateProgress] = useState(0);
@@ -65,15 +65,20 @@ export default function RefreshInfoPage() {
         
         if (executionResult.success) {
           toast.success(executionResult.message || "Script exécuté avec succès");
-        } else {
-          toast.error(executionResult.error || "Erreur lors de l'exécution du script");
-        }
-        
-        // Réinitialiser après 3 secondes
-        setTimeout(() => {
+          // Enchaînement : mise à jour de la base depuis env.* et release.* (pas d'enchaînement si échec)
           setExecuteProgress(0);
           setExecuteMessage("");
-        }, 3000);
+          setUpdateResult(null);
+          setUpdateProgress(0);
+          setUpdateMessage("Mise à jour de la base...");
+          startUpdating(() => runUpdateFromFiles());
+        } else {
+          toast.error(executionResult.error || "Erreur lors de l'exécution du script");
+          setTimeout(() => {
+            setExecuteProgress(0);
+            setExecuteMessage("");
+          }, 3000);
+        }
       } catch {
         clearInterval(progressInterval);
         clearInterval(messageInterval);
@@ -84,65 +89,109 @@ export default function RefreshInfoPage() {
     });
   };
 
+  const runUpdateFromFiles = async () => {
+    const progressInterval = setInterval(() => {
+      setUpdateProgress(prev => {
+        if (prev >= 95) return prev;
+        const increment = prev < 30 ? 0.5 : prev < 70 ? 1 : 2;
+        return Math.min(prev + increment, 95);
+      });
+    }, 300);
+
+    try {
+      const listResult = await getEnvUpdateFileList();
+      if (!listResult.success) {
+        clearInterval(progressInterval);
+        setUpdateProgress(0);
+        setUpdateMessage("");
+        setUpdateResult({ success: false, error: listResult.error });
+        toast.error(listResult.error);
+        return;
+      }
+
+      const { envFiles } = listResult;
+      const allUpdatedEnvs: string[] = [];
+      const allAddedReleases: string[] = [];
+      const allErrors: string[] = [];
+      const totalEnv = envFiles.length;
+
+      setUpdateMessage("Traitement des fichiers env.*...");
+      for (let i = 0; i < envFiles.length; i++) {
+        const result = await processOneEnvFile(envFiles[i]!);
+        if (result.updatedEnvs?.length) {
+          allUpdatedEnvs.push(...result.updatedEnvs);
+          const envLabel = result.updatedEnvs.length === 1 ? result.updatedEnvs[0] : result.updatedEnvs.join(", ");
+          setUpdateMessage(`env.* : ${envLabel}...`);
+        }
+        if (result.addedReleases?.length) allAddedReleases.push(...result.addedReleases);
+        if (result.error) allErrors.push(result.error);
+        setUpdateProgress(Math.min(40, ((i + 1) / Math.max(1, totalEnv)) * 35));
+      }
+
+      const releaseList = await getReleaseUpdateFileList();
+      if (!releaseList.success) allErrors.push(releaseList.error);
+      const releaseFiles = releaseList.success ? releaseList.releaseFiles : [];
+      const totalRelease = releaseFiles.length;
+      setUpdateMessage("Traitement des fichiers release.*...");
+      for (let r = 0; r < releaseFiles.length; r++) {
+        const result = await processOneReleaseFile(releaseFiles[r]!);
+        if (result.updatedEnvs?.length) allUpdatedEnvs.push(...result.updatedEnvs);
+        if (result.addedReleases?.length) allAddedReleases.push(...result.addedReleases);
+        if (result.error) allErrors.push(result.error);
+        setUpdateMessage(`release.* : ${releaseFiles[r]}...`);
+        setUpdateProgress(40 + (r / Math.max(1, totalRelease)) * 25);
+      }
+
+      setUpdateMessage("Mise à jour lastcheckstatus...");
+      const lastCheck = await applyLastCheckStatus();
+      if (!lastCheck.success && lastCheck.error) allErrors.push(lastCheck.error);
+      setUpdateProgress(90);
+
+      clearInterval(progressInterval);
+      setUpdateProgress(100);
+      const envLabel = allUpdatedEnvs.length === 1
+        ? `Mis à jour de l'environnement ${allUpdatedEnvs[0]}`
+        : allUpdatedEnvs.length > 0
+          ? `Mis à jour des environnements : ${allUpdatedEnvs.join(", ")}`
+          : "Terminé !";
+      setUpdateMessage(envLabel);
+      const success = allErrors.length === 0;
+      setUpdateResult({
+        success,
+        message: success
+          ? "Base de données mise à jour."
+          : "La base de données est indisponible ou en cours de maintenance.",
+        error: allErrors.length > 0 ? allErrors.join(" ; ") : undefined,
+        addedReleases: allAddedReleases.length > 0 ? allAddedReleases : undefined,
+        updatedEnvs: allUpdatedEnvs.length > 0 ? allUpdatedEnvs : undefined,
+      });
+
+      if (success) {
+        toast.success("Base de données mise à jour.");
+        if (allAddedReleases.length) toast.info(`Release(s) ajoutée(s) : ${allAddedReleases.join(", ")}`);
+      } else {
+        toast.error("La base de données est indisponible ou en cours de maintenance.");
+      }
+
+      setTimeout(() => {
+        setUpdateProgress(0);
+        setUpdateMessage("");
+        setCurrentServer("");
+      }, 3000);
+    } catch {
+      clearInterval(progressInterval);
+      setUpdateProgress(0);
+      setUpdateMessage("Erreur");
+      toast.error("Une erreur inattendue s'est produite");
+    }
+  };
+
   const handleUpdateFromFiles = () => {
     setUpdateResult(null);
     setUpdateProgress(0);
     setUpdateMessage("Initialisation...");
     setCurrentServer("");
-    
-    startUpdating(async () => {
-      // Simuler une progression pendant le traitement
-      const progressInterval = setInterval(() => {
-        setUpdateProgress(prev => {
-          if (prev >= 95) return prev; // Ne pas dépasser 95% avant la fin
-          // Progression plus lente au début, puis accélération
-          const increment = prev < 30 ? 0.5 : prev < 70 ? 1 : 2;
-          return Math.min(prev + increment, 95);
-        });
-      }, 300);
-
-      // Messages de progression simulés
-      const messageInterval = setInterval(() => {
-        const messages = [
-          "Connexion aux serveurs DB...",
-          "Lecture des fichiers CSV...",
-          "Traitement des environnements...",
-          "Mise à jour de la base de données...",
-          "Finalisation...",
-        ];
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-        setUpdateMessage(randomMessage);
-      }, 2000);
-
-      try {
-        const updateExecutionResult = await updateEnvFromFiles();
-        
-        clearInterval(progressInterval);
-        clearInterval(messageInterval);
-        setUpdateProgress(100);
-        setUpdateMessage("Terminé !");
-        setUpdateResult(updateExecutionResult);
-        
-        if (updateExecutionResult.success) {
-          toast.success(updateExecutionResult.message || "Mise à jour des environnements réussie");
-        } else {
-          toast.error(updateExecutionResult.error || "Erreur lors de la mise à jour des environnements");
-        }
-        
-        // Réinitialiser après 3 secondes
-        setTimeout(() => {
-          setUpdateProgress(0);
-          setUpdateMessage("");
-          setCurrentServer("");
-        }, 3000);
-      } catch {
-        clearInterval(progressInterval);
-        clearInterval(messageInterval);
-        setUpdateProgress(0);
-        setUpdateMessage("Erreur");
-        toast.error("Une erreur inattendue s'est produite");
-      }
-    });
+    startUpdating(() => runUpdateFromFiles());
   };
 
   return (
@@ -154,7 +203,7 @@ export default function RefreshInfoPage() {
             Refresh Info
           </CardTitle>
           <CardDescription className="text-orange-100">
-            Exécution du script refresh_info.ksh sur le serveur Linux
+            Exécution du script refresh_info_harp.ksh sur le serveur Linux
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
@@ -165,10 +214,8 @@ export default function RefreshInfoPage() {
                 Informations
               </h3>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Le script sera exécuté par l&apos;utilisateur connecté</li>
-                <li>Chemin du script : <code className="bg-blue-100 px-1 rounded">/data/exploit/harpadm/outils/scripts/refresh_info.ksh</code></li>
-                <li>Fichier de log : <code className="bg-blue-100 px-1 rounded">/data/exploit/harpadm/outils/logs/portail_refresh_info.log</code></li>
-                <li>Le script récupère les informations sur les environnements depuis chaque serveur</li>
+                <li><strong>Exécuter le script</strong> : lance refresh_info_harp.ksh sur le serveur, puis enchaîne sur la mise à jour de la base (env.* et release.*) en cas de succès.</li>
+                <li><strong>Mise à jour depuis le fichier CSV</strong> : met à jour la base à partir des fichiers env.* et release.* déjà présents (sans exécuter le script), autant de fois que souhaité.</li>
               </ul>
             </div>
 
@@ -252,7 +299,7 @@ export default function RefreshInfoPage() {
                     <span className="font-semibold">{Math.round(updateProgress)}%</span>
                   </div>
                   <Progress value={updateProgress} className="h-2 bg-blue-100" />
-                  <p className="text-xs text-blue-600 italic">
+                  <p className="text-xs text-blue-500 italic">
                     ⏳ Cette opération peut prendre plusieurs minutes. Veuillez patienter...
                   </p>
                 </div>

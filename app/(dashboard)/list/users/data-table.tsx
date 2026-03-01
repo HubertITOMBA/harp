@@ -37,7 +37,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from "lucide-react"
 import { useState } from "react"
 
 interface DataTableProps<TData, TValue> {
@@ -97,13 +97,26 @@ export function DataTable<TData, TValue>({
   return (
     <>
      <div className="flex items-center justify-between text-gray-500 font-semibold">
-     <div className="flex items-center py-4 ">
+     <div className="flex items-center gap-2 py-4 ">
         <Input
           placeholder="Rechercher dans toutes les colonnes..."
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
-          className="rounded-lg max-w-md"
+          className="rounded-lg max-w-md h-8 text-xs"
         />
+        {globalFilter && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => setGlobalFilter("")}
+            title="Effacer la recherche"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Effacer
+          </Button>
+        )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

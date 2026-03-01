@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, ArrowUpDown, Database, List, Loader2, Server, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Database, List, Loader2, Server, Search, Trash2, X } from "lucide-react";
 import { toast } from "react-toastify";
 import type { SessionRow } from "@/lib/parse-sessions-log";
 import {
@@ -350,12 +350,26 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 px-2.5 pb-2.5">
-              <Input
-                placeholder="Rechercher (SID, alias, schéma, serveur, IP)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 text-xs"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Rechercher (SID, alias, schéma, serveur, IP)..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-8 text-xs flex-1"
+                />
+                {search && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs shrink-0"
+                    onClick={() => setSearch("")}
+                    title="Effacer la recherche"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
 
               <Select
                 value={current ? current.aliasql : undefined}
@@ -544,12 +558,27 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2.5 pb-2.5 space-y-1.5">
-            <Input
-              placeholder="Rechercher dans toutes les colonnes..."
-              value={sessionSearch}
-              onChange={(e) => setSessionSearch(e.target.value)}
-              className="h-8 text-xs max-w-xs"
-            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                placeholder="Rechercher dans toutes les colonnes..."
+                value={sessionSearch}
+                onChange={(e) => setSessionSearch(e.target.value)}
+                className="h-8 text-xs max-w-xs"
+              />
+              {sessionSearch && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs shrink-0"
+                  onClick={() => setSessionSearch("")}
+                  title="Effacer la recherche"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Effacer
+                </Button>
+              )}
+            </div>
             <SessionsTableContent
               data={sessionsList}
               columns={sessionsColumns}

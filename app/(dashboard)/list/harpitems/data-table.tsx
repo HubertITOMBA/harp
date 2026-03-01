@@ -36,7 +36,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Settings2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Settings2, X } from "lucide-react"
 import { useState } from "react"
 
 interface DataTableProps<TData, TValue> {
@@ -83,6 +83,18 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
+        {(table.getColumn("descr")?.getFilterValue() as string) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => table.getColumn("descr")?.setFilterValue("")}
+            title="Effacer la recherche"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Effacer
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

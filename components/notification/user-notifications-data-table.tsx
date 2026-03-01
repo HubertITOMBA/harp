@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Filter } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Filter, X } from "lucide-react"
 import { useState, useMemo } from "react"
 
 interface DataTableProps<TData, TValue> {
@@ -142,7 +142,6 @@ export function UserNotificationsDataTable<TData, TValue>({
               value={searchValue}
               onChange={(event) => {
                 setSearchValue(event.target.value)
-                // Filtrer sur titre et message
                 const value = event.target.value
                 table.getColumn("title")?.setFilterValue(value)
                 table.getColumn("message")?.setFilterValue(value)
@@ -150,6 +149,23 @@ export function UserNotificationsDataTable<TData, TValue>({
               className="pl-10 rounded-lg max-w-sm"
             />
           </div>
+          {searchValue && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0"
+              onClick={() => {
+                setSearchValue("")
+                table.getColumn("title")?.setFilterValue(undefined)
+                table.getColumn("message")?.setFilterValue(undefined)
+              }}
+              title="Effacer la recherche"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Effacer
+            </Button>
+          )}
         </div>
 
         {/* Filtres et colonnes */}

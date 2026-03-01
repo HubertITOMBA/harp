@@ -36,7 +36,7 @@ DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";  
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from "lucide-react"
 import { useState, useMemo, useEffect } from "react"
 import React from "react"
 
@@ -157,16 +157,31 @@ export function DataTable<TData, TValue>({
     <>
      <div className="flex items-center justify-between text-gray-500 font-semibold">
      <div className="flex items-center py-4 ">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher par Base, Description, Serveur, Release, Ptools, Ora Release..."
-            value={globalFilter}
-            onChange={(event) => {
-              setGlobalFilter(event.target.value);
-            }}
-            className="pl-10 rounded-lg max-w-sm h-8 text-xs"
-          />
+        <div className="relative flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher par Base, Description, Serveur, Release, Ptools, Ora Release..."
+              value={globalFilter}
+              onChange={(event) => {
+                setGlobalFilter(event.target.value);
+              }}
+              className="pl-10 rounded-lg max-w-sm h-8 text-xs"
+            />
+          </div>
+          {globalFilter && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0"
+              onClick={() => setGlobalFilter("")}
+              title="Effacer la recherche"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Effacer
+            </Button>
+          )}
         </div>
         </div>
         <DropdownMenu>
