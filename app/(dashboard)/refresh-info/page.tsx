@@ -117,7 +117,7 @@ export default function RefreshInfoPage() {
 
       setUpdateMessage("Traitement des fichiers env.*...");
       for (let i = 0; i < envFiles.length; i++) {
-        const result = await processOneEnvFile(envFiles[i]!);
+        const result = await processOneEnvFile(envFiles[i]!, i === 0 ? { startNewLog: true } : undefined);
         if (result.updatedEnvs?.length) {
           allUpdatedEnvs.push(...result.updatedEnvs);
           const envLabel = result.updatedEnvs.length === 1 ? result.updatedEnvs[0] : result.updatedEnvs.join(", ");

@@ -204,6 +204,27 @@ const FILES_DIR =
     ? "C:\\produits\\portail_harp\\files"
     : "/produits/portail_harp/files");
 
+/** Fichier de log pour le diagnostic de la mise à jour env.* / release.* (même dossier que les fichiers, lisible par les utilisateurs) */
+const REFRESH_UPDATE_LOG_PATH = path.join(FILES_DIR, "refresh-info-update.log");
+
+function clearRefreshUpdateLog(): void {
+  try {
+    const stamp = new Date().toISOString();
+    fs.writeFileSync(REFRESH_UPDATE_LOG_PATH, `[${stamp}] Début du log de mise à jour.\n`, "utf-8");
+  } catch (err) {
+    console.error("[refresh-info] Impossible d'écrire le log:", err);
+  }
+}
+
+function appendRefreshUpdateLog(line: string): void {
+  try {
+    const stamp = new Date().toISOString();
+    fs.appendFileSync(REFRESH_UPDATE_LOG_PATH, `[${stamp}] ${line}\n`, "utf-8");
+  } catch (err) {
+    console.error("[refresh-info] Impossible d'écrire le log:", err);
+  }
+}
+
 export type UpdateEnvFromFilesResult = {
   success: boolean;
   message?: string;
@@ -285,8 +306,9 @@ export async function getReleaseUpdateFileList(): Promise<
 /**
  * Traite un seul fichier env.* et met à jour envsharp pour les environnements déjà présents.
  * Les env présents dans le fichier mais absents d'envsharp sont ignorés (mise à jour uniquement).
+ * @param startNewLog - Si true, écrase le fichier de log avant de traiter (début de batch).
  */
-export async function processOneEnvFile(fileName: string): Promise<UpdateEnvFromFilesResult> {
+export async function processOneEnvFile(fileName: string, options?: { startNewLog?: boolean }): Promise<UpdateEnvFromFilesResult> {
   try {
     const session = await auth();
     if (!session?.user?.netid) {
@@ -300,17 +322,34 @@ export async function processOneEnvFile(fileName: string): Promise<UpdateEnvFrom
       return { success: false, error: `Fichier introuvable : ${fileName}` };
     }
 
+    if (options?.startNewLog) {
+      clearRefreshUpdateLog();
+    }
+
     const content = fs.readFileSync(filePath, "utf-8");
     const lines = content.split(/\r?\n/).filter((line) => line.trim() !== "");
+    appendRefreshUpdateLog("---");
+    appendRefreshUpdateLog(`Fichier lu: ${fileName} | Nombre de lignes: ${lines.length}`);
+
     const errors: string[] = [];
     const addedReleases: string[] = [];
     const updatedEnvs: string[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       const csvData = parseCsvLine(lines[i]!);
       if (!csvData?.env?.trim()) continue;
+      if (csvData.env.trim().toLowerCase() === "env") continue; // ligne d'en-tête
 
       const result = await processEnvData(csvData);
+      const env = csvData.env.trim();
+      const harprelease = (csvData.harprelease || "").trim() || "N/A";
+      const confirmation = result.error
+        ? `erreur: ${result.error}`
+        : result.updated
+          ? "ligne traitée (env mis à jour)"
+          : "ligne ignorée (env absent d'envsharp)";
+      appendRefreshUpdateLog(`  env=${env} | harprelease=${harprelease} | ${confirmation}`);
+
       if (result.error) errors.push(result.error);
       if (result.addedReleases.length) addedReleases.push(...result.addedReleases);
       if (result.updated && result.env) updatedEnvs.push(result.env);
@@ -354,15 +393,28 @@ export async function processOneReleaseFile(fileName: string): Promise<UpdateEnv
 
     const content = fs.readFileSync(filePath, "utf-8");
     const lines = content.split(/\r?\n/).filter((line) => line.trim() !== "");
+    appendRefreshUpdateLog("---");
+    appendRefreshUpdateLog(`Fichier lu: ${fileName} | Nombre de lignes: ${lines.length}`);
+
     const errors: string[] = [];
     const addedReleases: string[] = [];
     const updatedEnvs: string[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       const csvData = parseCsvLine(lines[i]!);
       if (!csvData?.env?.trim()) continue;
+      if (csvData.env.trim().toLowerCase() === "env") continue; // ligne d'en-tête
 
       const result = await processEnvData(csvData, { isRelease: true });
+      const env = csvData.env.trim();
+      const harprelease = (csvData.harprelease || "").trim() || "N/A";
+      const confirmation = result.error
+        ? `erreur: ${result.error}`
+        : result.updated
+          ? "ligne traitée (env mis à jour)"
+          : "ligne ignorée (env absent d'envsharp)";
+      appendRefreshUpdateLog(`  env=${env} | harprelease=${harprelease} | ${confirmation}`);
+
       if (result.error) errors.push(result.error);
       if (result.addedReleases.length) addedReleases.push(...result.addedReleases);
       if (result.updated && result.env) updatedEnvs.push(result.env);
@@ -467,6 +519,7 @@ export async function updateEnvFromFiles(): Promise<UpdateEnvFromFilesResult> {
     const list = await getEnvUpdateFileList();
     if (!list.success) return { success: false, error: list.error };
 
+    clearRefreshUpdateLog();
     const errors: string[] = [];
     const addedReleases: string[] = [];
     const updatedEnvs: string[] = [];
