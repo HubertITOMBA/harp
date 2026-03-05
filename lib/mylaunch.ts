@@ -241,7 +241,13 @@ export async function launchExternalTool(
       console.log('Serveur local non disponible, utilisation du protocole mylaunch://');
       
       const url = buildMyLaunchUrl(tool, params);
-      window.location.href = url;
+      // Clic sur un <a> pour que certains navigateurs / handlers passent l'URL complète (avec query string)
+      const a = document.createElement('a');
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       
       return { success: true };
     }

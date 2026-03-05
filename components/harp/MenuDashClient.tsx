@@ -5,6 +5,17 @@ import Image from 'next/image';
 import { role } from '@/lib/data';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+/** URL SQL*Plus sans alias : rediriger vers la liste d'environnements pour choisir un env (aliasql). */
+function isSqlPlusWithoutAlias(href: string): boolean {
+  if (!href || typeof href !== 'string') return false;
+  const trimmed = href.trim();
+  if (trimmed === 'mylaunch://sqlplus') return true;
+  if (!trimmed.startsWith('mylaunch://sqlplus')) return false;
+  const q = trimmed.indexOf('?');
+  if (q === -1) return true;
+  return !/aliasql=/i.test(trimmed.slice(q));
+}
+
 interface MenuItem {
   menu: string;
   href: string;
@@ -77,14 +88,14 @@ export function MenuDashClient({ optionMenu, menuItems }: MenuDashClientProps) {
         ))}
 
         {optionMenu.map((item) => {
-          // Afficher tous les menus sans restriction de rôles
-          // Tous les menus sont visibles pour les utilisateurs ayant accès au dashboard (PSADMIN ou PORTAL_ADMIN)
+          // Lien SQL*Plus sans aliasql : rediriger vers la liste d'environnements (carte = alias = lancement avec alias)
+          const href = isSqlPlusWithoutAlias(item.href) ? '/harp/envs/1' : item.href;
           return (
             <div className="flex gap-1 md:gap-2" key={item.menu}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link 
-                    href={`${item.href}`}
+                    href={href}
                     prefetch={false}
                     className="flex items-center justify-center xl:justify-start gap-1 md:gap-2 text-xs px-1 md:px-2 py-1 md:py-2 rounded-xl hover:bg-orange-300 transition-colors w-full xl:w-auto"
                   >

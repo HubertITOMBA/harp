@@ -42,8 +42,12 @@ export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) 
       // Lancer SQL*Plus via le protocole mylaunch:// (alias = envsharp.aliasql)
       const params: Record<string, string | undefined> = {};
       const alias = typeof aliasql === 'string' ? aliasql.trim() : '';
-      if (alias) params.aliasql = alias;
-      
+      if (!alias) {
+        toast.warning('Aucun alias SQL*Net pour cet environnement. Vérifiez le champ aliasql dans envsharp.');
+        return;
+      }
+      params.aliasql = alias;
+
       const launchResult = await launchExternalTool('sqlplus', params);
 
       if (launchResult.success) {
