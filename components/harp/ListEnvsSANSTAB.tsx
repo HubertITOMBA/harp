@@ -13,6 +13,7 @@ import ServerEnvPage from "@/components/harp/ServerEnv";
 import { Label } from "@/components/ui/label"
 import { getServeName } from "@/data/user";
 import { EnvInfos } from "./EnvInfos";
+import { SQLPlusLink } from "./SQLPlusLink";
 import LancerApplis from "./LanceAppli";
 import EnvServRolesH from "./EnvServRolesH";
 // import { useState } from "react";
@@ -246,7 +247,7 @@ const HarpEnvPage =  async ( {id} : {id: string;} ) => {
                                           <Label>Instance Oracle :</Label><Label className="font-semibold text-sm mt-1">{psadm_env.oracle_sid}</Label>  
                                         </div> 
                                         <div className="flex gap-4 items-center">
-                                          <Label>Alias SQL*Net :</Label><Label className="font-semibold text-sm mt-1"><Link href=""> {psadm_env.aliasql}</Link></Label>  
+                                          <Label>Alias SQL*Net :</Label><Label className="font-semibold text-sm mt-1"><SQLPlusLink aliasql={psadm_env.aliasql} className="text-harpOrange hover:underline cursor-pointer"> {psadm_env.aliasql}</SQLPlusLink></Label>  
                                         </div> 
                                         <div className="flex gap-4 items-center">
                                             <Label>Schéma Oracle : </Label><Label  className="font-semibold text-sm mt-1"><Link href="">  {psadm_env.psadm_oracle.oraschema}</Link></Label>  

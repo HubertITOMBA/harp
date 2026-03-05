@@ -542,11 +542,18 @@ try {
     Write-Host "Commande complete: $exe $($startInfo.Arguments)" -ForegroundColor Cyan
 
     Write-Host "Lancement de l'application..." -ForegroundColor Green
-    
+
+    # Filtrer les arguments null/vides : Start-Process -ArgumentList n'accepte pas une liste vide ou contenant null
+    $validArgs = @($processArgs | Where-Object { $null -ne $_ -and [string]$_ -ne '' })
+
     # Utiliser Start-Process au lieu de Process.Start pour un meilleur contrôle
     try {
-        $proc = Start-Process -FilePath $exe -ArgumentList $processArgs -PassThru -NoNewWindow:$false
-        if (-not $proc) { 
+        if ($validArgs.Count -gt 0) {
+            $proc = Start-Process -FilePath $exe -ArgumentList $validArgs -PassThru -NoNewWindow:$false
+        } else {
+            $proc = Start-Process -FilePath $exe -PassThru -NoNewWindow:$false
+        }
+        if (-not $proc) {
             throw "Échec du lancement: Start-Process a retourné null"
         }
         

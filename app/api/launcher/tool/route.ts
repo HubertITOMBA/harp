@@ -126,9 +126,8 @@ export async function GET(request: NextRequest) {
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "sqlplus") {
-      // Pour sqlplus : /@ {aliasql}
-      // On ne veut plus utiliser les placeholders de la base (/@PARAM1) qui provoquent ORA-12154.
-      // Si aucun alias n'est fourni, on laisse les arguments vides pour laisser SQL*Plus demander la connexion.
+      // Pour sqlplus : /@ {aliasql} — aliasql = champ aliasql de la table envsharp
+      // Si aucun alias n'est fourni, arguments vides : SQL*Plus demandera la connexion.
       if (aliasql && aliasql.trim() !== "") {
         dynamicArgs = `/@ ${aliasql.trim()}`;
       } else {

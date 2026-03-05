@@ -5,6 +5,7 @@ import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 
+/** Alias Oracle SQL*Net pour la connexion (valeur du champ aliasql de la table envsharp). */
 interface SQLPlusLinkProps {
   className?: string;
   children: ReactNode;
@@ -38,9 +39,10 @@ export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) 
         }
       }
 
-      // Lancer SQL*Plus via le protocole mylaunch:// avec les paramètres
+      // Lancer SQL*Plus via le protocole mylaunch:// (alias = envsharp.aliasql)
       const params: Record<string, string | undefined> = {};
-      if (aliasql) params.aliasql = aliasql;
+      const alias = typeof aliasql === 'string' ? aliasql.trim() : '';
+      if (alias) params.aliasql = alias;
       
       const launchResult = await launchExternalTool('sqlplus', params);
 
