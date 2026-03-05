@@ -2,6 +2,9 @@ import { getApplicationStatusList, executeAppStatusRefresh } from "@/actions/app
 import { AppStatusTable } from "@/components/monitoring/AppStatusTable";
 import { Button } from "@/components/ui/button";
 
+// Rendu dynamique : getApplicationStatusList() utilise auth() qui lit headers()
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Statut des applications",
   description: "Suivi du statut des applications PeopleSoft / WebLogic par environnement et serveur.",
