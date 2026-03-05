@@ -1,3 +1,4 @@
+import { unstable_noStore } from "next/cache";
 import { getApplicationStatusList, executeAppStatusRefresh } from "@/actions/app-status";
 import { AppStatusTable } from "@/components/monitoring/AppStatusTable";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ export const metadata = {
 };
 
 export default async function StatutsApplicationsPage() {
+  unstable_noStore();
   const result = await getApplicationStatusList();
 
   const rows = result.success && result.data ? result.data : [];
