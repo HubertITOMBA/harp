@@ -126,10 +126,9 @@ export async function GET(request: NextRequest) {
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "sqlplus") {
-      // Pour sqlplus : /@ {aliasql} — aliasql = champ aliasql de la table envsharp
-      // Si aucun alias n'est fourni, arguments vides : SQL*Plus demandera la connexion.
+      // Pour sqlplus : /@aliasql (ex. /@FHHPP1) — aliasql = champ aliasql de la table envsharp
       if (aliasql && aliasql.trim() !== "") {
-        dynamicArgs = `/@ ${aliasql.trim()}`;
+        dynamicArgs = `/@${aliasql.trim()}`;
       } else {
         dynamicArgs = "";
       }
