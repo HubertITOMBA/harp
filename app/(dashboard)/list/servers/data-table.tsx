@@ -3,6 +3,7 @@
 import {
   ColumnDef,
   ColumnFiltersState,
+  Row,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -62,20 +63,34 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-
-
-
-      onSortingChange: setSorting,
-      onColumnFiltersChange: setColumnFilters,
-      onColumnVisibilityChange: setColumnVisibility,
-      onRowSelectionChange: setRowSelection,
-
-      state: {
-        sorting,
-        columnFilters,
-        columnVisibility,
-        rowSelection,
-      },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row: Row<TData>, _columnId: string, filterValue: string) => {
+      if (!filterValue || String(filterValue).trim() === "") return true;
+      const q = String(filterValue).toLowerCase().trim();
+      const r = row.original as Record<string, unknown>;
+      const values = [
+        r.srv,
+        r.ip,
+        r.pshome,
+        r.os,
+        r.domain,
+        r.psuser,
+        (r.statutenv as { statenv?: string; descr?: string } | null)?.statenv,
+        (r.statutenv as { statenv?: string; descr?: string } | null)?.descr,
+      ].filter(Boolean);
+      return values.some((val) => String(val).toLowerCase().includes(q));
+    },
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+    },
   })
 
   return (
@@ -85,18 +100,9 @@ export function DataTable<TData, TValue>({
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Rechercher par serveur, IP, PS Home, OS, Domain, PS User..."
+            placeholder="Rechercher dans toutes les colonnes (serveur, IP, PS Home, OS, Domain, PS User...)"
             value={globalFilter}
-            onChange={(event) => {
-              const value = event.target.value;
-              setGlobalFilter(value);
-              table.getColumn("srv")?.setFilterValue(value);
-              table.getColumn("ip")?.setFilterValue(value);
-              table.getColumn("pshome")?.setFilterValue(value);
-              table.getColumn("os")?.setFilterValue(value);
-              table.getColumn("domain")?.setFilterValue(value);
-              table.getColumn("psuser")?.setFilterValue(value);
-            }}
+            onChange={(e) => setGlobalFilter(e.target.value)}
             className="pl-10 rounded-lg max-w-sm h-8 text-xs"
           />
         </div>
@@ -106,12 +112,7 @@ export function DataTable<TData, TValue>({
             variant="outline"
             size="sm"
             className="h-8 text-xs shrink-0"
-            onClick={() => {
-              setGlobalFilter("");
-              ["srv", "ip", "pshome", "os", "domain", "psuser"].forEach((col) =>
-                table.getColumn(col)?.setFilterValue(undefined)
-              );
-            }}
+            onClick={() => setGlobalFilter("")}
             title="Effacer la recherche"
           >
             <X className="h-3.5 w-3.5 mr-1" />

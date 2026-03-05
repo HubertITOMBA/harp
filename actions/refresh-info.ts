@@ -204,24 +204,59 @@ const FILES_DIR =
     ? "C:\\produits\\portail_harp\\files"
     : "/produits/portail_harp/files");
 
-/** Fichier de log pour le diagnostic de la mise à jour env.* / release.* (même dossier que les fichiers, lisible par les utilisateurs) */
+/** Fichier de log (même dossier que les fichiers si accessible en écriture, sinon fallback dans save/) */
 const REFRESH_UPDATE_LOG_PATH = path.join(FILES_DIR, "refresh-info-update.log");
+const REFRESH_UPDATE_LOG_FALLBACK = path.join(process.cwd(), "save", "refresh-info-update.log");
+
+let refreshUpdateLogPath = REFRESH_UPDATE_LOG_PATH;
+
+function useRefreshUpdateLogFallback(): void {
+  try {
+    const dir = path.dirname(REFRESH_UPDATE_LOG_FALLBACK);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    refreshUpdateLogPath = REFRESH_UPDATE_LOG_FALLBACK;
+  } catch (e) {
+    console.error("[refresh-info] Fallback log path impossible:", e);
+  }
+}
 
 function clearRefreshUpdateLog(): void {
+  const stamp = new Date().toISOString();
+  const line = `[${stamp}] Début du log de mise à jour.\n`;
   try {
-    const stamp = new Date().toISOString();
-    fs.writeFileSync(REFRESH_UPDATE_LOG_PATH, `[${stamp}] Début du log de mise à jour.\n`, "utf-8");
+    fs.writeFileSync(refreshUpdateLogPath, line, "utf-8");
   } catch (err) {
-    console.error("[refresh-info] Impossible d'écrire le log:", err);
+    console.error("[refresh-info] Impossible d'écrire le log dans", refreshUpdateLogPath, err);
+    useRefreshUpdateLogFallback();
+    if (refreshUpdateLogPath === REFRESH_UPDATE_LOG_FALLBACK) {
+      try {
+        fs.writeFileSync(
+          refreshUpdateLogPath,
+          `[${stamp}] Début du log (répertoire ${FILES_DIR} non accessible en écriture, log dans save/).\n`,
+          "utf-8"
+        );
+      } catch (e2) {
+        console.error("[refresh-info] Écriture fallback impossible:", e2);
+      }
+    }
   }
 }
 
 function appendRefreshUpdateLog(line: string): void {
+  const stamp = new Date().toISOString();
+  const fullLine = `[${stamp}] ${line}\n`;
   try {
-    const stamp = new Date().toISOString();
-    fs.appendFileSync(REFRESH_UPDATE_LOG_PATH, `[${stamp}] ${line}\n`, "utf-8");
+    fs.appendFileSync(refreshUpdateLogPath, fullLine, "utf-8");
   } catch (err) {
-    console.error("[refresh-info] Impossible d'écrire le log:", err);
+    console.error("[refresh-info] Impossible d'écrire le log dans", refreshUpdateLogPath, err);
+    useRefreshUpdateLogFallback();
+    if (refreshUpdateLogPath === REFRESH_UPDATE_LOG_FALLBACK) {
+      try {
+        fs.appendFileSync(refreshUpdateLogPath, fullLine, "utf-8");
+      } catch (e2) {
+        console.error("[refresh-info] Append fallback impossible:", e2);
+      }
+    }
   }
 }
 

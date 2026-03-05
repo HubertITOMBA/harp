@@ -80,15 +80,15 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-     <div className="flex items-center justify-between text-gray-500 font-semibold">
-     <div className="flex items-center py-4 ">
+     <div className="flex items-center justify-between text-gray-600 font-semibold">
+     <div className="flex items-center py-3 ">
         <Input
           placeholder="Filtrer par environnement..."
           value={(table.getColumn("env")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("env")?.setFilterValue(event.target.value)
           }
-          className="rounded-lg max-w-sm"
+          className="rounded-lg max-w-sm h-8 text-xs"
         />
         </div>
         <DropdownMenu>
@@ -121,14 +121,14 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-    <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-xs font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="h-7">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center px-2 py-1">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -147,11 +147,10 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200"
-                
+                className="hover:bg-harpSkyLight transition-colors duration-150 h-7"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className="px-2 py-1 text-xs">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -187,22 +186,22 @@ export function DataTable<TData, TValue>({
         </Button>
     </div> */}
 
-      <div className="bg-white mt-5 flex items-center justify-between py-4 font-normal rounded-xl shadow-xl">
-          <div className="ml-5 mt-2 flex-1 text-xs text-muted-foreground">
+      <div className="bg-white mt-3 flex items-center justify-between py-3 font-normal rounded-xl shadow-md">
+          <div className="ml-4 flex-1 text-xs text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} sur {" "}
             {table.getFilteredRowModel().rows.length} ligne(s) selectionée(s).
           </div>
 
-      <div className="flex items-center space-x-6 lg:space-x-8 ">
+      <div className="flex items-center space-x-4 lg:space-x-6 ">
             <div className="flex items-center space-x-2">
-              <p className="text-xs font-medium ">Lignes par page</p>
+              <p className="text-xs font-medium">Lignes par page</p>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
                   table.setPageSize(Number(value))
                 }}
               >
-                <SelectTrigger className="h-7 w-[70px] rounded- text-xs">
+                <SelectTrigger className="h-7 w-[70px] text-xs">
                   <SelectValue placeholder={table.getState().pagination.pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">

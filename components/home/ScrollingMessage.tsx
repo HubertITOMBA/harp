@@ -55,7 +55,7 @@ export function ScrollingMessage({ messages }: ScrollingMessageProps) {
   }
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-orange-200 max-w-md">
+    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-orange-200 w-full max-w-4xl">
       <CardContent className="p-4">
         <div className="overflow-hidden relative h-6">
           {/* Message défilant avec transition de fondu */}

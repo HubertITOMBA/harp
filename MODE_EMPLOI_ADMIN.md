@@ -492,6 +492,49 @@ Les logs sont écrits dans :
 C:\apps\portail\launcher\logs\launcher.log
 ```
 
+#### Logs de mise à jour des environnements (refresh info)
+
+Deux étapes principales interviennent dans la mise à jour des environnements :
+
+- l’exécution du script Unix `refresh_info_harp.ksh` ;
+- la mise à jour de la base depuis les fichiers `env.*` et `release.*` générés.
+
+**1. Lancer le script `refresh_info` depuis l’interface**
+
+- Se connecter au portail avec un compte ayant les droits d’administration.
+- Aller sur l’écran de **refresh des environnements** (page `/refresh-info` dans le tableau de bord).
+- Cliquer sur le bouton qui lance le script `refresh_info` (section « Exécuter refresh_info »).
+
+Le log technique du script côté Unix se trouve dans :
+
+```text
+/data/exploit/harpadm/outils/logs/portail_refresh_info.log
+```
+
+**2. Mettre à jour les environnements à partir des fichiers `env.*` / `release.*`**
+
+- Toujours depuis la page `/refresh-info`, lancer la **mise à jour des environnements** à partir des fichiers `env.*` puis `release.*`.
+- Les fichiers doivent se trouver dans le répertoire des fichiers du portail :
+
+```text
+DEV Windows : C:\produits\portail_harp\files
+PROD Linux  : /produits/portail_harp/files
+```
+
+Un log détaillé du traitement (nom du fichier lu, nombre de lignes, env mis à jour, harprelease, confirmation de traitement ou erreur) est écrit dans :
+
+```text
+/produits/portail_harp/files/refresh-info-update.log
+```
+
+Si le processus Node/Next.js n’a pas les droits d’écriture sur ce répertoire, un repli automatique est utilisé :
+
+```text
+<racine_projet>/save/refresh-info-update.log
+```
+
+> **Conseil** : après un lancement de mise à jour, attendre la fin de l’opération dans l’IHM avant de consulter le log, afin qu’il soit complet.
+
 ### Problèmes courants
 
 #### 1. Erreur "Host is not allowed to connect"

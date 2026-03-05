@@ -102,16 +102,20 @@ export async function GET(request: NextRequest) {
     
     if (tool === "psdmt" || tool === "pside") {
       // Pour psdmt et pside : -CT ORACLE -CD {aliasql}
-      if (aliasql) {
-        dynamicArgs = `-CT ORACLE -CD ${aliasql}`;
-      } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
-        dynamicArgs = toolInfo.cmdarg;
+      // On ne veut plus utiliser les placeholders de la base (ex: -CT ORACLE -CD PARAM1).
+      if (aliasql && aliasql.trim() !== "") {
+        dynamicArgs = `-CT ORACLE -CD ${aliasql.trim()}`;
+      } else {
+        // Sans aliasql, on laisse les arguments vides pour que l'utilisateur renseigne la connexion manuellement.
+        dynamicArgs = "";
       }
     } else if (tool === "filezilla") {
-      // Pour filezilla : sftp: {netid}@{ip} -p 22
+      // Pour filezilla : ouvrir une session SFTP directe vers le serveur
+      // Syntaxe FileZilla: filezilla.exe "sftp://user@host:port"
       if (ip && netid) {
-        dynamicArgs = `sftp: ${netid}@${ip} -p 22`;
+        dynamicArgs = `sftp://${netid}@${ip}:22`;
       } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
+        // Fallback sur la configuration de base de données si on n'a pas les paramètres nécessaires
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "putty") {
@@ -123,10 +127,12 @@ export async function GET(request: NextRequest) {
       }
     } else if (tool === "sqlplus") {
       // Pour sqlplus : /@ {aliasql}
-      if (aliasql) {
-        dynamicArgs = `/@ ${aliasql}`;
-      } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
-        dynamicArgs = toolInfo.cmdarg;
+      // On ne veut plus utiliser les placeholders de la base (/@PARAM1) qui provoquent ORA-12154.
+      // Si aucun alias n'est fourni, on laisse les arguments vides pour laisser SQL*Plus demander la connexion.
+      if (aliasql && aliasql.trim() !== "") {
+        dynamicArgs = `/@ ${aliasql.trim()}`;
+      } else {
+        dynamicArgs = "";
       }
     }
 

@@ -141,12 +141,18 @@ export const columns: ColumnDef<MenuHarp>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-7 px-2 text-xs"
         >
           Ordre
           <ArrowUpDown className='ml-2 h-4 w-4' />
         </Button>
       )
-    }
+    },
+    cell: ({ row }) => (
+      <div className="w-14 text-center font-semibold text-xs">
+        {row.original.display}
+      </div>
+    )
   },
   {
     accessorKey: 'level',
@@ -155,12 +161,18 @@ export const columns: ColumnDef<MenuHarp>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-7 px-2 text-xs"
         >
           Niveau
           <ArrowUpDown className='ml-2 h-4 w-4' />
         </Button>
       )
-    }
+    },
+    cell: ({ row }) => (
+      <div className="w-16 text-center text-xs">
+        {row.original.level}
+      </div>
+    )
   },
   {
     accessorKey: 'active',
@@ -169,6 +181,7 @@ export const columns: ColumnDef<MenuHarp>[] = [
         <Button
           variant='ghost'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-7 px-2 text-xs"
         >
           Statut
           <ArrowUpDown className='ml-2 h-4 w-4' />
@@ -176,7 +189,14 @@ export const columns: ColumnDef<MenuHarp>[] = [
       )
     },
     cell: ({ row }) => (
-      <span className={row.original.active === 1 ? "text-green-600" : "text-red-600"}>
+      <span
+        className={
+          "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold " +
+          (row.original.active === 1
+            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            : "bg-red-50 text-red-700 border border-red-200")
+        }
+      >
         {row.original.active === 1 ? "Actif" : "Inactif"}
       </span>
     )

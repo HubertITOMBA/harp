@@ -52,7 +52,7 @@ export function ViewTypeServDialog({ typsrv, typeServName }: ViewTypeServDialogP
           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-0">
           <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">
             Type de service {typeServName.toUpperCase()}

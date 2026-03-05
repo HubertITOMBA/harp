@@ -7,6 +7,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Forcer l'affichage UTF-8 dans la console PowerShell (accents)
+try { chcp 65001 | Out-Null } catch {}
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
 # Charger la configuration depuis un fichier JSON
 # PRIORITÉ: répertoire du script (ex. D:\apps\portal\launcher) > W:\portal > LOCALAPPDATA
 function Get-LauncherConfig {
@@ -14,7 +19,7 @@ function Get-LauncherConfig {
     if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "launcher-config.json"))) {
         $configPath = Join-Path $PSScriptRoot "launcher-config.json"
         try {
-            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
             return $config
         } catch {
             Write-Host "Erreur lors du chargement de la configuration depuis $PSScriptRoot : $_" -ForegroundColor Yellow
@@ -26,7 +31,7 @@ function Get-LauncherConfig {
     # Si le fichier de config existe dans W:\portal, le charger
     if (Test-Path $configPath) {
         try {
-            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
             return $config
         } catch {
             Write-Host "Erreur lors du chargement de la configuration depuis W:\portal: $_" -ForegroundColor Yellow
@@ -37,7 +42,7 @@ function Get-LauncherConfig {
     $configPath = Join-Path $env:LOCALAPPDATA "HARP\launcher\launcher-config.json"
     if (Test-Path $configPath) {
         try {
-            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
             return $config
         } catch {
             Write-Host "Erreur lors du chargement de la configuration depuis LOCALAPPDATA: $_" -ForegroundColor Yellow
@@ -95,7 +100,7 @@ function Write-Log($message) {
         $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss.fff')
         $logMessage = "[$stamp] $message"
         $logFile = Join-Path $logDir 'launcher.log'
-        Add-Content -Path $logFile -Value $logMessage -ErrorAction SilentlyContinue
+        Add-Content -Path $logFile -Value $logMessage -Encoding UTF8 -ErrorAction SilentlyContinue
         Write-Host $logMessage -ForegroundColor Cyan
     } catch {
         # Si l'écriture du log échoue (dossier en lecture seule), afficher seulement dans la console

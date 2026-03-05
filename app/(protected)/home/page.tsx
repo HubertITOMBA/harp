@@ -186,7 +186,7 @@ const HomePage = async () => {
               {/* Lien vers la dernière chrono-tâche active */}
               {lastActiveTask && (
                 <Link href={`/view/tasks/${lastActiveTask.id}`}>
-                  <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-orange-100 cursor-pointer max-w-md">
+                  <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-orange-100 cursor-pointer w-full max-w-4xl">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-orange-500 rounded-lg">

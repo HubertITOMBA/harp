@@ -25,7 +25,7 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown, Search, Server, ExternalLink, FolderOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { launchExternalTool } from "@/lib/mylaunch";
+import { PuttyLink } from "@/components/harp/PuttyLink";
 
 export type RechercheRow = {
   typsrv: string | null;
@@ -48,33 +48,6 @@ export function RechercheTable({ data }: RechercheTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<{ id: string; value: string }[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
-
-  const handleSrvClick = async (ip: string, srv: string) => {
-    if (!ip) {
-      toast.warning("Adresse IP non disponible.");
-      return;
-    }
-    try {
-      const launchResult = await launchExternalTool("putty", {
-        host: ip,
-        port: 22,
-      });
-      if (launchResult.success) {
-        toast.success(`PuTTY en cours de lancement vers ${srv} (${ip}).`);
-      } else if (launchResult.error) {
-        toast.error(launchResult.error);
-      }
-    } catch (err) {
-      console.error("Lancement PuTTY:", err);
-      toast.error("Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.");
-      try {
-        await navigator.clipboard.writeText(ip);
-        toast.info(`IP ${ip} copiée dans le presse-papier.`);
-      } catch {
-        toast.info(`IP : ${ip}`);
-      }
-    }
-  };
 
   const handleEnvClick = (url: string | null, env: string) => {
     if (!url?.trim()) {
@@ -143,15 +116,14 @@ export function RechercheTable({ data }: RechercheTableProps) {
           const ip = row.original.ip;
           const srv = row.original.srv;
           return (
-            <button
-              type="button"
+            <PuttyLink
+              host={srv || ip}
+              ip={ip}
               className="text-orange-600 hover:text-orange-800 hover:underline font-mono text-xs inline-flex items-center gap-1"
-              onClick={() => handleSrvClick(ip, srv)}
-              title={`Connexion SSH / Putty : ${ip}`}
             >
               {srv}
               <Server className="h-3 w-3" />
-            </button>
+            </PuttyLink>
           );
         },
       },

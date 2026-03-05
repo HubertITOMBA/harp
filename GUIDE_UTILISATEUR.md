@@ -85,7 +85,7 @@ L'interface est divisée en plusieurs zones :
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [Logo HARP]                    [Barre de navigation]    │
+│  [Logo HARP]                   [Barre de navigation]    │
 ├──────────┬───────────────────────────────────────────────┤
 │          │                                               │
 │  Menu    │          Zone de contenu principale          │
@@ -191,6 +191,21 @@ Cliquer sur une **carte d'environnement** pour voir plus de détails :
 
 PuTTY permet de se connecter aux serveurs via SSH.
 
+#### Première utilisation : configurer le launcher sur votre poste
+
+Lors de la première utilisation, votre navigateur peut afficher une **boîte de dialogue** pour le protocole `mylaunch://` :
+
+- Vérifiez que la fenêtre indique bien que l’application à lancer est **PuTTY** (ou un outil connu).
+- ✅ Cocher **« Toujours autoriser l’ouverture de ce type de lien »** (ou équivalent) pour ne plus être interrogé à chaque fois.
+- Cliquer sur **« Autoriser » / « Ouvrir l’application »**.
+
+Si, au lieu de la boîte de dialogue, le navigateur affiche un message du type **« protocole mylaunch inconnu »** ou si rien ne se passe :
+
+- le **launcher n’est pas installé** ou mal configuré sur votre poste ;
+- contactez votre **administrateur** afin qu’il installe / corrige le launcher selon la procédure décrite dans le mode d’emploi administrateur.
+
+> **Note** : Une fois le launcher configuré, les clics sur « Se connecter via PuTTY » ouvriront directement PuTTY avec la bonne IP et, en production, avec votre NetID et votre clé SSH (si enregistrés dans votre profil).
+
 #### Méthode 1 : Depuis la page d'un environnement
 
 1. Ouvrir un environnement dans l'onglet **"Serveur"**
@@ -208,17 +223,6 @@ PuTTY permet de se connecter aux serveurs via SSH.
    - **User** : Votre NetID (pré-rempli)
    - **Port** : 22 (par défaut)
 3. Cliquer sur **"Lancer PuTTY"**
-
-#### Première utilisation
-
-Lors du premier lancement, une **boîte de dialogue** peut apparaître :
-- ✅ Cocher **"Toujours autoriser"** pour éviter cette question
-- Cliquer sur **"Autoriser"**
-
-> **Note** : Si PuTTY ne se lance pas, vérifiez que :
-> - Le protocole `mylaunch://` est installé (contactez l'admin)
-> - PuTTY est installé sur votre machine
-> - Votre clé SSH est configurée dans votre profil
 
 ### Lancer SQL Developer
 

@@ -31,7 +31,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Server, Network, Monitor, User, Globe, Tag, FileText, Activity, ArrowUpDown, Columns, Terminal } from 'lucide-react'
-import { ExternalToolLauncher } from '@/components/ui/external-tool-launcher'
+import { PuttyLink } from "@/components/harp/PuttyLink";
 
 interface HarpPageProps {
   id: number
@@ -344,18 +344,13 @@ export default function HarpPage({ id }: HarpPageProps) {
         if (!item.harpserve) return null;
         
         return (
-          <ExternalToolLauncher
-            tool="putty"
-            params={{
-              host: item.harpserve.ip || item.harpserve.srv,
-              port: 22,
-            }}
-            variant="outline"
-            size="sm"
-            className="h-6 w-6 p-0"
+          <PuttyLink
+            host={item.harpserve.srv || item.harpserve.ip || ""}
+            ip={item.harpserve.ip || ""}
+            className="inline-flex items-center justify-center h-6 w-6 p-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
           >
             <Server className="h-4 w-4" />
-          </ExternalToolLauncher>
+          </PuttyLink>
         );
       },
       enableSorting: false,
