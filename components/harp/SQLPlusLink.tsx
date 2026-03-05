@@ -1,11 +1,10 @@
 "use client"
 
-import { buildMyLaunchUrl } from '@/lib/mylaunch';
+import { useSession } from 'next-auth/react';
+import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 
-/** Alias Oracle SQL*Net pour la connexion (valeur du champ aliasql de la table envsharp).
- *  Utilise un vrai lien <a href="mylaunch://sqlplus?aliasql=..."> pour que le launcher reçoive l'URL complète. */
 interface SQLPlusLinkProps {
   className?: string;
   children: ReactNode;
@@ -13,32 +12,62 @@ interface SQLPlusLinkProps {
 }
 
 export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) {
-  const alias = typeof aliasql === 'string' ? aliasql.trim() : '';
-  const href = alias ? buildMyLaunchUrl('sqlplus', { aliasql: alias }) : undefined;
+  const { data: session } = useSession();
 
-  const handleNoAlias = (e: React.MouseEvent) => {
+  const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
     e.preventDefault();
-    toast.warning('Aucun alias SQL*Net pour cet environnement. Vérifiez le champ aliasql dans envsharp.');
-  };
 
-  if (href) {
-    return (
-      <a href={href} className={className}>
-        {children}
-      </a>
-    );
-  }
+    try {
+      // Récupérer le netid
+      const netid = session?.user?.netid;
+      if (!netid) {
+        toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
+      }
+
+      // Vérifier si l'outil est disponible (en production uniquement)
+      const isDevMode = 
+        process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
+        process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
+        process.env.NODE_ENV === 'development';
+
+      if (!isDevMode && netid) {
+        const checkResult = await checkToolAvailability('sqlplus', netid);
+        if (!checkResult.success) {
+          toast.error(checkResult.error || 'SQL*Plus n\'est pas configuré ou non accessible');
+          return;
+        }
+      }
+
+      // Lancer SQL*Plus via le protocole mylaunch:// avec les paramètres
+      const params: Record<string, string | undefined> = {};
+      if (aliasql) params.aliasql = aliasql;
+      
+      const launchResult = await launchExternalTool('sqlplus', params);
+
+      if (launchResult.success) {
+        toast.success('SQL*Plus est en cours de lancement...');
+      } else {
+        toast.error(
+          launchResult.error || 'Impossible de lancer SQL*Plus. Le protocole mylaunch:// n\'est pas installé.',
+          { autoClose: 10000 }
+        );
+      }
+    } catch (error) {
+      console.error('Erreur lors du lancement de SQL*Plus:', error);
+      toast.error('Erreur lors du lancement de SQL*Plus');
+    }
+  };
 
   return (
     <span
-      onClick={handleNoAlias}
+      onClick={handleClick}
       className={className}
       role="button"
       tabIndex={0}
       onKeyDown={(e: React.KeyboardEvent<HTMLSpanElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleNoAlias(e as unknown as React.MouseEvent);
+          handleClick(e as unknown as React.MouseEvent<HTMLSpanElement>);
         }
       }}
     >
@@ -46,4 +75,3 @@ export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) 
     </span>
   );
 }
-
