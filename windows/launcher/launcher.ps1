@@ -329,6 +329,18 @@ try {
         Write-Host "Aucun paramètre de requête" -ForegroundColor Gray
     }
 
+    # SQL*Plus : si aliasql absent en query, le lire depuis le chemin (mylaunch://sqlplus/ALIAS)
+    if ($tool -eq 'sqlplus' -and (-not $query.ContainsKey('aliasql') -or [string]::IsNullOrWhiteSpace($query['aliasql']))) {
+        $path = $uri.AbsolutePath
+        if ($path -and $path.Length -gt 1) {
+            $aliasFromPath = $path.TrimStart('/').Trim()
+            if ($aliasFromPath) {
+                $query['aliasql'] = [System.Uri]::UnescapeDataString($aliasFromPath)
+                Write-Host "Alias SQL*Net (depuis le chemin): $($query['aliasql'])" -ForegroundColor Yellow
+            }
+        }
+    }
+
     # Récupérer le netid (depuis l'URL ou l'environnement Windows)
     $netid = $query['netid']
     if (-not $netid -or [string]::IsNullOrWhiteSpace($netid)) {

@@ -74,11 +74,16 @@ export function buildSQLDeveloperUrl(): string {
 
 /**
  * Construit une URL mylaunch:// pour lancer un outil simple (sans paramètres)
+ * Pour sqlplus : alias dans le chemin (mylaunch://sqlplus/ALIAS) car la query est souvent supprimée par le handler Windows.
  */
 export function buildSimpleToolUrl(
   tool: 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge',
   params?: Record<string, string | number | undefined>
 ): string {
+  if (tool === 'sqlplus' && params?.aliasql) {
+    const alias = String(params.aliasql).trim();
+    if (alias) return `mylaunch://sqlplus/${encodeURIComponent(alias)}`;
+  }
   if (params && Object.keys(params).length > 0) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
