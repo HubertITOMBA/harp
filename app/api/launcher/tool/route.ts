@@ -78,12 +78,16 @@ export async function GET(request: NextRequest) {
     const versionToUse = ptversion || toolInfo.version;
     
     if ((tool === "psdmt" || tool === "pside") && versionToUse) {
-      // Convertir la version (ex: "8.60" -> "pt860", "8.61" -> "pt861")
-      const versionStr = versionToUse.trim();
-      const ptVersion = versionStr.replace(/\./g, ""); // Remplacer les points par rien
-      const basePath = `D:\\apps\\peoplesoft\\pt${ptVersion}\\bin\\client\\winx86`;
-      // Utiliser cmd de harptools
-      fullPath = `${basePath}\\${cmd}`;
+      // cmd peut être un chemin complet (ex: D:\...\psdmt.exe) ou un simple nom (psdmt.exe)
+      const isAbsolutePath = /^[a-zA-Z]:[\\/]/.test(cmd);
+      if (isAbsolutePath) {
+        fullPath = cmd;
+      } else {
+        const versionStr = versionToUse.trim();
+        const ptVersion = versionStr.replace(/\./g, "");
+        const basePath = `D:\\apps\\peoplesoft\\pt${ptVersion}\\bin\\client\\winx86`;
+        fullPath = `${basePath}\\${cmd}`;
+      }
     } else if (toolInfo.cmdpath && toolInfo.cmdpath.trim() !== "") {
       // Pour les autres outils, utiliser cmdpath + cmd de harptools
       const cmdpath = toolInfo.cmdpath.trim().replace(/\\$/, ""); // Enlever le \ final s'il existe

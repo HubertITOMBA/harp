@@ -505,8 +505,9 @@ try {
                 $argArray += $part
             }
         }
-        # Ne pas ajouter les paramètres URL comme arguments pour sqlplus : cmdarg contient déjà /@aliasql
-        if ($tool -ne 'sqlplus') {
+        # Ne pas ajouter les paramètres URL comme arguments pour sqlplus, pside, psdmt : cmdarg est déjà complet
+        $toolsWithCompleteCmdarg = @('sqlplus', 'pside', 'psdmt')
+        if ($tool -notin $toolsWithCompleteCmdarg) {
             foreach ($key in $query.Keys) {
                 if ($key -ne 'netid' -and $key -ne 'sshkey') {
                     $value = $query[$key]
