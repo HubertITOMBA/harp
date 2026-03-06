@@ -96,17 +96,25 @@ try {
             $sshkey = $request.QueryString["sshkey"]
             $urlParam = $request.QueryString["url"]
             $browserParam = $request.QueryString["browser"]
+            $aliasql = $request.QueryString["aliasql"]
+            $ptversion = $request.QueryString["ptversion"]
+            $envId = $request.QueryString["envId"]
+            $ip = $request.QueryString["ip"]
             
             if ($tool) {
-                # Construire l'URL mylaunch://
+                # Construire l'URL mylaunch:// (inclure aliasql pour sqlplus, etc.)
                 $mylaunchUrl = "mylaunch://$tool"
                 $params = @()
-                if ($hostParam) { $params += "host=$hostParam" }
-                if ($user) { $params += "user=$user" }
+                if ($hostParam) { $params += "host=$([System.Uri]::EscapeDataString($hostParam))" }
+                if ($user) { $params += "user=$([System.Uri]::EscapeDataString($user))" }
                 if ($portParam) { $params += "port=$portParam" }
-                if ($sshkey) { $params += "sshkey=$sshkey" }
+                if ($sshkey) { $params += "sshkey=$([System.Uri]::EscapeDataString($sshkey))" }
                 if ($urlParam) { $params += "url=$([System.Uri]::EscapeDataString($urlParam))" }
                 if ($browserParam) { $params += "browser=$([System.Uri]::EscapeDataString($browserParam))" }
+                if ($aliasql) { $params += "aliasql=$([System.Uri]::EscapeDataString($aliasql))" }
+                if ($ptversion) { $params += "ptversion=$([System.Uri]::EscapeDataString($ptversion))" }
+                if ($envId) { $params += "envId=$([System.Uri]::EscapeDataString($envId))" }
+                if ($ip) { $params += "ip=$([System.Uri]::EscapeDataString($ip))" }
                 if ($params.Count -gt 0) {
                     $mylaunchUrl += "?" + ($params -join "&")
                 }
