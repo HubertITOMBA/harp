@@ -114,11 +114,10 @@ export async function GET(request: NextRequest) {
         dynamicArgs = "";
       }
     } else if (tool === "filezilla") {
-      // Pour filezilla : sftp://user@host:port[/path]?keyfile=chemin_vers_ppk (clé SSH pour auth)
+      // Pour filezilla : sftp://user@host:port/...?keyfile=... (le / avant ? évite "Invalid port" )
       if (ip && netid) {
-        let sftpUrl = `sftp://${netid}@${ip}:22`;
+        let sftpUrl = `sftp://${netid}@${ip}:22/`;
         if (user?.pkeyfile?.trim()) {
-          // keyfile= chemin .ppk (slashes pour URL ; certains FileZilla acceptent ?keyfile= en ligne de commande)
           const keyfile = user.pkeyfile.trim().replace(/\\/g, "/");
           sftpUrl += `?keyfile=${keyfile}`;
         }
