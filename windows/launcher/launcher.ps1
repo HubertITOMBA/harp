@@ -498,21 +498,21 @@ try {
             $argArray += $hostValue
         }
     } else {
-        # Pour les autres outils, utiliser cmdarg de la base de données si disponible
+        # Pour les autres outils, utiliser cmdarg renvoyé par l'API (déjà complet pour sqlplus, psdmt, pside, etc.)
         if ($cmdarg -and $cmdarg.Trim() -ne '') {
-            # Parser les arguments depuis cmdarg (format: "arg1 arg2" ou "arg1=value1 arg2=value2")
             $cmdargParts = $cmdarg.Trim().Split(' ') | Where-Object { $_ -ne '' }
             foreach ($part in $cmdargParts) {
                 $argArray += $part
             }
         }
-        
-        # Ajouter les paramètres depuis l'URL si présents
-        foreach ($key in $query.Keys) {
-            if ($key -ne 'netid' -and $key -ne 'sshkey') {
-                $value = $query[$key]
-                if ($value -and $value.Trim() -ne '') {
-                    $argArray += "${key}=${value}"
+        # Ne pas ajouter les paramètres URL comme arguments pour sqlplus : cmdarg contient déjà /@aliasql
+        if ($tool -ne 'sqlplus') {
+            foreach ($key in $query.Keys) {
+                if ($key -ne 'netid' -and $key -ne 'sshkey') {
+                    $value = $query[$key]
+                    if ($value -and $value.Trim() -ne '') {
+                        $argArray += "${key}=${value}"
+                    }
                 }
             }
         }
