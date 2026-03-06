@@ -437,6 +437,15 @@ try {
     if ($pkeyfile) {
         Write-Host "  - Clé SSH: $pkeyfile" -ForegroundColor Gray
     }
+    # Tracer aliasql et l'utilisateur pour SQL*Plus (diagnostic production)
+    if ($tool -eq 'sqlplus') {
+        $aliasqlParam = $null
+        if ($query.ContainsKey('aliasql')) {
+            $aliasqlParam = $query['aliasql']
+        }
+        Write-Host "  - Alias SQL*Net (aliasql): $aliasqlParam" -ForegroundColor Gray
+        Write-Log "SQLPLUS: netid=$netid aliasql=$aliasqlParam exe=$exe cmdarg=$cmdarg"
+    }
     
     if (-not (Test-Path $exe)) {
         throw "Exécutable introuvable: $exe"
