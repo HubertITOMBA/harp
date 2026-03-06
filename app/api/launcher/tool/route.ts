@@ -114,12 +114,16 @@ export async function GET(request: NextRequest) {
         dynamicArgs = "";
       }
     } else if (tool === "filezilla") {
-      // Pour filezilla : ouvrir une session SFTP directe vers le serveur
-      // Syntaxe FileZilla: filezilla.exe "sftp://user@host:port"
+      // Pour filezilla : sftp://user@host:port[/path]?keyfile=chemin_vers_ppk (clé SSH pour auth)
       if (ip && netid) {
-        dynamicArgs = `sftp://${netid}@${ip}:22`;
+        let sftpUrl = `sftp://${netid}@${ip}:22`;
+        if (user?.pkeyfile?.trim()) {
+          // keyfile= chemin .ppk (slashes pour URL ; certains FileZilla acceptent ?keyfile= en ligne de commande)
+          const keyfile = user.pkeyfile.trim().replace(/\\/g, "/");
+          sftpUrl += `?keyfile=${keyfile}`;
+        }
+        dynamicArgs = sftpUrl;
       } else if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
-        // Fallback sur la configuration de base de données si on n'a pas les paramètres nécessaires
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "putty") {
