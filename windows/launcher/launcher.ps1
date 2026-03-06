@@ -505,8 +505,8 @@ try {
                 $argArray += $part
             }
         }
-        # Ne pas ajouter les paramètres URL comme arguments pour sqlplus, pside, psdmt : cmdarg est déjà complet
-        $toolsWithCompleteCmdarg = @('sqlplus', 'pside', 'psdmt')
+        # Ne pas ajouter les paramètres URL comme arguments : cmdarg renvoyé par l'API est déjà complet
+        $toolsWithCompleteCmdarg = @('sqlplus', 'pside', 'psdmt', 'filezilla')
         if ($tool -notin $toolsWithCompleteCmdarg) {
             foreach ($key in $query.Keys) {
                 if ($key -ne 'netid' -and $key -ne 'sshkey') {
