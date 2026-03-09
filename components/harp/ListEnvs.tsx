@@ -315,43 +315,50 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
-                          <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                          Instance Oracle
-                        </Label>
-                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <span>{envsharp.instanceId || "N/A"}</span>
-                          <SQLDeveloperLink className="ml-2 font-semibold text-harpOrange hover:underline cursor-pointer">
-                            {envsharp.aliasql || "N/A"} - {envsharp.orarelease || "N/A"}
-                          </SQLDeveloperLink>
-                        </div>
-                      </div>
+                      {/* Date maj (EnvInfos) - déplacée depuis l'onglet Oracle */}
+                      {envsharp.harpenvinfo &&
+                        envsharp.harpenvinfo.length > 0 &&
+                        envsharp.harpenvinfo[0].datmaj && (
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              Date maj
+                            </Label>
+                            <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                              {new Intl.DateTimeFormat("fr-FR", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              }).format(envsharp.harpenvinfo[0].datmaj!)}
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="space-y-1">
-                        <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
-                          <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                          Alias SQL*Net / Schema
-                        </Label>
-                        <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <SQLPlusLink 
-                            className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
-                            aliasql={envsharp.aliasql}
-                          >
-                            {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
-                          </SQLPlusLink>
-                        </div>
-                      </div>
-                    </div>
+                      {/* Dernier refresh (EnvInfos) - déplacé depuis l'onglet Oracle */}
+                      {envsharp.harpenvinfo &&
+                        envsharp.harpenvinfo.length > 0 &&
+                        envsharp.harpenvinfo[0].refreshdt && (
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              Dernier refresh
+                            </Label>
+                            <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                              {new Intl.DateTimeFormat("fr-FR", {
+                                dateStyle: "short",
+                                timeStyle: "medium",
+                              }).format(envsharp.harpenvinfo[0].refreshdt!)}
+                            </div>
+                          </div>
+                        )}
 
-                    <div className="space-y-2">
+                      {/* Schéma Oracle (ex-oracle) pour équilibrer les colonnes */}
                       <div className="space-y-1">
                         <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
                           <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                          Schéma Oracle
+                          Schéma Oracle --- DataMover
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <PSDMTLink 
+                          <PSDMTLink
                             className="font-semibold text-harpOrange hover:underline cursor-pointer"
                             ptversion={envsharp.ptversion}
                             aliasql={envsharp.aliasql}
@@ -360,14 +367,29 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           </PSDMTLink>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Password FT_EXPLOIT (EnvInfos) - déplacé depuis l'onglet Oracle */}
+                      {envsharp.harpenvinfo &&
+                        envsharp.harpenvinfo.length > 0 &&
+                        envsharp.harpenvinfo[0].pswd_ft_exploit && (
+                          <div className="space-y-1">
+                            <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                              Password FT_EXPLOIT
+                            </Label>
+                            <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_ft_exploit!} />
+                          </div>
+                        )}
 
                       <div className="space-y-1">
                         <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
                           <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                          Version PSoft
+                          Version PSoft --- Designer
                         </Label>
                         <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                          <PSIDELink 
+                          <PSIDELink
                             className="font-semibold text-harpOrange hover:underline cursor-pointer"
                             ptversion={envsharp.ptversion}
                             aliasql={envsharp.aliasql}
@@ -432,20 +454,6 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                   </div>
                                 </div>
                               )}
-                              {envInfo.refreshdt && (
-                                <div className="space-y-1">
-                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
-                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                                    Dernier refresh
-                                  </Label>
-                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                                    {new Intl.DateTimeFormat("fr-FR", {
-                                      dateStyle: "short",
-                                      timeStyle: "medium",
-                                    }).format(envInfo.refreshdt)}
-                                  </div>
-                                </div>
-                              )}
                               {envInfo.modedt && (
                                 <div className="space-y-1">
                                   <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
@@ -457,20 +465,6 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                       dateStyle: "short",
                                       timeStyle: "short",
                                     }).format(envInfo.modedt)}
-                                  </div>
-                                </div>
-                              )}
-                              {envInfo.datmaj && (
-                                <div className="space-y-1">
-                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
-                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                                    Date maj
-                                  </Label>
-                                  <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
-                                    {new Intl.DateTimeFormat("fr-FR", {
-                                      dateStyle: "short",
-                                      timeStyle: "short",
-                                    }).format(envInfo.datmaj)}
                                   </div>
                                 </div>
                               )}
@@ -487,15 +481,36 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                   </div>
                                 </div>
                               )}
-                              {envInfo.pswd_ft_exploit && (
-                                <div className="space-y-1">
-                                  <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
-                                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                                    Password FT_EXPLOIT
-                                  </Label>
-                                  <CopyPasswordButton password={envInfo.pswd_ft_exploit} />
+
+                              {/* Instance Oracle - déplacée depuis l'onglet Environnement */}
+                              <div className="space-y-1">
+                                <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                  <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                  Instance Oracle
+                                </Label>
+                                <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                                  <span>{envsharp.instanceId || "N/A"}</span>
+                                  <SQLDeveloperLink className="ml-2 font-semibold text-harpOrange hover:underline cursor-pointer">
+                                    {envsharp.aliasql || "N/A"} - {envsharp.orarelease || "N/A"}
+                                  </SQLDeveloperLink>
                                 </div>
-                              )}
+                              </div>
+
+                              {/* Alias SQL*Net / Schema - déplacé depuis l'onglet Environnement */}
+                              <div className="space-y-1">
+                                <Label className="text-[9px] sm:text-[10px] font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 py-1 rounded-t-md">
+                                  <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                                  Alias SQL*Net / Schema
+                                </Label>
+                                <div className="p-2 sm:p-2.5 bg-orange-50 rounded-md rounded-tl-none border border-orange-200 border-t-0 text-xs font-medium text-slate-900 font-mono shadow-sm">
+                                  <SQLPlusLink
+                                    className="font-semibold text-sm text-harpOrange hover:underline cursor-pointer"
+                                    aliasql={envsharp.aliasql}
+                                  >
+                                    {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
+                                  </SQLPlusLink>
+                                </div>
+                              </div>
                             </div>
                           );
                         })()}
