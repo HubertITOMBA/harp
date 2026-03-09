@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { RechercheTable } from "@/components/recherche/RechercheTable";
+import { RechercheTable, type RechercheRow } from "@/components/recherche/RechercheTable";
 
 // Toujours exécuter la requête côté serveur avec les données à jour (évite cache en production)
 export const dynamic = "force-dynamic";
@@ -10,61 +10,58 @@ export const metadata = {
   description: "Recherche environnements, types d'env, serveurs (typsrv, env, typenv, srv, site).",
 };
 
+/** Raw row: MySQL/Prisma renvoie les alias en minuscules (typenvidforurl, etc.) */
+type RawRow = {
+  typsrv: string | null;
+  env: string;
+  typenv: string | null;
+  typenvidforurl: number | null;
+  srv: string;
+  site: string | null;
+  url: string | null;
+  oraschema: string | null;
+  ip: string;
+};
+
 /**
- * Équivalent Prisma de la requête SQL :
- * SELECT i.typsrv, e.env, t.typenv, s.srv, s.site, t.id, e.url, e.oraschema, s.ip
- * FROM envsharp e, harptypenv t, harpenvserv i, harpserve s
- * WHERE e.typenvid = t.typenvid AND e.id = i.envId AND i.serverId = s.id
+ * Requête SQL explicite pour garantir la jointure sur typenvid :
+ * le type d'environnement (PRE-PRODUCTION, PRODUCTION, etc.) vient de harptypenv.typenv
+ * via envsharp.typenvid = harptypenv.typenvid (et non harptypenv.id).
+ * On mappe les clés brutes (minuscules) vers RechercheRow pour le composant.
  */
-async function getRechercheData() {
-  const envServList = await prisma.harpenvserv.findMany({
-    where: { envId: { not: null }, serverId: { not: null } },
-    include: { harpserve: true },
-    orderBy: [{ envId: "asc" }, { typsrv: "asc" }],
-  });
+async function getRechercheData(): Promise<RechercheRow[]> {
+  const raw = await prisma.$queryRaw<RawRow[]>`
+    SELECT
+      i.typsrv AS typsrv,
+      e.env AS env,
+      t.typenv AS typenv,
+      t.typenvid AS typenvIdForUrl,
+      s.srv AS srv,
+      s.site AS site,
+      e.url AS url,
+      e.oraschema AS oraschema,
+      s.ip AS ip
+    FROM harpenvserv i
+    INNER JOIN harpserve s ON i.serverId = s.id
+    INNER JOIN envsharp e ON i.envId = e.id
+    INNER JOIN harptypenv t ON e.typenvid = t.typenvid
+    WHERE i.envId IS NOT NULL
+      AND i.serverId IS NOT NULL
+      AND e.typenvid IS NOT NULL
+    ORDER BY i.envId ASC, i.typsrv ASC
+  `;
 
-  const envIds = [...new Set(envServList.map((i) => i.envId!).filter(Boolean))] as number[];
-  if (envIds.length === 0) return [];
-
-  const envSharpList = await prisma.envsharp.findMany({
-    where: { id: { in: envIds }, typenvid: { not: null } },
-    include: { harptypenv: true },
-  });
-  const envMap = new Map(envSharpList.map((e) => [e.id, e]));
-
-  const rows: {
-    typsrv: string | null;
-    env: string;
-    typenv: string | null;
-    typenvIdForUrl: number | null;
-    srv: string;
-    site: string | null;
-    url: string | null;
-    oraschema: string | null;
-    ip: string;
-  }[] = [];
-
-  for (const i of envServList) {
-    if (i.envId == null || i.serverId == null) continue;
-    const e = envMap.get(i.envId);
-    if (!e?.harptypenv) continue;
-    const s = i.harpserve;
-    if (!s) continue;
-    const t = e.harptypenv;
-    rows.push({
-      typsrv: i.typsrv,
-      env: e.env,
-      typenv: t.typenv,
-      typenvIdForUrl: t.typenvid,
-      srv: s.srv,
-      site: s.site,
-      url: e.url,
-      oraschema: e.oraschema,
-      ip: s.ip,
-    });
-  }
-
-  return rows;
+  return raw.map((r) => ({
+    typsrv: r.typsrv,
+    env: r.env,
+    typenv: r.typenv,
+    typenvIdForUrl: r.typenvidforurl,
+    srv: r.srv,
+    site: r.site,
+    url: r.url,
+    oraschema: r.oraschema,
+    ip: r.ip,
+  }));
 }
 
 export default async function RecherchePage() {
