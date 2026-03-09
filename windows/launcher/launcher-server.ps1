@@ -1,4 +1,4 @@
-# Serveur HTTP local pour lancer les applications sans protocole personnalisé
+﻿# Serveur HTTP local pour lancer les applications sans protocole personnalisé
 # Ce script écoute sur localhost et lance les applications via PowerShell
 
 param(
@@ -6,6 +6,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Forcer l'affichage UTF-8 dans la console (accents)
+try { chcp 65001 | Out-Null } catch {}
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 # URL de base de l'API
 $API_BASE_URL = $env:HARP_API_URL

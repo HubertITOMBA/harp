@@ -3,6 +3,7 @@ REM Wrapper batch pour le launcher PowerShell
 REM Ce fichier résout %LOCALAPPDATA% et appelle le script PowerShell
 REM Utilisé dans le registre Windows pour éviter les chemins codés en dur
 
+chcp 65001 >nul
 setlocal
 
 REM Chercher le launcher dans plusieurs emplacements possibles

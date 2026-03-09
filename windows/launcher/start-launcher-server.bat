@@ -2,6 +2,7 @@
 REM Script pour démarrer le serveur launcher en arrière-plan
 REM Ce script peut être ajouté au démarrage Windows de l'utilisateur
 
+chcp 65001 >nul
 setlocal
 
 REM Chercher le launcher dans plusieurs emplacements possibles
