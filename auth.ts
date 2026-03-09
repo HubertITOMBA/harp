@@ -22,6 +22,23 @@ export const {
     // Cookies sécurisés uniquement si AUTH_URL est en https (sinon false pour HTTP)
     useSecureCookies: process.env.AUTH_URL?.startsWith('https://') ?? false,
     trustHost: true, // Requis pour NextAuth v5 en production
+    events: {
+      async signIn({ user }) {
+        // Mettre à jour la dernière connexion de l'utilisateur dans la table User
+        // Important : NextAuth expose souvent user.id en string même si l'ID Prisma est un Int.
+        try {
+          const userId = typeof user?.id === "string" ? parseInt(user.id, 10) : NaN;
+          if (!isNaN(userId) && userId > 0) {
+            await db.user.update({
+              where: { id: userId },
+              data: { lastlogin: new Date() },
+            });
+          }
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour lastlogin:", error);
+        }
+      },
+    },
     callbacks: { 
       // Pas important pour Harp 
       //  async signIn({ user }) {
@@ -63,6 +80,11 @@ export const {
               session.user.pkeyfile = token.pkeyfile as string;
           }
 
+          // Dernière connexion précédente (stockée dans le JWT)
+          if ((token as any).lastLoginPrev && session.user) {
+              (session.user as any).lastLoginPrev = (token as any).lastLoginPrev;
+          }
+
           return session;
         } catch (error) {
           console.error("Erreur dans le callback session:", error);
@@ -100,6 +122,8 @@ export const {
                       token.customField = rolesString;
                       token.netid = existingUser.netid || null;
                       token.pkeyfile = existingUser.pkeyfile || null;
+                      // Stocker la dernière connexion précédente dans le token
+                      (token as any).lastLoginPrev = existingUser.lastlogin || null;
                     } else {
                       console.error("ID utilisateur invalide dans JWT callback:", user.id);
                       token.role = "";

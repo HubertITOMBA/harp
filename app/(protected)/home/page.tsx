@@ -27,6 +27,7 @@ import { notFound } from "next/navigation";
 import { getLastActiveTaskForUser } from "@/lib/actions/task-home-actions";
 import { getAllActiveMessages } from "@/lib/actions/message-actions";
 import { ScrollingMessage } from "@/components/home/ScrollingMessage";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata = {
   title: 'Accueil - Portail HARP',
@@ -38,10 +39,34 @@ export const metadata = {
  * Présente l'objectif de l'application et les fonctionnalités principales
  */
 const HomePage = async () => {
+  noStore();
   const session = await auth();
   
   if (!session?.user) {
     return notFound();
+  }
+
+  // Dernière connexion de l'utilisateur connecté (session précédente, depuis le JWT)
+  let lastLoginText: string | null = null;
+  try {
+    const prev = (session.user as any)?.lastLoginPrev as Date | string | null | undefined;
+    if (prev) {
+      const dateObj = prev instanceof Date ? prev : new Date(prev);
+      if (!isNaN(dateObj.getTime())) {
+        lastLoginText = new Intl.DateTimeFormat("fr-FR", {
+          dateStyle: "short",
+          timeStyle: "short",
+          timeZone: "Europe/Paris",
+        }).format(dateObj);
+      } else {
+        lastLoginText = "Jamais";
+      }
+    } else {
+      lastLoginText = "Jamais";
+    }
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la dernière connexion:", error);
+    lastLoginText = null;
   }
 
   // Récupérer la dernière chrono-tâche active de l'utilisateur
@@ -167,6 +192,19 @@ const HomePage = async () => {
       <main className="relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-gradient-to-r from-gray-900/5 via-orange-500/5 to-gray-900/5"></div>
+
+        {/* Dernière connexion (en haut à droite) */}
+        {lastLoginText && (
+          <div className="absolute top-3 right-3 z-20">
+            <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-white/80 backdrop-blur-sm px-3 py-2 shadow-sm">
+              <Clock className="h-4 w-4 text-orange-600" />
+              <div className="leading-tight text-right">
+                <div className="text-[11px] font-medium text-gray-500">Dernière connexion</div>
+                <div className="text-sm font-semibold text-gray-900">{lastLoginText}</div>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="max-w-4xl mx-auto text-center space-y-6">

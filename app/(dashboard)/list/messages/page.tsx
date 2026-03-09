@@ -12,7 +12,7 @@ const MsgListPage = async () => {
  
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="w-full mx-auto px-2 sm:px-4 lg:px-6">
         <Card className="shadow-lg border-orange-200">
           <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
             <CardTitle className="flex items-center gap-2">
@@ -20,8 +20,8 @@ const MsgListPage = async () => {
               Messages ({messageCount})
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex justify-end">
+          <CardContent className="p-3 sm:p-4">
+            <div className="mb-3 flex justify-end">
               <CreateMessageDialog />
             </div>
             <DataTable columns={columns} data={data} />
