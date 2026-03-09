@@ -1,6 +1,10 @@
 import prisma from "@/lib/prisma";
 import { RechercheTable } from "@/components/recherche/RechercheTable";
 
+// Toujours exécuter la requête côté serveur avec les données à jour (évite cache en production)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Recherche",
   description: "Recherche environnements, types d'env, serveurs (typsrv, env, typenv, srv, site).",
