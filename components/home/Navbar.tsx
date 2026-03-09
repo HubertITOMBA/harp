@@ -127,16 +127,47 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
                   }
                   
                   // Afficher l'icône seulement si le menu est visible (hasAccess = true)
+                  const href = item.href || "#";
+                  const isExternal =
+                    href.startsWith("http://") || href.startsWith("https://");
+
                   return (
                     <div className="flex gap-2" key={item.display}>
-                      <Link href={`${item.href}`}
-                            className="flex items-center justify-center lg:justify-start gap-2 text-xs font-medium px-1 p-2 rounded-xl hover:text-orange-500 transition-colors"
-                      >
-                        {item.icone && item.icone !== "" && item.icone !== "N" ? (
-                          <Image src={`/ressources/${item.icone}`} alt="" width={16} height={16} className="" />
-                        ) : null}
-                        <span className="hidden lg:block text-xs">{item.menu}</span>
-                      </Link>
+                      {isExternal ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center lg:justify-start gap-2 text-xs font-medium px-1 p-2 rounded-xl hover:text-orange-500 transition-colors"
+                        >
+                          {item.icone && item.icone !== "" && item.icone !== "N" ? (
+                            <Image
+                              src={`/ressources/${item.icone}`}
+                              alt=""
+                              width={16}
+                              height={16}
+                              className=""
+                            />
+                          ) : null}
+                          <span className="hidden lg:block text-xs">{item.menu}</span>
+                        </a>
+                      ) : (
+                        <Link
+                          href={href}
+                          className="flex items-center justify-center lg:justify-start gap-2 text-xs font-medium px-1 p-2 rounded-xl hover:text-orange-500 transition-colors"
+                        >
+                          {item.icone && item.icone !== "" && item.icone !== "N" ? (
+                            <Image
+                              src={`/ressources/${item.icone}`}
+                              alt=""
+                              width={16}
+                              height={16}
+                              className=""
+                            />
+                          ) : null}
+                          <span className="hidden lg:block text-xs">{item.menu}</span>
+                        </Link>
+                      )}
                     </div>
                   );
                 })}

@@ -15,7 +15,40 @@ export function CopyPasswordButton({ password }: { password: string }) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(password);
+      if (!password) {
+        toast.error("Aucun mot de passe à copier");
+        return;
+      }
+
+      let copiedOk = false;
+
+      // 1) Tentative avec l'API moderne (Clipboard API)
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        try {
+          await navigator.clipboard.writeText(password);
+          copiedOk = true;
+        } catch (err) {
+          console.error("Clipboard API indisponible, fallback execCommand:", err);
+        }
+      }
+
+      // 2) Fallback pour navigateurs anciens / contexte non sécurisé
+      if (!copiedOk) {
+        const textArea = document.createElement("textarea");
+        textArea.value = password;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand("copy");
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+
       setCopied(true);
       toast.success("Mot de passe copié dans le presse-papiers");
       setTimeout(() => setCopied(false), 2000);

@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { Label } from "@/components/ui/label"
-import { Button } from '@/components/ui/button'
+import { CopyPasswordButton } from "./CopyPasswordButton";
 
 interface EnvInfoProps {
     env: string;
@@ -79,12 +79,7 @@ export const EnvInfos = async ({
             {envInfos.pswd_ft_exploit && (
                 <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <Label className="w-32 text-muted-foreground">password FT_EXPLOIT :</Label>
-                    <Label className="text-red-600 font-semibold text-sm">
-                        Clique ici pour copier le mot de passe
-                    </Label>
-                    <Button variant="outline" size="sm">
-                        Copier le mot de passe
-                    </Button>
+                    <CopyPasswordButton password={envInfos.pswd_ft_exploit} />
                 </div>
             )}
             {envInfos.userunx && (

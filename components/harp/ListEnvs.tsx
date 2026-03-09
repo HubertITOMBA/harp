@@ -223,7 +223,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                       {envsharp.anonym === "N" ? null : (
                         <Badge variant="outline" className="text-xs">
                           <Lock className="w-3 h-3 mr-1" />
-                          Anonyme
+                          Anonymisée
                         </Badge>
                       )}
                       {envsharp.edi === "N" ? null : (

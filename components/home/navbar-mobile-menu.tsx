@@ -64,26 +64,53 @@ export function NavbarMobileMenu({ menuItems }: NavbarMobileMenuProps) {
               <span className="text-xs">Accueil</span>
             </button>
           </DropdownMenuItem>
-          {menuItems.map((item) => (
-            <DropdownMenuItem key={item.id} asChild>
-              <Link
-                href={item.href || "#"}
-                className="flex items-center gap-3 w-full cursor-pointer"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.icone && item.icone !== "" && item.icone !== "N" ? (
-                  <Image
-                    src={`/ressources/${item.icone}`}
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="flex-shrink-0"
-                  />
-                ) : null}
-                <span className="text-xs">{item.menu}</span>
-              </Link>
-            </DropdownMenuItem>
-          ))}
+          {menuItems.map((item) => {
+            const href = item.href || "#";
+            const isExternal =
+              href.startsWith("http://") || href.startsWith("https://");
+
+            return (
+              <DropdownMenuItem key={item.id} asChild>
+                {isExternal ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 w-full cursor-pointer"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.icone && item.icone !== "" && item.icone !== "N" ? (
+                      <Image
+                        src={`/ressources/${item.icone}`}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="flex-shrink-0"
+                      />
+                    ) : null}
+                    <span className="text-xs">{item.menu}</span>
+                  </a>
+                ) : (
+                  <Link
+                    href={href}
+                    className="flex items-center gap-3 w-full cursor-pointer"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.icone && item.icone !== "" && item.icone !== "N" ? (
+                      <Image
+                        src={`/ressources/${item.icone}`}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="flex-shrink-0"
+                      />
+                    ) : null}
+                    <span className="text-xs">{item.menu}</span>
+                  </Link>
+                )}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
