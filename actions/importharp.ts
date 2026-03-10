@@ -184,10 +184,7 @@ export const insertTypeBases = async () => {
 
  export const initDefaultValues = async () => {
   try {
-      // Mise à jour de tous les environnements
-      await prisma.psadm_env.updateMany({ data: { statenvId: 8 }  });
-
-      // Mise à jour de tous les environnements
+      // Mise à jour de tous les environnements dans les nouvelles tables HARP
       await prisma.envsharp.updateMany({ data: { statenvId: 8 } });
 
       await prisma.$executeRaw`UPDATE psadm_user set lastlogin = now() where lastlogin = 0`;

@@ -343,7 +343,6 @@ model psadm_env {
   anonym        String?         @db.Char(1)
   edi           String?         @db.Char(1)
   typenvid      Int?
-  statenvId     Int?            @default(0)
   psadm_dispo   psadm_dispo[]
   // statutenv     statutenv?      @relation(fields: [statenvId], references: [id], map: "statut_env_ibfk_1")
   // statutenv     statutenv?      @relation(fields: [statenvId], references: [id])
@@ -361,7 +360,6 @@ model psadm_env {
   @@index([ptversion], map: "ptversion")
   @@index([typenv], map: "typenv")
   @@index([volum], map: "volum")
-  @@index([statenvId], map: "id")
   @@index([env], map: "env")
 }
 
