@@ -8,12 +8,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-// model netidManquants {
-//   netid String? @db.VarChar(10)
-//   nom   String? @db.VarChar(25)
-//   num   Int     @id @default(autoincrement())
-// }
+/// Table historique/technique conservée en base mais non gérée par Prisma Client.
+/// On la garde pour éviter tout DROP lors des `db push` en production.
+model netidManquants {
+  netid String? @db.VarChar(10)
+  nom   String? @db.VarChar(25)
+  num   Int     @id @default(autoincrement())
+
+  @@ignore
+}
 
 model psadm_appli {
   appli     String      @db.Char(2)
@@ -331,7 +334,7 @@ model psadm_env {
   psversion     String          @db.VarChar(50)
   ptversion     String          @db.VarChar(50)
   harprelease   String          @db.VarChar(20)
-  volum         String?         @db.VarChar(60)
+  volum         String?         @db.VarChar(70)
   datmaj        DateTime?       @db.Timestamp(0)
   gassi         String?         @db.VarChar(50)
   rpg           String?         @db.VarChar(50)
@@ -416,6 +419,17 @@ model psadm_expora {
 
 // }
 
+/// Table historique/technique conservée en base mais non gérée par Prisma Client.
+model psadm_externes {
+  env    String @db.VarChar(32)
+  typsrv String @db.VarChar(32)
+  domain String @db.VarChar(32)
+  num    Int    @id @default(autoincrement())
+
+  @@index([env], map: "env")
+  @@ignore
+}
+
 model psadm_groupe {
   nom               String             @id @db.VarChar(9)
   description       String?            @db.VarChar(50)
@@ -440,6 +454,18 @@ model psadm_habilitation {
 //   num           Int      @id @default(autoincrement())
 
 // }
+
+/// Table historique/technique conservée en base mais non gérée par Prisma Client.
+model psadm_historique {
+  date          DateTime @default(now()) @db.Timestamp(0)
+  id_modifieur  String?  @db.VarChar(10)
+  netid_updated String?  @db.VarChar(10)
+  num_demande   String?  @db.VarChar(20)
+  commentaire   String?  @db.VarChar(100)
+  num           Int      @id @default(autoincrement())
+
+  @@ignore
+}
 
 model psadm_info {
   num      Int      @id @default(autoincrement())
