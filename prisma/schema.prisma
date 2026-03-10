@@ -921,6 +921,8 @@ model User {
   notificationsCreated harpnotification[]
   emailsSent          harpsentemail[]
   taskItems     harptaskitem[] // Tâches assignées à cet utilisateur
+
+  @@map("user")
 }
 
 model Account {
