@@ -16,16 +16,23 @@ let migrationPromise: Promise<any> | null = null;
 /**
  * Vérifie si la migration doit être exécutée et l'exécute si nécessaire
  * Cette fonction est idempotente et thread-safe
+ * @param force - si true, réinitialise le flag et relance la migration (utile quand userCount est resté 0)
  */
-export async function ensureUserMigration() {
+export async function ensureUserMigration(force?: boolean) {
+  if (force) {
+    resetMigrationFlag();
+    migrationPromise = null;
+    console.log("[Migration] Forçage de la migration (paramètre force=true)");
+  }
+
   // Si une migration est déjà en cours, retourner la même promesse
   if (migrationInProgress && migrationPromise) {
     console.log("[Migration] Migration déjà en cours, réutilisation de la promesse...");
     return migrationPromise;
   }
 
-  // Si la migration a déjà été exécutée avec succès, ne pas réessayer
-  if (migrationExecuted) {
+  // Si la migration a déjà été exécutée avec succès, ne pas réessayer (sauf si force)
+  if (migrationExecuted && !force) {
     return { skipped: true, reason: "Migration déjà exécutée" };
   }
 

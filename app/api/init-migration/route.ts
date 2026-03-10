@@ -4,14 +4,15 @@ import { ensureUserMigration } from "@/lib/init-migration";
 /**
  * Route API pour initialiser la migration des utilisateurs
  * S'exécute automatiquement une seule fois si la table User est vide
- * 
- * Cette route peut être appelée :
- * - Automatiquement au démarrage de l'application
- * - Manuellement via une requête GET/POST
+ *
+ * Pour forcer une nouvelle exécution (ex. userCount resté à 0) :
+ *   GET /api/init-migration?force=1  ou  ?force=true
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const result = await ensureUserMigration();
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get("force") === "1" || searchParams.get("force") === "true";
+    const result = await ensureUserMigration(force);
     
     if (result.success) {
       return NextResponse.json({
@@ -49,8 +50,7 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  // Même logique que GET
-  return GET();
+export async function POST(request: Request) {
+  return GET(request);
 }
 
