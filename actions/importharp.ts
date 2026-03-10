@@ -486,11 +486,15 @@ export async function importListEnvs() {
       }
     });
 
-    // Créer un Set des environnements existants pour une recherche rapide
-    const existingEnvSet = new Set(existingEnvs.map(e => e.env));
-
-    // Filtrer uniquement les environnements qui n'existent pas encore (delta)
-    const envsToImport = envData.filter(record => !existingEnvSet.has(record.env));
+    // Si envsharp est vide (premier import), importer TOUT psadm_env.
+    // Sinon, ne prendre que le delta (environnements manquants).
+    let envsToImport: typeof envData;
+    if (existingEnvs.length === 0) {
+      envsToImport = envData;
+    } else {
+      const existingEnvSet = new Set(existingEnvs.map(e => e.env));
+      envsToImport = envData.filter(record => !existingEnvSet.has(record.env));
+    }
 
     // Vérifier spécifiquement les environnements mentionnés par l'utilisateur
     const specificEnvs = ['FHFDMO','FHFPUM','FHFST1','FHFST2','FHFST3','FHHDMO','FHHPUM','FHHST1','FHHST2','FHHST3','FHXPUM'];
@@ -570,7 +574,7 @@ export async function importListEnvs() {
         anonym: record.anonym || null,
         edi: record.edi || null,
         typenvid: finalTypenvId, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid
-        statenvId: 8 // OUVERT par défaut (psadm_env n'a pas statenvId en prod)
+        statenvId: null
       };
     });
 
@@ -777,7 +781,7 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
         anonym: record.anonym || null,
         edi: record.edi || null,
         typenvid: typenvid, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid et validé
-        statenvId: 8 // OUVERT par défaut (psadm_env n'a pas statenvId en prod)
+        statenvId: null
       };
     });
 
