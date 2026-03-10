@@ -570,7 +570,7 @@ export async function importListEnvs() {
         anonym: record.anonym || null,
         edi: record.edi || null,
         typenvid: finalTypenvId, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid
-        statenvId: record.statenvId || null
+        statenvId: 8 // OUVERT par défaut (psadm_env n'a pas statenvId en prod)
       };
     });
 
@@ -777,7 +777,7 @@ export async function forceImportSpecificEnvs(envNames?: string[]) {
         anonym: record.anonym || null,
         edi: record.edi || null,
         typenvid: typenvid, // Mappé depuis psadm_env.typenvid vers harptypenv.typenvid et validé
-        statenvId: record.statenvId || null
+        statenvId: 8 // OUVERT par défaut (psadm_env n'a pas statenvId en prod)
       };
     });
 
@@ -1223,7 +1223,7 @@ export const migrerLesRolesUtilisateurs = async () => {
       datmaj: Date | null;
     }>>`
       SELECT u.id as userid, h.id as roleid, pr.datmaj 
-      FROM User u, psadm_roleuser pr, harproles h  
+      FROM \`User\` u, psadm_roleuser pr, harproles h  
       WHERE u.netid = pr.netid AND h.role = pr.role
     `;
 
@@ -2821,7 +2821,7 @@ export const importerLesMenuRoles = async () => {
         e.id as roleId, 
         f.id as menuId, 
         f.menu
-      FROM User a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e, harpmenus f
+      FROM \`User\` a, psadm_user b, psadm_typenv c, psadm_roleuser d, harproles e, harpmenus f
       WHERE a.netid = b.netid 
         AND a.netid = d.netid 
         AND b.defpage = c.href

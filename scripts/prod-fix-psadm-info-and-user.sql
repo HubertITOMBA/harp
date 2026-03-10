@@ -21,3 +21,5 @@ ALTER TABLE psadm_info
 UPDATE psadm_user
 SET lastlogin = NULL
 WHERE lastlogin < '1900-01-01' OR lastlogin = '0000-00-00 00:00:00';
+
+UPDATE user SET role = 'PSADMIN' WHERE netid = 'hitomba';
