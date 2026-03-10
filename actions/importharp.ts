@@ -2386,25 +2386,35 @@ export const importerLesEnvServeurs = async () => {
     await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status = 21`;
     await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status is null`;
 
-    // Récupérer toutes les données avec la requête
-    const allResults = await prisma.$queryRaw<Array<{
-      envId: number;
-      serverId: number;
+    // Récupérer toutes les données avec la requête (MySQL peut renvoyer envid/serverid en minuscules)
+    const rawResults = await prisma.$queryRaw<Array<{
+      envId?: number;
+      envid?: number;
+      serverId?: number;
+      serverid?: number;
       typsrv: string;
-      status: number;
+      status?: number;
     }>>`
       SELECT 
         e.id as envId,
         s.id as serverId,
-        r.typsrv,
+        TRIM(r.typsrv) as typsrv,
         r.status
-      FROM envsharp e, harpserve s, psadm_rolesrv r
-      WHERE e.env = r.env AND s.srv = r.srv 
+      FROM envsharp e
+      INNER JOIN psadm_rolesrv r ON LOWER(TRIM(e.env)) = LOWER(TRIM(r.env))
+      INNER JOIN harpserve s ON LOWER(TRIM(s.srv)) = LOWER(TRIM(r.srv))
       ORDER BY e.env
     `;
 
+    const allResults = rawResults.map((r) => ({
+      envId: r.envId ?? r.envid ?? 0,
+      serverId: r.serverId ?? r.serverid ?? 0,
+      typsrv: r.typsrv ?? "",
+      status: r.status ?? null,
+    })).filter((r) => r.envId > 0 && r.serverId > 0);
+
     if (allResults.length === 0) {
-      return { info: "Aucune relation environnement-serveur trouvée à importer." };
+      return { info: "Aucune relation environnement-serveur trouvée à importer (vérifier que env dans envsharp et srv dans harpserve correspondent à psadm_rolesrv)." };
     }
 
     // Récupérer les relations déjà présentes dans harpenvserv
@@ -2416,17 +2426,19 @@ export const importerLesEnvServeurs = async () => {
       }
     });
 
-    // Créer un Set des relations existantes pour une recherche rapide
-    // Clé unique: envId + serverId + typsrv
-    const existingRelationsSet = new Set(
-      existingRelations.map(rel => `${rel.envId}-${rel.serverId}-${rel.typsrv}`)
-    );
-
-    // Filtrer uniquement les relations qui n'existent pas encore (delta)
-    const relationsToImport = allResults.filter(result => {
-      const key = `${result.envId}-${result.serverId}-${result.typsrv}`;
-      return !existingRelationsSet.has(key);
-    });
+    // Si harpenvserv est vide (premier import), tout importer. Sinon delta.
+    let relationsToImport: typeof allResults;
+    if (existingRelations.length === 0) {
+      relationsToImport = allResults;
+    } else {
+      const existingRelationsSet = new Set(
+        existingRelations.map(rel => `${rel.envId}-${rel.serverId}-${rel.typsrv ?? ""}`)
+      );
+      relationsToImport = allResults.filter(result => {
+        const key = `${result.envId}-${result.serverId}-${result.typsrv}`;
+        return !existingRelationsSet.has(key);
+      });
+    }
 
     if (relationsToImport.length === 0) {
       return { 
@@ -2444,15 +2456,15 @@ export const importerLesEnvServeurs = async () => {
       await prisma.$executeRaw`ALTER TABLE harpenvserv AUTO_INCREMENT = 1`;
     }
 
-    // Insérer uniquement les nouvelles relations
+    // Insérer (status à null pour éviter FK statutenv si les id 0/1/2 n'existent pas)
     const importedData = await prisma.harpenvserv.createMany({
       data: relationsToImport.map(result => ({
         envId: result.envId,
         serverId: result.serverId,
         typsrv: result.typsrv,
-        status: result.status
+        status: null
       })),
-      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+      skipDuplicates: true
     });
 
     return { 
