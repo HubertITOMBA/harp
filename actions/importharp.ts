@@ -1840,14 +1840,17 @@ export const migrateServers = async () => {
       }
     });
 
-    // Créer un Set des serveurs existants pour une recherche rapide
-    // Clé unique: srv
-    const existingServersSet = new Set(existingServers.map(srv => srv.srv));
-
-    // Filtrer uniquement les serveurs qui n'existent pas encore (delta)
-    const serversToImport = allPsadmSrvData.filter(record => 
-      !existingServersSet.has(record.srv)
-    );
+    // Si harpserve est vide (premier import), importer TOUS les serveurs.
+    // Sinon, ne prendre que le delta (serveurs manquants).
+    let serversToImport: typeof allPsadmSrvData;
+    if (existingServers.length === 0) {
+      serversToImport = allPsadmSrvData;
+    } else {
+      const existingServersSet = new Set(existingServers.map(srv => srv.srv));
+      serversToImport = allPsadmSrvData.filter(record =>
+        !existingServersSet.has(record.srv)
+      );
+    }
 
     if (serversToImport.length === 0) {
       return { 
@@ -1865,7 +1868,7 @@ export const migrateServers = async () => {
       await prisma.$executeRaw`ALTER TABLE harpserve AUTO_INCREMENT = 1`;
     }
 
-    // Insérer uniquement les nouveaux serveurs
+    // Insérer uniquement les nouveaux serveurs (statenvId à null pour éviter FK si statutenv manquant)
     const result = await prisma.harpserve.createMany({
       data: serversToImport.map(record => ({
         srv: record.srv,
@@ -1874,7 +1877,7 @@ export const migrateServers = async () => {
         os: record.os,
         psuser: record.psuser,
         domain: record.domain,
-        statenvId: 8,
+        statenvId: null,
       })),
       skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
     });
