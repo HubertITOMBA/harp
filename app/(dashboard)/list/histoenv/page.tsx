@@ -5,19 +5,29 @@ import { DataTable } from './data-table';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History } from "lucide-react";
 
+/** Row brut : MySQL/Prisma renvoie souvent les colonnes en minuscules (statenvid). */
+type RawDispoRow = {
+  env: string;
+  fromdate: Date;
+  msg: string | null;
+  statenvid: number | null;
+  statenv: string;
+};
+
 const EnvDispoListPage = async () => {
-  const dataRaw = await db.psadm_dispo.findMany({
-    select: {
-      env: true,
-      fromdate: true,
-      msg: true,
-      statenvId: true,
-      statenv: true
-    },
-    orderBy: {
-      fromdate: 'desc'
-    }
-  });
+  const raw = await db.$queryRaw<RawDispoRow[]>`
+    SELECT env, fromdate, msg, statenvId AS statenvid, statenv
+    FROM psadm_dispo
+    WHERE (fromdate IS NULL OR fromdate >= '1900-01-01')
+    ORDER BY fromdate DESC
+  `;
+  const dataRaw = raw.map((r) => ({
+    env: r.env,
+    fromdate: r.fromdate,
+    msg: r.msg,
+    statenvId: r.statenvid ?? 0,
+    statenv: r.statenv,
+  }));
 
   // Récupérer les icônes depuis statutenv
   const statutenvIds = dataRaw
