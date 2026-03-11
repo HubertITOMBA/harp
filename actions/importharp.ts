@@ -2683,17 +2683,21 @@ export const importerLesTools = async () => {
       }
     });
 
-    // Créer un Set des outils existants pour une recherche rapide
-    // Clé unique: cmd + tooltype + descr (pour identifier les outils uniques)
-    const existingToolsSet = new Set(
-      existingTools.map(tool => `${tool.cmd}-${tool.tooltype}-${tool.descr}`)
-    );
+    // Si la table harptools est vide, on importe TOUT psadm_tools (premier import).
+    // Sinon, on ne prend que le delta basé sur cmd + tooltype + descr.
+    let toolsToImport: typeof allPsadmTools;
+    if (existingTools.length === 0) {
+      toolsToImport = allPsadmTools;
+    } else {
+      const existingToolsSet = new Set(
+        existingTools.map(tool => `${tool.cmd}-${tool.tooltype}-${tool.descr}`)
+      );
 
-    // Filtrer uniquement les outils qui n'existent pas encore (delta)
-    const toolsToImport = allPsadmTools.filter(tool => {
-      const key = `${tool.cmd}-${tool.tooltype}-${tool.descr}`;
-      return !existingToolsSet.has(key);
-    });
+      toolsToImport = allPsadmTools.filter(tool => {
+        const key = `${tool.cmd}-${tool.tooltype}-${tool.descr}`;
+        return !existingToolsSet.has(key);
+      });
+    }
 
     if (toolsToImport.length === 0) {
       return { 
@@ -2714,10 +2718,10 @@ export const importerLesTools = async () => {
     // Mapper les données de psadm_tools vers harptools et insérer uniquement les nouveaux outils
     const importedData = await prisma.harptools.createMany({
       data: toolsToImport.map((tool) => ({
-        tool: "", // Colonne tool non importée, laissée vide
-        cmdpath: "", // Champ non présent dans psadm_tools, laissé vide
+        tool: tool.tool,           // identifiant logique (putty, sqlplus, ...)
+        cmdpath: null,             // non géré pour l'instant
         cmd: tool.cmd,
-        version: "", // Champ non présent dans psadm_tools, laissé vide
+        version: null,
         descr: tool.descr,
         tooltype: tool.tooltype,
         cmdarg: tool.cmdarg || "",
