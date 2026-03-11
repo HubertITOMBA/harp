@@ -44,6 +44,14 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Normalisation tolérante pour la recherche :
+  // - minuscules
+  // - suppression des espaces, tirets, underscores (ga, gassi, gassi_ => même forme)
+  const normalizeText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[\s_-]+/g, "");
+
   // Vérifier la position du scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -80,30 +88,18 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
       return children;
     }
 
-    // Filtrer les données en fonction du terme de recherche
-    const searchLower = searchTerm.toLowerCase().trim();
+    // Filtrer les données en fonction du terme de recherche (sur le NOM d'env uniquement)
+    const searchNorm = normalizeText(searchTerm.trim());
     const filteredIds = new Set(
       envsData
         .filter((env) => {
-          // Recherche dans tous les champs pertinents
-          const searchFields = [
-            env.env,
-            env.descr,
-            env.aliasql,
-            env.oraschema,
-            env.psversion,
-            env.ptversion,
-            env.harprelease,
-            env.statutenv?.statenv,
-            env.serverInfo?.srv,
-            env.serverInfo?.ip,
-            env.serverInfo?.pshome,
-          ];
-
-          return searchFields.some((field) => {
-            if (!field) return false;
-            return field.toLowerCase().includes(searchLower);
-          });
+          const nameNorm = normalizeText(env.env || "");
+          if (!nameNorm) return false;
+          // Commence par (prioritaire), puis contient (pour les cas plus longs)
+          return (
+            nameNorm.startsWith(searchNorm) ||
+            (searchNorm.length > 2 && nameNorm.includes(searchNorm))
+          );
         })
         .map((env) => env.id)
     );

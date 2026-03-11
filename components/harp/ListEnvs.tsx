@@ -221,16 +221,38 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         )}
                       </HarpUrlLink>
                       {envsharp.anonym === "N" ? null : (
-                        <Badge variant="outline" className="text-xs">
-                          <Lock className="w-3 h-3 mr-1" />
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-orange-400 text-orange-800 bg-orange-50"
+                        >
+                           <Image
+                            src="/ressources/anonym.png"
+                            alt="ANO"
+                            width={16}
+                            height={16}
+                            className="object-contain align-middle"
+                          />
+                          {/* <Lock className="w-3 h-3 mr-1" /> */}
                           Anonymisée
                         </Badge>
                       )}
                       {envsharp.edi === "N" ? null : (
-                        <Badge variant="secondary" className="text-xs">
-                          <Globe className="w-3 h-3 mr-1" />
-                          EDI
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-sky-400 text-sky-800 bg-sky-50"
+                          >
+                            <Globe className="w-3 h-3 mr-1" />
+                            EDI
+                          </Badge>
+                          <Image
+                            src="/ressources/edi.png"
+                            alt="EDI"
+                            width={96}
+                            height={58}
+                            className="object-contain align-middle"
+                          />
+                        </div>
                       )}
                     </div>
                     {envsharp.descr && (
