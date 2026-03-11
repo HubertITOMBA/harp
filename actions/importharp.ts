@@ -321,18 +321,17 @@ export const lierTypeEnvs = async () => {
     ];
 
     for (const update of updates) {
-      const result = await prisma.psadm_env.update({
-        where: {
-          typenv: update.typenv
-        },
-        data: {
-          typenvid: {
-            set: await prisma.psadm_typenv.findUnique({
-              where: { typenv: update.typenv },
-               select: { display: true }
-            }).then(result => result?.display)
-          }
-        }
+      const typenvRow = await prisma.psadm_typenv.findFirst({
+        where: { typenv: update.typenv },
+        select: { display: true },
+      });
+
+      if (typenvRow?.display == null) continue;
+
+      // typenv n'est pas unique dans psadm_env => updateMany
+      await prisma.psadm_env.updateMany({
+        where: { typenv: update.typenv },
+        data: { typenvid: typenvRow.display },
       });
     }
 
@@ -1324,22 +1323,21 @@ export const verifierDoublonsOracleSid1 = async () => {
         const instances = await prisma.harpora.findMany({
           where: {
             oracle_sid: doublon.oracle_sid
-          },
-          include: {
-            envsharp: {
-              select: {
-                env: true
-              }
-            }
           }
         });
+
+        const envIds = Array.from(new Set(instances.map((i: any) => i.envId).filter((v: any) => typeof v === "number")));
+        const envs = envIds.length
+          ? await prisma.envsharp.findMany({ where: { id: { in: envIds } }, select: { id: true, env: true } })
+          : [];
+        const envMap = new Map(envs.map(e => [e.id, e.env]));
 
         return {
           oracle_sid: doublon.oracle_sid,
           occurrences: doublon._count.oracle_sid,
           environnements: instances.map(inst => ({
             id: inst.id,
-            env: inst.envsharp.env,
+            env: envMap.get((inst as any).envId) ?? null,
             aliasql: inst.aliasql,
             oraschema: inst.oraschema
           }))
@@ -1387,24 +1385,23 @@ export const verifierDoublonsOracleSid = async () => {
           where: {
             oracle_sid: doublon.oracle_sid
           },
-          include: {
-            envsharp: {
-              select: {
-                env: true
-              }
-            }
-          },
           orderBy: {
             id: 'asc'
           }
         });
+
+        const envIds = Array.from(new Set(instances.map((i: any) => i.envId).filter((v: any) => typeof v === "number")));
+        const envs = envIds.length
+          ? await prisma.envsharp.findMany({ where: { id: { in: envIds } }, select: { id: true, env: true } })
+          : [];
+        const envMap = new Map(envs.map(e => [e.id, e.env]));
 
         return {
           oracle_sid: doublon.oracle_sid,
           occurrences: doublon._count.oracle_sid,
           environnements: instances.map(inst => ({
             id: inst.id,
-            env: inst.envsharp.env,
+            env: envMap.get((inst as any).envId) ?? null,
             aliasql: inst.aliasql,
             oraschema: inst.oraschema
           }))
@@ -1937,7 +1934,7 @@ export const migrateDataToEnvsharp = async () => {
         anonym: record.anonym,
         edi: record.edi,
         typenvid: record.typenvid,
-        statenvId: record.statenvId
+        statenvId: null
       }))
     })
 
@@ -2109,7 +2106,7 @@ export const OLD_importerLesEnvInfos = async () => {
 
     // Récupérer les données avec un JOIN entre envsharp et 
     
-    const results = await prisma.$queryRaw`
+    const results = await prisma.$queryRaw<any[]>`
       SELECT 
         e.id as envId,
         i.datadt,
@@ -2161,22 +2158,12 @@ export const OLD_importerLesEnvInfos = async () => {
  */
 export const importerLesEnvInfos = async () => {
   try {
-    // Récupérer tous les environnements
-    const allEnvs = await prisma.envsharp.findMany({
-      select: {
-        id: true,
-        env: true,
-      }
-    });
-
-    // Récupérer toutes les informations d'environnement
-    // IMPORTANT : en prod, certaines colonnes DateTime peuvent contenir des valeurs "0" / invalides
-    // qui font échouer Prisma (P2020). On passe donc par SQL et on convertit les "0" en NULL.
-    type RawEnvInfo = {
-      env: string;
+    // IMPORTANT : en prod, certaines colonnes DateTime peuvent contenir des valeurs "0" / invalides (P2020).
+    // On joint directement envsharp <-> psadm_envinfo en SQL et on convertit les "0" en NULL.
+    type Row = {
+      envId: number;
       datadt: Date | null;
       modetp: string | null;
-      modedt: Date | null;
       refreshdt: Date | null;
       lastcheckstatus: number | null;
       lastcheckdt: Date | null;
@@ -2187,52 +2174,40 @@ export const importerLesEnvInfos = async () => {
       pswd_ft_exploit: string | null;
     };
 
-    const rawEnvInfos = await prisma.$queryRaw<RawEnvInfo[]>`
+    const rawJoined = await prisma.$queryRaw<Row[]>`
       SELECT
-        env,
-        CASE WHEN datadt = 0 THEN NULL ELSE datadt END AS datadt,
-        modetp,
-        CASE WHEN modedt = 0 THEN NULL ELSE modedt END AS modedt,
-        CASE WHEN refreshdt = 0 THEN NULL ELSE refreshdt END AS refreshdt,
-        lastcheckstatus,
-        CASE WHEN lastcheckdt = 0 THEN NULL ELSE lastcheckdt END AS lastcheckdt,
-        lastcheckmsg,
-        datmaj,
-        deploycbldt,
-        userunx,
-        pswd_ft_exploit
-      FROM psadm_envinfo
+        e.id AS envId,
+        CASE WHEN i.datadt = 0 THEN NULL ELSE i.datadt END AS datadt,
+        i.modetp AS modetp,
+        CASE WHEN i.refreshdt = 0 THEN NULL ELSE i.refreshdt END AS refreshdt,
+        i.lastcheckstatus AS lastcheckstatus,
+        CASE WHEN i.lastcheckdt = 0 THEN NULL ELSE i.lastcheckdt END AS lastcheckdt,
+        i.lastcheckmsg AS lastcheckmsg,
+        i.datmaj AS datmaj,
+        i.deploycbldt AS deploycbldt,
+        i.userunx AS userunx,
+        i.pswd_ft_exploit AS pswd_ft_exploit
+      FROM envsharp e
+      INNER JOIN psadm_envinfo i
+        ON LOWER(TRIM(i.env)) = LOWER(TRIM(e.env))
     `;
 
-    // Indexer par env (insensible à la casse/espaces) pour éviter O(n²) et gérer les différences de saisie
-    const infoByEnv = new Map<string, RawEnvInfo>();
-    for (const info of rawEnvInfos) {
-      const key = (info.env ?? "").trim().toLowerCase();
-      if (key) infoByEnv.set(key, info);
-    }
-
-    // Préparer toutes les données pour l'import
-    const allDataToImport = allEnvs.map(env => {
-      const matchingInfo = infoByEnv.get((env.env ?? "").trim().toLowerCase());
-      if (!matchingInfo) return null;
-
-      return {
-        envId: env.id,
-        datadt: matchingInfo.datadt || new Date(),
-        modetp: matchingInfo.modetp,
-        refreshdt: matchingInfo.refreshdt || matchingInfo.datmaj || new Date(),
-        lastcheckstatus: matchingInfo.lastcheckstatus,
-        lastcheckdt: matchingInfo.lastcheckdt || matchingInfo.datmaj || new Date(),
-        lastcheckmsg: matchingInfo.lastcheckmsg,
-        datmaj: matchingInfo.datmaj || new Date(),
-        deploycbldt: matchingInfo.deploycbldt,
-        userunx: matchingInfo.userunx,
-        pswd_ft_exploit: matchingInfo.pswd_ft_exploit
-      };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+    const allDataToImport = rawJoined.map((r) => ({
+      envId: r.envId,
+      datadt: r.datadt || new Date(),
+      modetp: r.modetp,
+      refreshdt: r.refreshdt || r.datmaj || new Date(),
+      lastcheckstatus: r.lastcheckstatus,
+      lastcheckdt: r.lastcheckdt || r.datmaj || new Date(),
+      lastcheckmsg: r.lastcheckmsg,
+      datmaj: r.datmaj || new Date(),
+      deploycbldt: r.deploycbldt,
+      userunx: r.userunx,
+      pswd_ft_exploit: r.pswd_ft_exploit,
+    }));
 
     if (allDataToImport.length === 0) {
-      return { info: "Aucune information d'environnement trouvée à importer." };
+      return { info: "Aucune information d'environnement trouvée à importer (aucune jointure envsharp <-> psadm_envinfo)." };
     }
 
     // Récupérer les informations déjà présentes dans harpenvinfo
