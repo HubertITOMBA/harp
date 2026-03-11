@@ -2161,13 +2161,6 @@ export const OLD_importerLesEnvInfos = async () => {
  */
 export const importerLesEnvInfos = async () => {
   try {
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt is null`;
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET datadt = NOW() where datadt = 0`;
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET refreshdt = datmaj where refreshdt is null`;
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET refreshdt = datmaj where refreshdt = 0`;
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt is null`;
-    await prisma.$executeRaw`UPDATE psadm_envinfo SET modedt = datmaj where modedt = 0`;
-
     // Récupérer tous les environnements
     const allEnvs = await prisma.envsharp.findMany({
       select: {
@@ -2177,20 +2170,59 @@ export const importerLesEnvInfos = async () => {
     });
 
     // Récupérer toutes les informations d'environnement
-    const allEnvInfos = await prisma.psadm_envinfo.findMany();
+    // IMPORTANT : en prod, certaines colonnes DateTime peuvent contenir des valeurs "0" / invalides
+    // qui font échouer Prisma (P2020). On passe donc par SQL et on convertit les "0" en NULL.
+    type RawEnvInfo = {
+      env: string;
+      datadt: Date | null;
+      modetp: string | null;
+      modedt: Date | null;
+      refreshdt: Date | null;
+      lastcheckstatus: number | null;
+      lastcheckdt: Date | null;
+      lastcheckmsg: string | null;
+      datmaj: Date | null;
+      deploycbldt: string | null;
+      userunx: string | null;
+      pswd_ft_exploit: string | null;
+    };
+
+    const rawEnvInfos = await prisma.$queryRaw<RawEnvInfo[]>`
+      SELECT
+        env,
+        CASE WHEN datadt = 0 THEN NULL ELSE datadt END AS datadt,
+        modetp,
+        CASE WHEN modedt = 0 THEN NULL ELSE modedt END AS modedt,
+        CASE WHEN refreshdt = 0 THEN NULL ELSE refreshdt END AS refreshdt,
+        lastcheckstatus,
+        CASE WHEN lastcheckdt = 0 THEN NULL ELSE lastcheckdt END AS lastcheckdt,
+        lastcheckmsg,
+        datmaj,
+        deploycbldt,
+        userunx,
+        pswd_ft_exploit
+      FROM psadm_envinfo
+    `;
+
+    // Indexer par env (insensible à la casse/espaces) pour éviter O(n²) et gérer les différences de saisie
+    const infoByEnv = new Map<string, RawEnvInfo>();
+    for (const info of rawEnvInfos) {
+      const key = (info.env ?? "").trim().toLowerCase();
+      if (key) infoByEnv.set(key, info);
+    }
 
     // Préparer toutes les données pour l'import
     const allDataToImport = allEnvs.map(env => {
-      const matchingInfo = allEnvInfos.find(info => info.env === env.env);
+      const matchingInfo = infoByEnv.get((env.env ?? "").trim().toLowerCase());
       if (!matchingInfo) return null;
 
       return {
         envId: env.id,
         datadt: matchingInfo.datadt || new Date(),
         modetp: matchingInfo.modetp,
-        refreshdt: matchingInfo.refreshdt || new Date(),
+        refreshdt: matchingInfo.refreshdt || matchingInfo.datmaj || new Date(),
         lastcheckstatus: matchingInfo.lastcheckstatus,
-        lastcheckdt: matchingInfo.lastcheckdt || new Date(),
+        lastcheckdt: matchingInfo.lastcheckdt || matchingInfo.datmaj || new Date(),
         lastcheckmsg: matchingInfo.lastcheckmsg,
         datmaj: matchingInfo.datmaj || new Date(),
         deploycbldt: matchingInfo.deploycbldt,
