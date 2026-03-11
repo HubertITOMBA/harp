@@ -2720,7 +2720,8 @@ export const importerLesTools = async () => {
       data: toolsToImport.map((tool) => ({
         tool: tool.tool,           // identifiant logique (putty, sqlplus, ...)
         cmdpath: null,             // non géré pour l'instant
-        cmd: tool.cmd,
+        // Certains cmd dans psadm_tools sont déjà entourés de guillemets -> on les enlève
+        cmd: tool.cmd.replace(/"/g, ""),
         version: null,
         descr: tool.descr,
         tooltype: tool.tooltype,

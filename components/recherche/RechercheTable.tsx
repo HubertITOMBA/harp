@@ -9,6 +9,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import type { SortingState } from "@tanstack/react-table";
@@ -144,6 +145,7 @@ export function RechercheTable({ data }: RechercheTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: (updater) => {
@@ -205,7 +207,7 @@ export function RechercheTable({ data }: RechercheTableProps) {
             )}
           </div>
           <p className="text-[10px] text-gray-500">
-            {table.getFilteredRowModel().rows.length} ligne(s) affichée(s)
+            {table.getFilteredRowModel().rows.length} ligne(s) trouvée(s)
             {data.length > 0 && ` sur ${data.length} au total`}.
           </p>
         </CardContent>
@@ -266,8 +268,8 @@ export function RechercheTable({ data }: RechercheTableProps) {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
+                {table.getPaginationRowModel().rows?.length ? (
+                  table.getPaginationRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
                       className="hover:bg-orange-50 h-8 transition-colors"
@@ -302,6 +304,54 @@ export function RechercheTable({ data }: RechercheTableProps) {
           </div>
         </CardContent>
       </Card>
+      <div className="flex items-center justify-between gap-2 text-[10px] text-gray-600">
+        <div className="flex items-center gap-2">
+          <span>
+            Page{" "}
+            <strong>
+              {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
+            </strong>
+          </span>
+          <span className="hidden sm:inline">
+            ({table.getPaginationRowModel().rows.length} ligne(s) sur cette page)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className="h-7 text-[10px] border-gray-300 rounded px-1"
+            value={table.getState().pagination.pageSize}
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
+          >
+            {[10, 25, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size} / page
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[10px]"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Préc.
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[10px]"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Suiv.
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
