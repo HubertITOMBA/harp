@@ -89,7 +89,7 @@ model envsharp {
   ptversion     String?        @db.VarChar(50)
   harprelease   String?        @db.VarChar(20)
   pshome        String?        @db.VarChar(32)
-  volum         String?        @db.VarChar(60)
+  volum         String?        @db.VarChar(70)
   datmaj        DateTime?      @db.Timestamp(0)
   gassi         String?        @db.VarChar(50)
   rpg           String?        @db.VarChar(50)

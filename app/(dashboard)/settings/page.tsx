@@ -854,7 +854,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer l&apos;historique d&apos;environnements
+                Importer les dates de refresh et historique d&apos;environnements
               </Button>
               <Button 
                 onClick={handleStatutDisponible}
