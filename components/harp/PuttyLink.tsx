@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
+import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface PuttyLinkProps {
   host: string;
@@ -34,6 +35,10 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
         toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
       }
 
+      // Vérifier si le launcher est démarré (serveur local)
+      const health = await checkLauncherHealth(800);
+      const launcherRunning = health.running;
+
       // Vérifier si l'outil est disponible (en production uniquement)
       const isDevMode = 
         process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
@@ -62,21 +67,30 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
         ? undefined
         : (session?.user?.pkeyfile || undefined);
 
-      // Lancer PuTTY via le protocole mylaunch://
-      const launchResult = await launchExternalTool('putty', {
-        host: hostToUse,
-        user: userToUse,
-        sshkey: sshkeyToUse,
-      });
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('putty', {
+          host: hostToUse,
+          user: userToUse,
+          sshkey: sshkeyToUse,
+        });
 
-      if (launchResult.success) {
-        toast.success('PuTTY est en cours de lancement...');
-      } else {
-        toast.error(
-          launchResult.error || 'Impossible de lancer PuTTY. Le protocole mylaunch:// n\'est pas installé.',
-          { autoClose: 10000 }
-        );
+        if (launchResult.success) {
+          toast.success('PuTTY est en cours de lancement...');
+        } else {
+          toast.error(
+            launchResult.error || 'Impossible de lancer PuTTY. Vérifiez que le launcher est installé et démarré.',
+            { autoClose: 10000 }
+          );
+        }
+      };
+
+      // Si le launcher ne répond pas, afficher un message clair et actionnable
+      if (!launcherRunning) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       console.error('Erreur lors du lancement de PuTTY:', error);
       toast.error('Erreur lors du lancement de PuTTY');

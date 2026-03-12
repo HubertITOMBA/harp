@@ -20,6 +20,10 @@ export interface PeopleSoftParams {
   [key: string]: string | number | undefined;
 }
 
+export type LauncherHealthCheckResult =
+  | { running: true; health?: any }
+  | { running: false; error?: string };
+
 /**
  * Construit une URL mylaunch:// pour lancer PuTTY
  */
@@ -262,6 +266,42 @@ export async function launchExternalTool(
       success: false, 
       error: 'Impossible de lancer l\'application. Vérifiez que le serveur launcher est démarré ou que le protocole mylaunch:// est installé.' 
     };
+  }
+}
+
+/**
+ * Vérifie si le serveur local du launcher répond.
+ * Le launcher expose un endpoint de santé sur http://localhost:8765/health.
+ *
+ * Note: on considère "running" dès qu'on arrive à obtenir une réponse HTTP,
+ * même si le contenu n'est pas du JSON.
+ */
+export async function checkLauncherHealth(timeoutMs: number = 800): Promise<LauncherHealthCheckResult> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch("http://localhost:8765/health", {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-cache",
+    });
+    clearTimeout(timeoutId);
+
+    // Si on a une réponse, le process est très probablement lancé.
+    try {
+      const data = await response.json();
+      return { running: true, health: data };
+    } catch {
+      return { running: true };
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.name === "AbortError"
+          ? "Timeout"
+          : error.message
+        : String(error);
+    return { running: false, error: message };
   }
 }
 

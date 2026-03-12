@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ColumnDef,
   Row,
@@ -45,7 +45,6 @@ interface RechercheTableProps {
 }
 
 export function RechercheTable({ data }: RechercheTableProps) {
-  const router = useRouter();
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<{ id: string; value: string }[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -58,10 +57,8 @@ export function RechercheTable({ data }: RechercheTableProps) {
     window.open(url.trim(), "_blank", "noopener,noreferrer");
   };
 
-  const handleTypenvClick = (typenvIdForUrl: number | null) => {
-    if (typenvIdForUrl == null) return;
-    router.push(`/harp/envs/${typenvIdForUrl}`);
-  };
+  const typenvHref = (typenvIdForUrl: number | null) =>
+    typenvIdForUrl != null ? `/harp/envs/${typenvIdForUrl}` : null;
 
   const columns = useMemo<ColumnDef<RechercheRow>[]>(
     () => [
@@ -97,16 +94,27 @@ export function RechercheTable({ data }: RechercheTableProps) {
         cell: ({ row }) => {
           const typenv = row.original.typenv;
           const typenvIdForUrl = row.original.typenvIdForUrl;
+          const href = typenvHref(typenvIdForUrl);
+          if (href) {
+            return (
+              <Link
+                href={href}
+                className="text-orange-600 hover:text-orange-800 hover:underline font-medium text-xs inline-flex items-center gap-1"
+                title={`Ouvrir /harp/envs/${typenvIdForUrl}`}
+              >
+                {typenv ?? "—"}
+                <FolderOpen className="h-3 w-3" />
+              </Link>
+            );
+          }
           return (
-            <button
-              type="button"
-              className="text-orange-600 hover:text-orange-800 hover:underline font-medium text-xs inline-flex items-center gap-1"
-              onClick={() => handleTypenvClick(typenvIdForUrl)}
-              title={`Ouvrir /harp/envs/${typenvIdForUrl}`}
+            <span
+              className="text-gray-500 font-medium text-xs inline-flex items-center gap-1 cursor-default"
+              title="Type d'environnement non lié (typenvid manquant)"
             >
               {typenv ?? "—"}
-              <FolderOpen className="h-3 w-3" />
-            </button>
+              <FolderOpen className="h-3 w-3 opacity-50" />
+            </span>
           );
         },
       },

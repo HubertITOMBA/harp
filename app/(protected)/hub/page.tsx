@@ -1,7 +1,7 @@
 'use client'
 
 import { PuttyLauncher } from '@/components/ui/external-tool-launcher'
-import { launchExternalTool } from '@/lib/mylaunch'
+import { checkLauncherHealth, launchExternalTool } from '@/lib/mylaunch'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Terminal, Server, User, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast'
 
 export default function HarpPage() {
   const { data: session } = useSession()
@@ -24,7 +25,7 @@ export default function HarpPage() {
     }
   }, [session])
 
-  const handleLaunchPutty = () => {
+  const handleLaunchPutty = async () => {
     setError(null)
     
     // Vérifier que le host est fourni
@@ -39,15 +40,24 @@ export default function HarpPage() {
       : (session?.user?.netid || undefined)
     
     try {
-      const success = launchExternalTool('putty', {
-        host: host.trim(),
-        user: userToUse,
-        port: 22,
-      })
-      
-      if (!success) {
-        setError('Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.')
+      const doLaunch = async () => {
+        const result = await launchExternalTool('putty', {
+          host: host.trim(),
+          user: userToUse,
+          port: 22,
+        })
+        if (!result.success) {
+          throw new Error(result.error || 'Impossible de lancer PuTTY. Vérifiez que le launcher est installé et démarré.')
+        }
       }
+
+      const health = await checkLauncherHealth(800)
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() })
+        return
+      }
+
+      await doLaunch()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du lancement de PuTTY'
       setError(errorMessage)

@@ -2,11 +2,12 @@
 
 import { useSession } from 'next-auth/react';
 import { PuttyLauncher, PeopleSoftIDELauncher } from '@/components/ui/external-tool-launcher';
-import { launchExternalTool } from '@/lib/mylaunch';
+import { launchExternalTool, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface ServerConnectionButtonsProps {
   ip?: string | null;
@@ -61,18 +62,27 @@ export function ServerConnectionButtons({
         ? undefined
         : (pkeyfile || undefined);
 
-      // Lancer PuTTY via le protocole mylaunch://
-      const launchResult = await launchExternalTool('putty', {
-        host: ip,
-        user: userToUse,
-        sshkey: sshkeyToUse,
-      });
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('putty', {
+          host: ip,
+          user: userToUse,
+          sshkey: sshkeyToUse,
+        });
 
-      if (launchResult.success) {
-        toast.success('PuTTY est en cours de lancement...');
-      } else {
-        toast.error(launchResult.error || 'Impossible de lancer PuTTY');
+        if (launchResult.success) {
+          toast.success('PuTTY est en cours de lancement...');
+        } else {
+          toast.error(launchResult.error || 'Impossible de lancer PuTTY');
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       console.error('Erreur lors du lancement de PuTTY:', error);
       toast.error('Erreur lors du lancement de PuTTY');

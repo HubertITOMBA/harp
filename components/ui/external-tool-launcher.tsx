@@ -2,14 +2,15 @@
 
 import * as React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import { 
-  buildPuttyUrl, 
-  buildPeopleSoftUrl, 
   launchExternalTool,
+  checkLauncherHealth,
   type PuttyParams,
   type PeopleSoftParams,
   type ExternalTool 
 } from "@/lib/mylaunch";
+import { showLauncherNotRunningToast } from "@/components/harp/launcherToast";
 
 interface ExternalToolLauncherProps {
   tool: ExternalTool;
@@ -46,15 +47,26 @@ export function ExternalToolLauncher({
 }: ExternalToolLauncherProps) {
   const handleClick = React.useCallback(async () => {
     try {
-      const result = await launchExternalTool(tool, params);
-      if (result.success) {
-        onLaunch?.();
-      } else {
-        throw new Error(result.error || "Impossible de lancer l'application");
+      const doLaunch = async () => {
+        const result = await launchExternalTool(tool, params);
+        if (result.success) {
+          onLaunch?.();
+        } else {
+          throw new Error(result.error || "Impossible de lancer l'application");
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       console.error("Erreur lors du lancement:", err);
+      toast.error(err.message || "Erreur lors du lancement", { autoClose: 10000 });
       onError?.(err);
     }
   }, [tool, params, onLaunch, onError]);

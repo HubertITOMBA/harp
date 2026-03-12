@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import * as React from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool } from '@/lib/mylaunch';
+import { launchExternalTool, checkLauncherHealth } from '@/lib/mylaunch';
 import { Button } from '@/components/ui/button';
 import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface LancerApplisProps {
   host?: string;
@@ -94,7 +95,7 @@ const LancerApplis = ({ host, user, port, sshkey, devMode, devUser }: LancerAppl
     }
   }, [isDevMode, devMode, user, devUser, userToUse, host, hostToUse, sshkeyToUse, session]);
 
-  const execAppli = () => {
+  const execAppli = async () => {
     setError(null);
 
     try {
@@ -104,19 +105,26 @@ const LancerApplis = ({ host, user, port, sshkey, devMode, devUser }: LancerAppl
         return;
       }
 
-      // Lancer PuTTY via le protocole mylaunch://
-      // En mode dev : utiliser les valeurs forcées (hubert, pas de sshkey)
-      // En production : utiliser netid et pkeyfile de la session
-      const launchResult = await launchExternalTool('putty', {
-        host: hostToUse,
-        user: userToUse,
-        port,
-        sshkey: sshkeyToUse,
-      });
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('putty', {
+          host: hostToUse,
+          user: userToUse,
+          port,
+          sshkey: sshkeyToUse,
+        });
 
-      if (!launchResult.success) {
-        throw new Error(launchResult.error || 'Impossible de lancer PuTTY. Vérifiez que le protocole mylaunch:// est installé.');
+        if (!launchResult.success) {
+          throw new Error(launchResult.error || 'Impossible de lancer PuTTY. Vérifiez que le launcher est installé et démarré.');
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du lancement de PuTTY';
       setError(errorMessage);

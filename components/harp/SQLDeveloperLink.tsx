@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
+import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface SQLDeveloperLinkProps {
   className?: string;
@@ -42,17 +43,26 @@ export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps)
         }
       }
 
-      // Lancer SQL Developer via le protocole mylaunch://
-      const launchResult = await launchExternalTool('sqldeveloper');
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('sqldeveloper');
 
-      if (launchResult.success) {
-        toast.success('SQL Developer est en cours de lancement...');
-      } else {
-        toast.error(
-          launchResult.error || 'Impossible de lancer SQL Developer. Le protocole mylaunch:// n\'est pas installé.',
-          { autoClose: 10000 }
-        );
+        if (launchResult.success) {
+          toast.success('SQL Developer est en cours de lancement...');
+        } else {
+          toast.error(
+            launchResult.error || 'Impossible de lancer SQL Developer. Vérifiez que le launcher est installé et démarré.',
+            { autoClose: 10000 }
+          );
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       console.error('Erreur lors du lancement de SQL Developer:', error);
       toast.error('Erreur lors du lancement de SQL Developer');

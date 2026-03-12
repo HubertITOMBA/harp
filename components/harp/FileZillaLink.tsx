@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
+import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface FileZillaLinkProps {
   host?: string;
@@ -50,16 +51,26 @@ export function FileZillaLink({ host, ip, pshome, className, children }: FileZil
       if (ip) params.ip = ip;
       if (netid) params.netid = netid;
       
-      const launchResult = await launchExternalTool('filezilla', params);
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('filezilla', params);
 
-      if (launchResult.success) {
-        toast.success('FileZilla est en cours de lancement...');
-      } else {
-        toast.error(
-          launchResult.error || 'Impossible de lancer FileZilla. Le protocole mylaunch:// n\'est pas installé.',
-          { autoClose: 10000 }
-        );
+        if (launchResult.success) {
+          toast.success('FileZilla est en cours de lancement...');
+        } else {
+          toast.error(
+            launchResult.error || 'Impossible de lancer FileZilla. Vérifiez que le launcher est installé et démarré.',
+            { autoClose: 10000 }
+          );
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       console.error('Erreur lors du lancement de FileZilla:', error);
       toast.error('Erreur lors du lancement de FileZilla');

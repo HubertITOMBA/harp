@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability } from '@/lib/mylaunch';
+import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
+import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 
 interface PSIDELinkProps {
   className?: string;
@@ -52,21 +53,30 @@ export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELink
         }
       }
 
-      // Lancer PSIDE via le protocole mylaunch:// avec les paramètres de l'environnement
       const params: Record<string, string | undefined> = {};
       if (ptversion) params.ptversion = ptversion;
       if (aliasql) params.aliasql = aliasql;
       
-      const launchResult = await launchExternalTool('pside', params);
+      const doLaunch = async () => {
+        const launchResult = await launchExternalTool('pside', params);
 
-      if (launchResult.success) {
-        toast.success('PSIDE est en cours de lancement...');
-      } else {
-        toast.error(
-          launchResult.error || 'Impossible de lancer PSIDE. Le protocole mylaunch:// n\'est pas installé.',
-          { autoClose: 10000 }
-        );
+        if (launchResult.success) {
+          toast.success('PSIDE est en cours de lancement...');
+        } else {
+          toast.error(
+            launchResult.error || 'Impossible de lancer PSIDE. Vérifiez que le launcher est installé et démarré.',
+            { autoClose: 10000 }
+          );
+        }
+      };
+
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        return;
       }
+
+      await doLaunch();
     } catch (error) {
       console.error('Erreur lors du lancement de PSIDE:', error);
       toast.error('Erreur lors du lancement de PSIDE');

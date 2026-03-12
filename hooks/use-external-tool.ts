@@ -4,11 +4,12 @@ import { useCallback, useState } from "react";
 import { 
   launchExternalTool, 
   buildMyLaunchUrl,
+  checkLauncherHealth,
   type ExternalTool 
 } from "@/lib/mylaunch";
 
 interface UseExternalToolReturn {
-  launch: (tool: ExternalTool, params?: Record<string, string | number | undefined>) => boolean;
+  launch: (tool: ExternalTool, params?: Record<string, string | number | undefined>) => Promise<boolean>;
   isLaunching: boolean;
   error: Error | null;
   buildUrl: (tool: ExternalTool, params?: Record<string, string | number | undefined>) => string;
@@ -28,19 +29,21 @@ export function useExternalTool(): UseExternalToolReturn {
   const [isLaunching, setIsLaunching] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const launch = useCallback((
+  const launch = useCallback(async (
     tool: ExternalTool,
     params?: Record<string, string | number | undefined>
-  ): boolean => {
+  ): Promise<boolean> => {
     setIsLaunching(true);
     setError(null);
 
     try {
-      const success = launchExternalTool(tool, params);
-      
-      if (!success) {
-        throw new Error("Impossible de lancer l'application externe");
+      const health = await checkLauncherHealth(800);
+      if (!health.running) {
+        throw new Error("Launcher HARP non détecté (http://localhost:8765/health).");
       }
+
+      const result = await launchExternalTool(tool, params);
+      if (!result.success) throw new Error(result.error || "Impossible de lancer l'application externe");
 
       // Réinitialiser l'état après un court délai
       setTimeout(() => {
