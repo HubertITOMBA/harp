@@ -35,7 +35,7 @@ async function getRechercheData(): Promise<RechercheRow[]> {
       i.typsrv AS typsrv,
       e.env AS env,
       t.typenv AS typenv,
-      t.typenvid AS typenvIdForUrl,
+      t.typenvid AS typenvidforurl,
       s.srv AS srv,
       s.site AS site,
       e.url AS url,

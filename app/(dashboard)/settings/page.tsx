@@ -720,14 +720,14 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start border-orange-300 hover:bg-orange-50"
               >
-                Forcer l&apos;import d&apos;environnements spécifiques
+                Forcer l&apos;import d&apos;environnements PUM
               </Button>
               <Button 
                 onClick={handeleInstancesEnvs}
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les instances d&apos;environnements
+                Les instances d&apos;environnements
               </Button>
             </CardContent>
           </Card>
@@ -768,7 +768,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Lier les Environnements aux Harp releases
+                Lier les Environnements aux releases
               </Button>
             </CardContent>
           </Card>
@@ -802,7 +802,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Mettre à jour les ORACLE_SID
+                MAJ les ORACLE_SID
               </Button>
               <Button 
                 onClick={handleLesEnvServeurs}
@@ -816,28 +816,28 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les serveurs PUM (typenvid = 21)
+                Serveurs PUM (typenvid = 21)
               </Button>
               <Button 
                 onClick={handleEnvPUMInfos}
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les infos ORA PUM (typenvid = 21)
+                Infos ORA PUM (typenvid = 21)
               </Button>
               <Button 
                 onClick={handleMAjInstance_ID_ENVS}
                 variant="outline"
                 className="w-full justify-start"
               >
-                Mettre à jour INSTANCES ID dans les ENVS Serveurs
+                MAJ Instaces ID des ENVS Serveurs
               </Button>
               <Button 
                 onClick={handleOraRelease}
                 variant="outline"
                 className="w-full justify-start"
               >
-                Mettre à jour Version ORACLE sur les ENVS
+                MAJ Version ORACLE sur les ENVS
               </Button>
             </CardContent>
           </Card>
@@ -880,7 +880,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les rôles Utilisateurs
+                Rôles Utilisateurs
               </Button>
             </CardContent>
           </Card>
@@ -900,7 +900,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Dates de refresh et historique d&apos;environnements
+                Dates de refresh et historique
               </Button>
               <Button 
                 onClick={handleStatutDisponible}
@@ -914,7 +914,7 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les Indisponibilités d&apos;environnements
+                Indisponibilités d&apos;environnements
               </Button>
               <div className="space-y-2">
                 <Button 
@@ -963,14 +963,14 @@ export default function Home() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les anciens chemins de tools
+                Anciens chemins de tools
               </Button>
               <Button 
                 onClick={handleLesHarpItems}
                 variant="outline"
                 className="w-full justify-start"
               >
-                Importer les items réutilisables HARP
+                Items réutilisables HARP
               </Button>
             </CardContent>
           </Card>
