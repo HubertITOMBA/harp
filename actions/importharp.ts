@@ -274,6 +274,7 @@ export const GenererLesMenus = async () => {
         { display: 0, level: 2, menu:  'Permissions par Rôle', href: '/list/permrole', descr: '', icone: 'localact.png',active:  1, role: 'TMA_LOCAL'},
         { display: 5, level: 1, menu:  'Recherche', href: '/recherche', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 7, level: 1, menu:  'Refresh Infos', href: '/refresh-info', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
+        { display: 7, level: 1, menu:  'Applications', href: '/statuts-applications', descr: '', icone: '', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles', href: '/list/roles', descr: '', icone: '',active:  1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles serveurs', href: '/list/servrole', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Rôles Utilisateurs', href: '/list/useroles', descr: '', icone: 'flag.png', active: 1, role: 'TMA_LOCAL'},
@@ -3632,5 +3633,215 @@ export const importerLesHarpItems = async () => {
 };
 
 
+export const importerEnvServeursPUM = async () => {
+  try {
+    // Mettre à jour les statuts avant l'import
+    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status = 21`;
+    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status is null`;
 
+    // Récupérer toutes les données avec la requête (MySQL peut renvoyer envid/serverid en minuscules)
+    const rawResults = await prisma.$queryRaw<Array<{
+      envId?: number;
+      envid?: number;
+      serverId?: number;
+      serverid?: number;
+      typsrv: string;
+      status?: number;
+    }>>`
+      SELECT 
+        e.id as envId,
+        e.typenvid,
+        s.id as serverId,
+        TRIM(r.typsrv) as typsrv,
+        r.status
+      FROM envsharp e
+      INNER JOIN psadm_rolesrv r ON LOWER(TRIM(e.env)) = LOWER(TRIM(r.env))
+      INNER JOIN harpserve s ON LOWER(TRIM(s.srv)) = LOWER(TRIM(r.srv))
+      WHERE e.typenvid = 21
+      ORDER BY e.env
+    `;
+
+    const allResults = rawResults.map((r) => ({
+      envId: r.envId ?? r.envid ?? 0,
+      serverId: r.serverId ?? r.serverid ?? 0,
+      typsrv: r.typsrv ?? "",
+      status: r.status ?? null,
+    })).filter((r) => r.envId > 0 && r.serverId > 0);
+
+    if (allResults.length === 0) {
+      return { info: "Aucune relation environnement PUM-serveur trouvée à importer (vérifier que env dans envsharp et srv dans harpserve correspondent à psadm_rolesrv)." };
+    }
+
+    // Récupérer les relations déjà présentes dans harpenvserv
+    const existingRelations = await prisma.harpenvserv.findMany({
+      select: {
+        envId: true,
+        serverId: true,
+        typsrv: true
+      }
+    });
+
+    // Si harpenvserv est vide (premier import), tout importer. Sinon delta.
+    let relationsToImport: typeof allResults;
+    if (existingRelations.length === 0) {
+      relationsToImport = allResults;
+    } else {
+      const existingRelationsSet = new Set(
+        existingRelations.map(rel => `${rel.envId}-${rel.serverId}-${rel.typsrv ?? ""}`)
+      );
+      relationsToImport = allResults.filter(result => {
+        const key = `${result.envId}-${result.serverId}-${result.typsrv}`;
+        return !existingRelationsSet.has(key);
+      });
+    }
+
+    if (relationsToImport.length === 0) {
+      return { 
+        info: "Toutes les relations environnement PUM -serveur sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allResults.length,
+          totalInHarpenvserv: existingRelations.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingRelations.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpenvserv AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer (status à null pour éviter FK statutenv si les id 0/1/2 n'existent pas)
+    const importedData = await prisma.harpenvserv.createMany({
+      data: relationsToImport.map(result => ({
+        envId: result.envId,
+        serverId: result.serverId,
+        typsrv: result.typsrv,
+        status: null
+      })),
+      skipDuplicates: true
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) relation(s) environnement-serveur importée(s) avec succès !`,
+      details: {
+        totalInSource: allResults.length,
+        totalInHarpenvserv: existingRelations.length + importedData.count,
+        imported: importedData.count,
+        skipped: allResults.length - relationsToImport.length
+      }
+    };
+  } catch (error) {
+    return handlePrismaError(error, "Erreur lors de l'importation des relations environnement-serveur", "importerLesEnvServeurs");
+  }
+};
+
+
+
+export const importerLesEnvPUMInfos = async () => {
+  try {
+    // IMPORTANT : en prod, certaines colonnes DateTime peuvent contenir des valeurs "0" / invalides (P2020).
+    // On joint directement envsharp <-> psadm_envinfo en SQL et on convertit les "0" en NULL.
+    type Row = {
+      envId: number;
+      datadt: Date | null;
+      modetp: string | null;
+      refreshdt: Date | null;
+      lastcheckstatus: number | null;
+      lastcheckdt: Date | null;
+      lastcheckmsg: string | null;
+      datmaj: Date | null;
+      deploycbldt: string | null;
+      userunx: string | null;
+      pswd_ft_exploit: string | null;
+    };
+
+    const rawJoined = await prisma.$queryRaw<Row[]>`
+      SELECT
+        e.id AS envId,
+        CASE WHEN i.datadt = 0 THEN NULL ELSE i.datadt END AS datadt,
+        i.modetp AS modetp,
+        CASE WHEN i.refreshdt = 0 THEN NULL ELSE i.refreshdt END AS refreshdt,
+        i.lastcheckstatus AS lastcheckstatus,
+        CASE WHEN i.lastcheckdt = 0 THEN NULL ELSE i.lastcheckdt END AS lastcheckdt,
+        i.lastcheckmsg AS lastcheckmsg,
+        i.datmaj AS datmaj,
+        i.deploycbldt AS deploycbldt,
+        i.userunx AS userunx,
+        i.pswd_ft_exploit AS pswd_ft_exploit
+      FROM envsharp e
+      INNER JOIN psadm_envinfo i
+        ON LOWER(TRIM(i.env)) = LOWER(TRIM(e.env))
+      WHERE e.typenvid = 21
+    `;
+
+    const allDataToImport = rawJoined.map((r) => ({
+      envId: r.envId,
+      datadt: r.datadt || new Date(),
+      modetp: r.modetp,
+      refreshdt: r.refreshdt || r.datmaj || new Date(),
+      lastcheckstatus: r.lastcheckstatus,
+      lastcheckdt: r.lastcheckdt || r.datmaj || new Date(),
+      lastcheckmsg: r.lastcheckmsg,
+      datmaj: r.datmaj || new Date(),
+      deploycbldt: r.deploycbldt,
+      userunx: r.userunx,
+      pswd_ft_exploit: r.pswd_ft_exploit,
+    }));
+
+    if (allDataToImport.length === 0) {
+      return { info: "Aucune information d'environnement trouvée à importer (aucune jointure envsharp <-> psadm_envinfo)." };
+    }
+
+    // Récupérer les informations déjà présentes dans harpenvinfo
+    const existingInfos = await prisma.harpenvinfo.findMany({
+      select: {
+        envId: true
+      }
+    });
+
+    // Créer un Set des envIds existants pour une recherche rapide
+    // Clé unique: envId
+    const existingEnvIdsSet = new Set(existingInfos.map(info => info.envId));
+
+    // Filtrer uniquement les informations qui n'existent pas encore (delta)
+    const infosToImport = allDataToImport.filter(data => 
+      !existingEnvIdsSet.has(data.envId)
+    );
+
+    if (infosToImport.length === 0) {
+      return { 
+        info: "Toutes les informations d'environnement sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: {
+          totalInSource: allDataToImport.length,
+          totalInHarpenvinfo: existingInfos.length,
+          imported: 0
+        }
+      };
+    }
+
+    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
+    if (existingInfos.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpenvinfo AUTO_INCREMENT = 1`;
+    }
+
+    // Insérer uniquement les nouvelles informations
+    const importedData = await prisma.harpenvinfo.createMany({
+      data: infosToImport,
+      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+    });
+
+    return { 
+      success: `${importedData.count} nouvelle(s) information(s) d'environnement importée(s) avec succès !`,
+      details: {
+        totalInSource: allDataToImport.length,
+        totalInHarpenvinfo: existingInfos.length + importedData.count,
+        imported: importedData.count,
+        skipped: allDataToImport.length - infosToImport.length
+      }
+    };
+  } catch (error) {
+    return handlePrismaError(error, "Erreur lors de l'importation des informations d'environnements", "importerOraInstances");
+  }
+};
 

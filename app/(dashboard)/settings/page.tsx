@@ -15,6 +15,8 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   importerOraInstances,
   updateInstanceServerIds,
   importerLesEnvServeurs,
+  importerEnvServeursPUM,
+  importerLesEnvPUMInfos,
   updateEnvsharpInstanceIds,
   updateEnvsharpOrarelease,
   importerLesPToolsVersions,
@@ -416,6 +418,36 @@ toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
 }
 }
 
+const handleEnvServeursPUM = async () => {
+  try {
+    const result = await importerEnvServeursPUM();
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success(result.success);
+    } else if (result.info) {
+      toast.info(result.info);
+    }
+  } catch (error) {
+    toast.error("Une erreur est survenue lors de l'import des serveurs PUM.");
+  }
+}
+
+const handleEnvPUMInfos = async () => {
+  try {
+    const result = await importerLesEnvPUMInfos();
+    if (result.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success(result.success);
+    } else if (result.info) {
+      toast.info(result.info);
+    }
+  } catch (error) {
+    toast.error("Une erreur est survenue lors de l'import des infos ORA PUM.");
+  }
+}
+
 
 const handleMAjInstance_ID_ENVS = async () => {
   try {
@@ -778,6 +810,20 @@ export default function Home() {
                 className="w-full justify-start"
               >
                 Importer les ENVS Serveurs
+              </Button>
+              <Button 
+                onClick={handleEnvServeursPUM}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les serveurs PUM (typenvid = 21)
+              </Button>
+              <Button 
+                onClick={handleEnvPUMInfos}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                Importer les infos ORA PUM (typenvid = 21)
               </Button>
               <Button 
                 onClick={handleMAjInstance_ID_ENVS}
