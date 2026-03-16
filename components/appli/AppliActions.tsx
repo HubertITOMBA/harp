@@ -21,12 +21,10 @@ export function AppliActions({ appli }: AppliActionsProps) {
   const actions: ActionItem[] = [
     {
       label: "Voir",
-      icon: <Eye className="h-4 w-4" />,
       onClick: () => setViewOpen(true),
     },
     {
       label: "Modifier",
-      icon: <Pencil className="h-4 w-4" />,
       onClick: () => setEditOpen(true),
     },
   ];

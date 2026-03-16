@@ -81,14 +81,14 @@ export function DataTable<TData, TValue>({
   return (
     <>
      <div className="flex items-center justify-between text-gray-600 font-semibold">
-     <div className="flex items-center py-3 ">
+     <div className="flex items-center py-3 w-full max-w-2xl">
         <Input
           placeholder="Filtrer par environnement..."
           value={(table.getColumn("env")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("env")?.setFilterValue(event.target.value)
           }
-          className="rounded-lg max-w-sm h-8 text-xs"
+          className="rounded-lg w-full h-8 text-xs"
         />
         </div>
         <DropdownMenu>
@@ -123,12 +123,12 @@ export function DataTable<TData, TValue>({
 
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-xs font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-[11px] sm:text-xs font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="h-7">
+            <TableRow key={headerGroup.id} className="h-7 sm:h-8">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="text-white bg-harpOrange text-center px-2 py-1">
+                  <TableHead key={header.id} className="text-white bg-harpOrange text-center px-2 py-0.5 sm:py-1">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -141,16 +141,16 @@ export function DataTable<TData, TValue>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="divide-y divide-gray-200 bg-white">
+        <TableBody className="divide-y divide-gray-200 bg-white text-[11px] sm:text-xs">
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-150 h-7"
+                className="hover:bg-harpSkyLight transition-colors duration-150 h-7 sm:h-8"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-2 py-1 text-xs">
+                  <TableCell key={cell.id} className="px-2 py-0.5 sm:py-1">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

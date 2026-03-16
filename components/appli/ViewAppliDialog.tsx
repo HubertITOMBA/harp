@@ -26,6 +26,7 @@ export function ViewAppliDialog({ appli, psversion, open: controlledOpen, onOpen
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
+  const isControlled = controlledOpen !== undefined || !!onOpenChange;
 
   useEffect(() => {
     if (open && !appliData) {
@@ -46,16 +47,18 @@ export function ViewAppliDialog({ appli, psversion, open: controlledOpen, onOpen
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
-          title="Voir"
-        >
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-orange-300 hover:bg-orange-50"
+            title="Voir"
+          >
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-0">
           <DialogTitle className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-t-md -mx-6 -mt-6">

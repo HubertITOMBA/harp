@@ -15,12 +15,17 @@ interface EditTypeServDialogProps {
     typsrv: string;
     descr: string;
   };
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EditTypeServDialog({ typeServ }: EditTypeServDialogProps) {
+export function EditTypeServDialog({ typeServ, open: controlledOpen, onOpenChange }: EditTypeServDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -49,7 +54,7 @@ export function EditTypeServDialog({ typeServ }: EditTypeServDialogProps) {
 
   return (
     <FormDialog
-      trigger={
+      trigger={controlledOpen === undefined && !onOpenChange ? (
         <Button
           variant="outline"
           size="sm"
@@ -58,7 +63,7 @@ export function EditTypeServDialog({ typeServ }: EditTypeServDialogProps) {
         >
           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
-      }
+      ) : undefined}
       title={`Modifier le type de service ${typeServ.typsrv.toUpperCase()}`}
       description="Modifiez les informations du type de service"
       onSubmit={handleSubmit}
@@ -66,6 +71,8 @@ export function EditTypeServDialog({ typeServ }: EditTypeServDialogProps) {
       submitIcon={<Pencil className="h-4 w-4" />}
       isPending={isPending}
       maxWidth="2xl"
+      open={open}
+      onOpenChange={setOpen}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Type de service (lecture seule) */}

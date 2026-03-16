@@ -81,14 +81,14 @@ export function DataTable<TData, TValue>({
   return (
     <>
      <div className="flex items-center justify-between text-gray-500 font-semibold">
-     <div className="flex items-center py-4 ">
+     <div className="flex items-center py-4 w-full max-w-2xl">
         <Input
           placeholder="Filtrer par Titre..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("title")?.setFilterValue(event.target.value)
           }
-          className="rounded-lg max-w-sm"
+          className="rounded-lg w-full h-8 text-xs"
         />
         </div>
         <DropdownMenu>
@@ -123,9 +123,9 @@ export function DataTable<TData, TValue>({
 
     <div className=" bg-white rounded-xl shadow-xl overflow-hidden">
       <Table className="min-w-full divide-y divide-gray-200">
-        <TableHeader className="bg-harpOrange text-white text-center text-lg font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-[11px] sm:text-xs font-bold">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="h-7 sm:h-8">
               {headerGroup.headers.map((header) => {
                 return (
                   <TableHead 
@@ -144,19 +144,19 @@ export function DataTable<TData, TValue>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="divide-y divide-gray-200 bg-white">
+        <TableBody className="divide-y divide-gray-200 bg-white text-[11px] sm:text-xs">
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-harpSkyLight transition-colors duration-200"
+                className="hover:bg-harpSkyLight transition-colors duration-200 h-7 sm:h-8"
                 
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell 
                     key={cell.id}
-                    className={cell.column.id === 'actions' ? 'text-center' : ''}
+                    className={`${cell.column.id === 'actions' ? 'text-center' : ''} py-0.5 sm:py-1`}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

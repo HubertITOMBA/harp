@@ -74,7 +74,7 @@ export const columns: ColumnDef<ListNotifications>[] = [
           ) : (
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           )}
-          <span className={hasUnread ? "font-semibold" : ""}>{notification.title}</span>
+          <span className="text-xs sm:text-sm">{notification.title}</span>
         </div>
       )
     }

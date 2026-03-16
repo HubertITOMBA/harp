@@ -81,7 +81,7 @@ export function DataTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn("descr")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="w-full max-w-2xl"
         />
         {(table.getColumn("descr")?.getFilterValue() as string) && (
           <Button
@@ -126,9 +126,9 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <Table className="min-w-full divide-y divide-gray-200">
-          <TableHeader className="bg-harpOrange text-white text-center text-xs font-bold">
+        <TableHeader className="bg-harpOrange text-white text-center text-[11px] sm:text-xs font-bold">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="h-7">
+            <TableRow key={headerGroup.id} className="h-7 sm:h-8">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id} className="text-white bg-harpOrange text-center py-1">
@@ -144,16 +144,16 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="divide-y divide-gray-200 bg-white">
+          <TableBody className="divide-y divide-gray-200 bg-white text-[11px] sm:text-xs">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-harpSkyLight transition-colors duration-200 h-7"
+                  className="hover:bg-harpSkyLight transition-colors duration-200 h-7 sm:h-8"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-1 text-xs">
+                    <TableCell key={cell.id} className="py-0.5 sm:py-1">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

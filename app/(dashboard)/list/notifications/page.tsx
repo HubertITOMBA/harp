@@ -13,7 +13,7 @@ export default async function NotificationsListPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[110rem] mx-auto space-y-6 w-full">
         <Card className="shadow-lg border-orange-200">
           <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
             <CardTitle className="flex items-center gap-2">

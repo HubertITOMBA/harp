@@ -54,7 +54,7 @@ export const columns: ColumnDef<ListItem>[] = [
       )
     },
     cell: ({ row }) => {
-      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('descr')}</div>
+      return <div className="text-xs sm:text-sm">{row.getValue('descr')}</div>
     }
   },
   {

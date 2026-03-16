@@ -92,7 +92,7 @@ export const columns: ColumnDef<ListTask>[] = [
       )
     },
     cell: ({ row }) => {
-      return <div className="font-semibold text-xs sm:text-sm">{row.getValue('title')}</div>
+      return <div className="text-xs sm:text-sm">{row.getValue('title')}</div>
     }
   },
   {
@@ -227,7 +227,7 @@ export const columns: ColumnDef<ListTask>[] = [
     cell: ({ row }) => {
       const duration = row.getValue("effectiveDuration") as number | null;
       if (!duration) return <div className="text-xs sm:text-sm text-gray-400">-</div>;
-      return <div className="text-xs sm:text-sm font-medium">{formatDuration(duration)}</div>;
+      return <div className="text-xs sm:text-sm">{formatDuration(duration)}</div>;
     },
   },
   {
