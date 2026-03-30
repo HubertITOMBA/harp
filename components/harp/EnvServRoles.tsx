@@ -63,7 +63,12 @@ export default function HarpPage({ id }: HarpPageProps) {
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    os: false,
+    descr: false,
+    psuser: false,
+    ip: false,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -403,19 +408,32 @@ export default function HarpPage({ id }: HarpPageProps) {
     );
   }
 
+  const columnLabels: Record<string, string> = {
+    srv: "Serveur",
+    ip: "IP",
+    os: "OS",
+    psuser: "PS User",
+    domain: "Domain",
+    typsrv: "Type",
+    descType: "Description Type",
+    descr: "Description",
+    status: "Status",
+    actions: "Action",
+  };
+
   return (
     <div className="space-y-4">
       {/* Barre d'outils */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 text-xs">
                 <Columns className="h-3 w-3 mr-1" />
                 Colonnes
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuContent align="end" sideOffset={4} className="bg-white z-[250] w-48">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
@@ -425,20 +443,10 @@ export default function HarpPage({ id }: HarpPageProps) {
                       key={column.id}
                       className="capitalize text-xs"
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
+                      onSelect={(event) => event.preventDefault()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
-                      {column.id === 'srv' && 'Serveur'}
-                      {column.id === 'ip' && 'IP'}
-                      {column.id === 'os' && 'OS'}
-                      {column.id === 'psuser' && 'PS User'}
-                      {column.id === 'domain' && 'Domain'}
-                      {column.id === 'typsrv' && 'Type'}
-                      {column.id === 'descType' && 'Description Type'}
-                      {column.id === 'descr' && 'Description'}
-                      {column.id === 'status' && 'Status'}
-                      {column.id === 'actions' && 'Action'}
+                      {columnLabels[column.id] ?? column.id}
                     </DropdownMenuCheckboxItem>
                   )
                 })}
