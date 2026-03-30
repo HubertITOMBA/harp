@@ -239,7 +239,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
             className="w-full shadow-lg hover:shadow-xl transition-all duration-300 border-2 hover:border-harpOrange/30"
           >
             {/* En-tête de l'environnement */}
-            <CardHeader className="bg-gradient-to-r from-white to-harpSkyLight/5 pb-2 pt-3 px-3">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 pb-2 pt-3 px-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   {/* Icône de statut */}
