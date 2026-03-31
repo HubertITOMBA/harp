@@ -101,6 +101,24 @@ Tester le serveur launcher :
 
 ---
 
+## Cas Citrix / multi-utilisateurs (important)
+
+Sur un serveur **Citrix / multi-sessions**, le serveur local du launcher (`http://localhost:8765`) peut être **partagé** entre utilisateurs (un seul process peut écouter le port). Symptôme typique : le 1er utilisateur connecté reçoit ensuite les lancements des autres (ex. PuTTY s’ouvre dans la mauvaise session) et/ou les appels API utilisent le mauvais `netid`.
+
+**Recommandation** : forcer le portail à utiliser **uniquement** le protocole `mylaunch://` (un lancement = une exécution dans la session utilisateur), et ne pas passer par `localhost:8765`.
+
+Pour cela, définir côté portail :
+
+```powershell
+NEXT_PUBLIC_LAUNCHER_TRANSPORT=protocol
+```
+
+Effets :
+- Le portail **n’exige plus** que `http://localhost:8765/health` réponde.
+- Les lancements se font via `mylaunch://...` (handler Windows), ce qui évite le “vol” de session par le 1er utilisateur.
+
+---
+
 ## Démarrer / arrêter le serveur launcher
 
 - **Démarrage manuel** : exécuter **D:\apps\portal\launcher\start-launcher-server.bat** (ou double-clic).

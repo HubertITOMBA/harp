@@ -165,7 +165,14 @@ export async function launchOpenUrlInBrowser(
 ): Promise<{ success: boolean; error?: string }> {
   const detected = browser ?? getCurrentBrowser();
   try {
+    // En environnements multi-sessions (ex: Citrix), un serveur local sur localhost:8765
+    // peut être partagé entre utilisateurs. On permet donc de forcer l'utilisation du
+    // protocole mylaunch:// via une variable d'environnement.
+    const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
+    const allowLocalServer = transport !== 'protocol';
+
     try {
+      if (!allowLocalServer) throw new Error('Local launcher server disabled by configuration');
       const serverUrl = new URL('http://localhost:8765/launch');
       serverUrl.searchParams.set('tool', 'openurl');
       serverUrl.searchParams.set('url', targetUrl);
@@ -204,8 +211,12 @@ export async function launchExternalTool(
   params?: Record<string, string | number | undefined>
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
+    const allowLocalServer = transport !== 'protocol';
+
     // Essayer d'abord le serveur HTTP local (sans protocole personnalisé)
     try {
+      if (!allowLocalServer) throw new Error('Local launcher server disabled by configuration');
       const serverUrl = `http://localhost:8765/launch?tool=${encodeURIComponent(tool)}`;
       const searchParams = new URLSearchParams();
       
@@ -247,7 +258,11 @@ export async function launchExternalTool(
       }
     } catch (serverError) {
       // Si le serveur local n'est pas disponible, utiliser le protocole mylaunch://
-      console.log('Serveur local non disponible, utilisation du protocole mylaunch://');
+      if (allowLocalServer) {
+        console.log('Serveur local non disponible, utilisation du protocole mylaunch://');
+      } else {
+        console.log('Serveur local désactivé, utilisation du protocole mylaunch://');
+      }
       
       const url = buildMyLaunchUrl(tool, params);
       // Clic sur un <a> pour que certains navigateurs / handlers passent l'URL complète (avec query string)

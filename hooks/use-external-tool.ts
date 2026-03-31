@@ -37,9 +37,13 @@ export function useExternalTool(): UseExternalToolReturn {
     setError(null);
 
     try {
-      const health = await checkLauncherHealth(800);
-      if (!health.running) {
-        throw new Error("Launcher HARP non détecté (http://localhost:8765/health).");
+      const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
+      const allowLocalServer = transport !== "protocol";
+      if (allowLocalServer) {
+        const health = await checkLauncherHealth(800);
+        if (!health.running) {
+          throw new Error("Launcher HARP non détecté (http://localhost:8765/health).");
+        }
       }
 
       const result = await launchExternalTool(tool, params);
