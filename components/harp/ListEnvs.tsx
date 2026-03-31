@@ -415,9 +415,29 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             </div>
                           </div>
                         ) : null}
+
+                        {envsharp.harpenvinfo?.[0]?.userunx ? (
+                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
+                            <Label className="text-[11px] font-semibold text-slate-800">Sudo Sudoer</Label>
+                            <div className="text-xs font-mono text-slate-900 text-right">
+                              <span className="inline-flex items-center rounded bg-harpOrange px-2 py-1 text-white text-[10px]">
+                                {envsharp.harpenvinfo[0].userunx}
+                              </span>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="divide-y divide-orange-100">
+                        {envsharp.harpenvinfo?.[0]?.datadt ? (
+                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
+                            <Label className="text-[11px] font-semibold text-slate-800">Image production</Label>
+                            <div className="text-xs font-mono text-slate-900 text-right">
+                              {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(envsharp.harpenvinfo[0].datadt!)}
+                            </div>
+                          </div>
+                        ) : null}
+
                         <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
                           <Label className="text-[11px] font-semibold text-slate-800">Schéma Oracle (DataMover)</Label>
                           <div className="text-xs font-mono text-slate-900 text-right">
@@ -528,31 +548,11 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                           </>
                         ) : null}
 
-                        {envsharp.harpenvinfo?.[0]?.datadt ? (
-                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
-                            <Label className="text-[11px] font-semibold text-slate-800">Image production</Label>
-                            <div className="text-xs font-mono text-slate-900 text-right">
-                              {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(envsharp.harpenvinfo[0].datadt!)}
-                            </div>
-                          </div>
-                        ) : null}
-
                         {envsharp.harpenvinfo?.[0]?.modedt ? (
                           <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
                             <Label className="text-[11px] font-semibold text-slate-800">Dernier mis à jour</Label>
                             <div className="text-xs font-mono text-slate-900 text-right">
                               {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(envsharp.harpenvinfo[0].modedt!)}
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {envsharp.harpenvinfo?.[0]?.userunx ? (
-                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
-                            <Label className="text-[11px] font-semibold text-slate-800">Sudo Sudoer</Label>
-                            <div className="text-xs font-mono text-slate-900 text-right">
-                              <span className="inline-flex items-center rounded bg-harpOrange px-2 py-1 text-white text-[10px]">
-                                {envsharp.harpenvinfo[0].userunx}
-                              </span>
                             </div>
                           </div>
                         ) : null}
