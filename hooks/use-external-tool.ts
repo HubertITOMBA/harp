@@ -40,9 +40,11 @@ export function useExternalTool(): UseExternalToolReturn {
       const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
       const allowLocalServer = transport !== "protocol";
       if (allowLocalServer) {
-        const health = await checkLauncherHealth(800);
+        const health = await checkLauncherHealth(800, params?.netid as string | undefined);
         if (!health.running) {
-          throw new Error("Launcher HARP non détecté (http://localhost:8765/health).");
+          throw new Error(
+            "Launcher HARP non détecté. Lancez start-launcher-server.bat dans votre session Citrix."
+          );
         }
       }
 

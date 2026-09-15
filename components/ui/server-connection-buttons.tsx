@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { PuttyLauncher, PeopleSoftIDELauncher } from '@/components/ui/external-tool-launcher';
-import { launchExternalTool, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchExternalTool, checkLauncherHealth, getLauncherPortForUser } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ export function ServerConnectionButtons({
           host: ip,
           user: userToUse,
           sshkey: sshkeyToUse,
+          netid: netid || userToUse,
         });
 
         if (launchResult.success) {
@@ -76,9 +77,12 @@ export function ServerConnectionButtons({
         }
       };
 
-      const health = await checkLauncherHealth(800);
+      const health = await checkLauncherHealth(800, netid);
       if (!health.running) {
-        showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
+        showLauncherNotRunningToast({
+          onContinue: () => void doLaunch(),
+          healthUrl: `http://localhost:${getLauncherPortForUser(netid)}/health`,
+        });
         return;
       }
 

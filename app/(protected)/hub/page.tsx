@@ -45,13 +45,14 @@ export default function HarpPage() {
           host: host.trim(),
           user: userToUse,
           port: 22,
+          netid: session?.user?.netid || userToUse,
         })
         if (!result.success) {
           throw new Error(result.error || 'Impossible de lancer PuTTY. Vérifiez que le launcher est installé et démarré.')
         }
       }
 
-      const health = await checkLauncherHealth(800)
+      const health = await checkLauncherHealth(800, session?.user?.netid || userToUse)
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() })
         return

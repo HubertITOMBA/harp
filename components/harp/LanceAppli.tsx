@@ -111,6 +111,7 @@ const LancerApplis = ({ host, user, port, sshkey, devMode, devUser }: LancerAppl
           user: userToUse,
           port,
           sshkey: sshkeyToUse,
+          netid: session?.user?.netid || userToUse,
         });
 
         if (!launchResult.success) {
@@ -118,7 +119,7 @@ const LancerApplis = ({ host, user, port, sshkey, devMode, devUser }: LancerAppl
         }
       };
 
-      const health = await checkLauncherHealth(800);
+      const health = await checkLauncherHealth(800, session?.user?.netid || userToUse);
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
         return;

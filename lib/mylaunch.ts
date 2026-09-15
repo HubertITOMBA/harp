@@ -252,13 +252,18 @@ async function probeHealth(
 }
 
 /**
- * Trouve le port du launcher de CET utilisateur (hash netid + offsets + cache).
+ * Trouve le port du launcher de CET utilisateur (hash netid + scan parallele + match health.user).
  */
 export async function resolveLauncherPort(
   netidOrUsername?: string | null,
-  timeoutMs: number = 600
+  timeoutMs: number = 400
 ): Promise<{ port: number; health?: any } | null> {
   const preferred = getLauncherPortForUser(netidOrUsername);
+  const wantUser = (netidOrUsername || "")
+    .trim()
+    .toLowerCase()
+    .split("\\")
+    .pop() || "";
   const cached = getCachedLauncherPort();
   const candidates: number[] = [];
   if (cached) candidates.push(cached);
@@ -266,38 +271,66 @@ export async function resolveLauncherPort(
     const p = preferred + i > 8999 ? 8800 + ((preferred + i - 8800) % 200) : preferred + i;
     if (!candidates.includes(p)) candidates.push(p);
   }
-  // Compat ancienne install mono-user
   if (!candidates.includes(8765)) candidates.push(8765);
 
-  for (const port of candidates) {
-    const probe = await probeHealth(port, timeoutMs);
-    if (probe.ok) {
-      setCachedLauncherPort(port);
-      return { port, health: probe.health };
+  const probes = await Promise.all(
+    candidates.map(async (port) => {
+      const probe = await probeHealth(port, timeoutMs);
+      return { port, ok: probe.ok, health: probe.health };
+    })
+  );
+
+  const okProbes = probes.filter((p) => p.ok);
+  if (okProbes.length === 0) return null;
+
+  // Priorite: health.user === netid Windows (critique Citrix multi-sessions)
+  if (wantUser) {
+    const matched = okProbes.find(
+      (p) => p.health?.user && String(p.health.user).toLowerCase() === wantUser
+    );
+    if (matched) {
+      setCachedLauncherPort(matched.port);
+      return { port: matched.port, health: matched.health };
     }
   }
-  return null;
+
+  const preferredHit = okProbes.find((p) => p.port === preferred);
+  if (preferredHit) {
+    setCachedLauncherPort(preferredHit.port);
+    return { port: preferredHit.port, health: preferredHit.health };
+  }
+
+  const first = okProbes[0];
+  setCachedLauncherPort(first.port);
+  return { port: first.port, health: first.health };
 }
 
 /**
  * Lance une application externe via le serveur local (port par utilisateur 8800-8999).
- * Sans droits registre Citrix : pas de fallback mylaunch:// silencieux.
+ * Citrix sans registre: TOUJOURS prioriser localhost (ignorer protocol-only).
  */
 export async function launchExternalTool(
   tool: ExternalTool,
   params?: Record<string, string | number | undefined>
 ): Promise<{ success: boolean; error?: string }> {
   const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
-  const allowLocalServer = transport !== "protocol";
-  const allowProtocolFallback = transport === "protocol" || transport === "auto";
+  // "protocol" seul etait utilise quand mylaunch:// etait dispo via GPO.
+  // Sans droits registre Citrix, on force le serveur local.
+  const allowProtocolFallback = transport === "auto";
 
   const netid =
     (params?.netid as string | undefined) ||
     (params?.user as string | undefined) ||
     null;
 
-  const resolved = allowLocalServer ? await resolveLauncherPort(netid) : null;
-  const port = resolved?.port ?? getLauncherPortForUser(netid);
+  const resolved = await resolveLauncherPort(netid);
+  if (!resolved) {
+    return {
+      success: false,
+      error: `Launcher non détecté (port attendu ~${getLauncherPortForUser(netid)}). Dans Citrix: start-launcher-server.bat puis vérifier W:\\portal\\HARP\\launcher\\launcher.port`,
+    };
+  }
+  const port = resolved.port;
 
   const buildLaunchUrl = (format?: "html") => {
     const serverUrl = `http://localhost:${port}/launch?tool=${encodeURIComponent(tool)}`;
@@ -316,8 +349,9 @@ export async function launchExternalTool(
 
   const tryFetchLaunch = async (): Promise<{ success: boolean; error?: string }> => {
     const fullUrl = buildLaunchUrl();
+    console.info("[mylaunch] fetch", fullUrl);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch(fullUrl, {
         method: "GET",
@@ -342,6 +376,7 @@ export async function launchExternalTool(
         return;
       }
       const fullUrl = buildLaunchUrl("html");
+      console.info("[mylaunch] navigation", fullUrl);
       const iframe = document.createElement("iframe");
       iframe.setAttribute("aria-hidden", "true");
       iframe.style.cssText =
@@ -380,24 +415,6 @@ export async function launchExternalTool(
   };
 
   try {
-    if (!allowLocalServer) {
-      const url = buildMyLaunchUrl(tool, params);
-      const a = document.createElement("a");
-      a.href = url;
-      a.style.display = "none";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return { success: true };
-    }
-
-    if (!resolved) {
-      return {
-        success: false,
-        error: `Launcher non détecté pour cet utilisateur (port attendu ~${getLauncherPortForUser(netid)}). Dans la session Citrix, lancez start-launcher-server.bat puis vérifiez W:\\portal\\HARP\\launcher\\launcher.port`,
-      };
-    }
-
     try {
       return await tryFetchLaunch();
     } catch (fetchError) {
@@ -419,7 +436,7 @@ export async function launchExternalTool(
         success: false,
         error:
           navResult.error ||
-          `Le navigateur n'atteint pas http://localhost:${port}. Ouvrez le portail DANS la session Citrix du launcher.`,
+          `Le navigateur n'atteint pas http://localhost:${port}/launch. Ouvrez le portail DANS la session Citrix du launcher.`,
       };
     }
   } catch (error) {
