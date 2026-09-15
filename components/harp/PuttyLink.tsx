@@ -29,14 +29,13 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
     setIsLoading(true);
 
     try {
-      // Récupérer le netid
       const netid = session?.user?.netid;
       if (!netid) {
         toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
       }
 
-      // Vérifier si le launcher est démarré (serveur local)
-      const health = await checkLauncherHealth(800);
+      // Vérifier si le launcher est démarré (serveur local - port par utilisateur)
+      const health = await checkLauncherHealth(800, netid);
       const launcherRunning = health.running;
 
       // Vérifier si l'outil est disponible (en production uniquement)
@@ -72,6 +71,7 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
           host: hostToUse,
           user: userToUse,
           sshkey: sshkeyToUse,
+          netid: netid || userToUse,
         });
 
         if (launchResult.success) {

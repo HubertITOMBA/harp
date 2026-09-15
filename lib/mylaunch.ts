@@ -197,127 +197,256 @@ export async function launchOpenUrlInBrowser(
 }
 
 /**
- * Lance une application externe via le serveur local ou le protocole mylaunch://
- * 
- * Cette fonction essaie d'abord d'utiliser le serveur HTTP local (port 8765),
- * et si celui-ci n'est pas disponible, utilise le protocole mylaunch://
- * 
- * @param tool - Le nom de l'outil à lancer
- * @param params - Les paramètres optionnels pour l'outil
- * @returns Promise<{ success: boolean; error?: string }> - Résultat du lancement
+ * Port launcher par utilisateur (Citrix) — doit rester identique a Get-HarpUserLauncherPort (PowerShell).
+ * Plage 8800-8999.
+ */
+export function getLauncherPortForUser(netidOrUsername?: string | null): number {
+  let name = (netidOrUsername || "default").trim().toLowerCase();
+  if (name.includes("\\")) name = name.split("\\").pop() || name;
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return 8800 + (sum % 200);
+}
+
+function getCachedLauncherPort(): number | null {
+  if (typeof sessionStorage === "undefined") return null;
+  const raw = sessionStorage.getItem("harp_launcher_port");
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 8800 && n <= 8999 ? n : null;
+}
+
+function setCachedLauncherPort(port: number) {
+  try {
+    sessionStorage.setItem("harp_launcher_port", String(port));
+  } catch {
+    /* ignore */
+  }
+}
+
+async function probeHealth(
+  port: number,
+  timeoutMs: number
+): Promise<{ ok: boolean; health?: any }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`http://localhost:${port}/health`, {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-cache",
+      mode: "cors",
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) return { ok: false };
+    try {
+      const data = await response.json();
+      return { ok: true, health: data };
+    } catch {
+      return { ok: true };
+    }
+  } catch {
+    clearTimeout(timeoutId);
+    return { ok: false };
+  }
+}
+
+/**
+ * Trouve le port du launcher de CET utilisateur (hash netid + offsets + cache).
+ */
+export async function resolveLauncherPort(
+  netidOrUsername?: string | null,
+  timeoutMs: number = 600
+): Promise<{ port: number; health?: any } | null> {
+  const preferred = getLauncherPortForUser(netidOrUsername);
+  const cached = getCachedLauncherPort();
+  const candidates: number[] = [];
+  if (cached) candidates.push(cached);
+  for (let i = 0; i <= 30; i++) {
+    const p = preferred + i > 8999 ? 8800 + ((preferred + i - 8800) % 200) : preferred + i;
+    if (!candidates.includes(p)) candidates.push(p);
+  }
+  // Compat ancienne install mono-user
+  if (!candidates.includes(8765)) candidates.push(8765);
+
+  for (const port of candidates) {
+    const probe = await probeHealth(port, timeoutMs);
+    if (probe.ok) {
+      setCachedLauncherPort(port);
+      return { port, health: probe.health };
+    }
+  }
+  return null;
+}
+
+/**
+ * Lance une application externe via le serveur local (port par utilisateur 8800-8999).
+ * Sans droits registre Citrix : pas de fallback mylaunch:// silencieux.
  */
 export async function launchExternalTool(
   tool: ExternalTool,
   params?: Record<string, string | number | undefined>
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
-    const allowLocalServer = transport !== 'protocol';
+  const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
+  const allowLocalServer = transport !== "protocol";
+  const allowProtocolFallback = transport === "protocol" || transport === "auto";
 
-    // Essayer d'abord le serveur HTTP local (sans protocole personnalisé)
-    try {
-      if (!allowLocalServer) throw new Error('Local launcher server disabled by configuration');
-      const serverUrl = `http://localhost:8765/launch?tool=${encodeURIComponent(tool)}`;
-      const searchParams = new URLSearchParams();
-      
-      if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            searchParams.append(key, String(value));
-          }
-        });
-      }
-      
-      const fullUrl = searchParams.toString() 
-        ? `${serverUrl}&${searchParams.toString()}`
-        : serverUrl;
-      
-      // Essayer de contacter le serveur local
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1000); // Timeout de 1 seconde
-      
-      try {
-        const response = await fetch(fullUrl, {
-          method: 'GET',
-          signal: controller.signal,
-          cache: 'no-cache'
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const data = await response.json();
-          return { success: data.success !== false, error: data.error };
-        } else {
-          throw new Error(`HTTP ${response.status}`);
+  const netid =
+    (params?.netid as string | undefined) ||
+    (params?.user as string | undefined) ||
+    null;
+
+  const resolved = allowLocalServer ? await resolveLauncherPort(netid) : null;
+  const port = resolved?.port ?? getLauncherPortForUser(netid);
+
+  const buildLaunchUrl = (format?: "html") => {
+    const serverUrl = `http://localhost:${port}/launch?tool=${encodeURIComponent(tool)}`;
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && key !== "netid") {
+          searchParams.append(key, String(value));
         }
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        // Si le serveur n'est pas disponible, utiliser le protocole mylaunch://
-        throw fetchError;
+      });
+    }
+    if (format) searchParams.set("format", format);
+    const qs = searchParams.toString();
+    return qs ? `${serverUrl}&${qs}` : serverUrl;
+  };
+
+  const tryFetchLaunch = async (): Promise<{ success: boolean; error?: string }> => {
+    const fullUrl = buildLaunchUrl();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(fullUrl, {
+        method: "GET",
+        signal: controller.signal,
+        cache: "no-cache",
+        mode: "cors",
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      return { success: data.success !== false, error: data.error };
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  };
+
+  const tryNavigationLaunch = (): Promise<{ success: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      if (typeof document === "undefined") {
+        resolve({ success: false, error: "Pas de document (SSR)" });
+        return;
       }
-    } catch (serverError) {
-      // Si le serveur local n'est pas disponible, utiliser le protocole mylaunch://
-      if (allowLocalServer) {
-        console.log('Serveur local non disponible, utilisation du protocole mylaunch://');
-      } else {
-        console.log('Serveur local désactivé, utilisation du protocole mylaunch://');
-      }
-      
+      const fullUrl = buildLaunchUrl("html");
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText =
+        "position:absolute;width:0;height:0;border:0;left:-9999px;top:-9999px";
+      let settled = false;
+      const finish = (ok: boolean, error?: string) => {
+        if (settled) return;
+        settled = true;
+        try {
+          iframe.remove();
+        } catch {
+          /* ignore */
+        }
+        resolve(ok ? { success: true } : { success: false, error });
+      };
+
+      iframe.onload = () => finish(true);
+      document.body.appendChild(iframe);
+      iframe.src = fullUrl;
+
+      setTimeout(() => {
+        if (settled) return;
+        const popup = window.open(
+          fullUrl,
+          "harp_launcher_launch",
+          "noopener,noreferrer,width=480,height=240"
+        );
+        if (popup) finish(true);
+        else
+          finish(
+            false,
+            "Impossible d'atteindre le launcher depuis le navigateur (fetch/iframe/popup bloques)."
+          );
+      }, 1200);
+    });
+  };
+
+  try {
+    if (!allowLocalServer) {
       const url = buildMyLaunchUrl(tool, params);
-      // Clic sur un <a> pour que certains navigateurs / handlers passent l'URL complète (avec query string)
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.style.display = 'none';
+      a.style.display = "none";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
       return { success: true };
     }
+
+    if (!resolved) {
+      return {
+        success: false,
+        error: `Launcher non détecté pour cet utilisateur (port attendu ~${getLauncherPortForUser(netid)}). Dans la session Citrix, lancez start-launcher-server.bat puis vérifiez W:\\portal\\HARP\\launcher\\launcher.port`,
+      };
+    }
+
+    try {
+      return await tryFetchLaunch();
+    } catch (fetchError) {
+      console.warn("[mylaunch] fetch /launch echoue, essai iframe/popup:", fetchError);
+      const navResult = await tryNavigationLaunch();
+      if (navResult.success) return navResult;
+
+      if (allowProtocolFallback) {
+        const url = buildMyLaunchUrl(tool, params);
+        const a = document.createElement("a");
+        a.href = url;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      return {
+        success: false,
+        error:
+          navResult.error ||
+          `Le navigateur n'atteint pas http://localhost:${port}. Ouvrez le portail DANS la session Citrix du launcher.`,
+      };
+    }
   } catch (error) {
-    console.error('Erreur lors du lancement de l\'outil externe:', error);
-    return { 
-      success: false, 
-      error: 'Impossible de lancer l\'application. Vérifiez que le serveur launcher est démarré ou que le protocole mylaunch:// est installé.' 
+    console.error("Erreur lors du lancement de l'outil externe:", error);
+    return {
+      success: false,
+      error:
+        "Impossible de lancer l'application. Vérifiez que le serveur launcher est démarré (start-launcher-server.bat).",
     };
   }
 }
 
 /**
- * Vérifie si le serveur local du launcher répond.
- * Le launcher expose un endpoint de santé sur http://localhost:8765/health.
- *
- * Note: on considère "running" dès qu'on arrive à obtenir une réponse HTTP,
- * même si le contenu n'est pas du JSON.
+ * Vérifie si le serveur local du launcher répond (port par utilisateur).
  */
-export async function checkLauncherHealth(timeoutMs: number = 800): Promise<LauncherHealthCheckResult> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch("http://localhost:8765/health", {
-      method: "GET",
-      signal: controller.signal,
-      cache: "no-cache",
-    });
-    clearTimeout(timeoutId);
-
-    // Si on a une réponse, le process est très probablement lancé.
-    try {
-      const data = await response.json();
-      return { running: true, health: data };
-    } catch {
-      return { running: true };
-    }
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.name === "AbortError"
-          ? "Timeout"
-          : error.message
-        : String(error);
-    return { running: false, error: message };
+export async function checkLauncherHealth(
+  timeoutMs: number = 800,
+  netidOrUsername?: string | null
+): Promise<LauncherHealthCheckResult> {
+  const resolved = await resolveLauncherPort(netidOrUsername, timeoutMs);
+  if (resolved) {
+    return { running: true, health: resolved.health };
   }
+  return {
+    running: false,
+    error: `Timeout/unreachable (port ~${getLauncherPortForUser(netidOrUsername)})`,
+  };
 }
 
 /**

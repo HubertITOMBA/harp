@@ -1,7 +1,11 @@
 ﻿#Requires -Version 5.1
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
-    [string]$Url
+    [Parameter(Mandatory = $false, Position = 0)]
+    [string]$Url = "",
+
+    # Alternative robuste (Citrix/cmd) : URL en Base64 pour eviter le decoupage sur & ?
+    [Parameter(Mandatory = $false)]
+    [string]$UrlBase64 = ""
 )
 
 Set-StrictMode -Version Latest
@@ -11,6 +15,43 @@ $ErrorActionPreference = 'Stop'
 try { chcp 65001 | Out-Null } catch {}
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
+# Decoder l'URL si fournie en Base64 (chemin recommande depuis launcher-server)
+if ([string]::IsNullOrWhiteSpace($Url) -and -not [string]::IsNullOrWhiteSpace($UrlBase64)) {
+    try {
+        $Url = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UrlBase64))
+    } catch {
+        $Url = ""
+    }
+}
+
+# Log de demarrage IMMEDIAT (avant toute autre logique) - toujours tenter TEMP + W: + script
+function Write-BootstrapLog([string]$message) {
+    $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss.fff')
+    $line = "[$stamp] BOOT $message"
+    $targets = @(
+        $(if (Test-Path "W:\") { "W:\portal\HARP\launcher\logs\launcher.log" } else { $null }),
+        $(if ($PSScriptRoot) { Join-Path $PSScriptRoot "logs\launcher.log" } else { $null }),
+        (Join-Path $env:TEMP "harp-launcher.log")
+    ) | Where-Object { $_ }
+    foreach ($file in $targets) {
+        try {
+            $dir = Split-Path $file -Parent
+            if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+            Add-Content -Path $file -Value $line -Encoding UTF8 -ErrorAction Stop
+        } catch {}
+    }
+    try { Write-Host $line -ForegroundColor Cyan } catch {}
+}
+
+Write-BootstrapLog "launcher.ps1 demarre PSScriptRoot=$PSScriptRoot UrlLen=$($Url.Length) UrlBase64Len=$($UrlBase64.Length)"
+
+if ([string]::IsNullOrWhiteSpace($Url)) {
+    Write-BootstrapLog "ERREUR: aucune URL recue (ni -Url ni -UrlBase64)"
+    Write-Host "ERREUR: URL manquante. Relancez via le serveur launcher (mise a jour requise)." -ForegroundColor Red
+    Start-Sleep -Seconds 8
+    exit 1
+}
 
 # Charger la configuration depuis un fichier JSON
 # PRIORITÉ: répertoire du script (ex. D:\apps\portal\launcher) > W:\portal > LOCALAPPDATA
@@ -71,39 +112,55 @@ if (-not $API_BASE_URL) {
     $API_BASE_URL = "http://localhost:9352"
 }
 
+function Get-LauncherLogDir {
+    # PRIORITE multi-utilisateurs: W:\ (home reseau par user) > dossier du script > LOCALAPPDATA
+    $candidates = @(
+        "W:\portal\HARP\launcher\logs",
+        $(if ($PSScriptRoot) { Join-Path $PSScriptRoot "logs" } else { $null }),
+        $(if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA "HARP\launcher\logs" } else { $null })
+    ) | Where-Object { $_ }
+
+    foreach ($dir in $candidates) {
+        try {
+            $parent = Split-Path $dir -Parent
+            # W:\ : accepter si la lettre existe, creer portal\HARP\launcher\logs si besoin
+            if ($dir -like "W:\*") {
+                if (-not (Test-Path "W:\")) { continue }
+            } elseif ($parent -and -not (Test-Path $parent)) {
+                continue
+            }
+            if (-not (Test-Path $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force -ErrorAction Stop | Out-Null
+            }
+            # Test d'ecriture rapide
+            $probe = Join-Path $dir ".write-test"
+            Set-Content -Path $probe -Value "ok" -ErrorAction Stop
+            Remove-Item $probe -Force -ErrorAction SilentlyContinue
+            return $dir
+        } catch {
+            continue
+        }
+    }
+    return $null
+}
+
 function Write-Log($message) {
     try {
-        # PRIORITÉ: Utiliser le répertoire du script, sinon W:\portal, sinon LOCALAPPDATA
-        $logDir = $null
-        
-        # Si le script est dans un répertoire accessible, utiliser ce répertoire
-        if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
-            $logDir = Join-Path $PSScriptRoot 'logs'
-        }
-        
-        # Sinon, essayer W:\portal\HARP\launcher\logs
-        if (-not $logDir -or -not (Test-Path (Split-Path $logDir -Parent))) {
-            $wPortalLogDir = "W:\portal\HARP\launcher\logs"
-            if (Test-Path "W:\portal") {
-                $logDir = $wPortalLogDir
-            }
-        }
-        
-        # En dernier recours, utiliser LOCALAPPDATA
-        if (-not $logDir) {
-            $logDir = Join-Path $env:LOCALAPPDATA "HARP\launcher\logs"
-        }
-        
-        if (-not (Test-Path $logDir)) { 
-            New-Item -ItemType Directory -Path $logDir -Force | Out-Null 
-        }
+        $logDir = Get-LauncherLogDir
         $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss.fff')
         $logMessage = "[$stamp] $message"
-        $logFile = Join-Path $logDir 'launcher.log'
-        Add-Content -Path $logFile -Value $logMessage -Encoding UTF8 -ErrorAction SilentlyContinue
+        $files = @()
+        if ($logDir) { $files += (Join-Path $logDir 'launcher.log') }
+        $files += (Join-Path $env:TEMP "harp-launcher.log")
+        foreach ($logFile in ($files | Select-Object -Unique)) {
+            try {
+                $d = Split-Path $logFile -Parent
+                if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null }
+                Add-Content -Path $logFile -Value $logMessage -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch {}
+        }
         Write-Host $logMessage -ForegroundColor Cyan
     } catch {
-        # Si l'écriture du log échoue (dossier en lecture seule), afficher seulement dans la console
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')] $message" -ForegroundColor Cyan
     }
 }
@@ -468,28 +525,29 @@ try {
     $argArray = @()
     
     # Pour PuTTY, construire les arguments spécifiques
+    # Ordre recommande: -ssh -P <port> -i <key> user@host
     if ($tool -eq 'putty') {
-        # Port doit venir en premier pour PuTTY
-        if ($query.ContainsKey('port')) { 
+        $argArray += '-ssh'
+
+        if ($query.ContainsKey('port') -and -not [string]::IsNullOrWhiteSpace([string]$query.port)) {
             $argArray += '-P'
             $argArray += [string]$query.port
         }
-        
-        # Clé SSH (depuis la base de données ou depuis l'URL)
+
+        # Cle SSH (URL prioritaire, sinon pkeyfile API)
         $sshkey = $query['sshkey']
         if (-not $sshkey -and $pkeyfile) {
             $sshkey = $pkeyfile
         }
-        if ($sshkey) { 
+        if ($sshkey -and -not [string]::IsNullOrWhiteSpace([string]$sshkey)) {
             $argArray += '-i'
             $argArray += [string]$sshkey
         }
-        
-        # Host en dernier (avec user si fourni) - REQUIS pour PuTTY
+
         if (-not $query.ContainsKey('host') -or [string]::IsNullOrWhiteSpace($query.host)) {
             throw "Le parametre 'host' est requis pour lancer PuTTY"
         }
-        
+
         $hostValue = [string]$query.host
         if ($query.ContainsKey('user') -and $query.user -and -not [string]::IsNullOrWhiteSpace($query.user)) {
             $userValue = [string]$query.user
@@ -497,6 +555,8 @@ try {
         } else {
             $argArray += $hostValue
         }
+
+        Write-Log "PUTTY args: $($argArray -join ' ')"
     } else {
         # Pour les autres outils, utiliser cmdarg renvoyé par l'API (déjà complet pour sqlplus, psdmt, pside, etc.)
         if ($cmdarg -and $cmdarg.Trim() -ne '') {

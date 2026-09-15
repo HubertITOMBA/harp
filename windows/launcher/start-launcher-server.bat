@@ -1,96 +1,94 @@
 @echo off
-REM Script pour démarrer le serveur launcher en arrière-plan
-REM Ce script peut être ajouté au démarrage Windows de l'utilisateur
+REM Start HARP launcher server - port PAR UTILISATEUR (8800-8999), ASCII only
+REM Set VISIBLE=1 to show the PowerShell window (debug)
 
-chcp 65001 >nul
 setlocal
 
-REM Chercher le launcher dans plusieurs emplacements possibles
-REM PRIORITÉ: D:\apps\portal\launcher (production) > W:\portal > LOCALAPPDATA > TEMP
-set LAUNCHER_DIR=
-set SERVER_SCRIPT=
+set "LAUNCHER_DIR="
+set "SERVER_SCRIPT="
 
-REM PRIORITÉ 1: Production - D:\apps\portal\launcher
-if exist "D:\apps\portal\launcher\launcher-server.ps1" (
-    set LAUNCHER_DIR=D:\apps\portal\launcher
-    set SERVER_SCRIPT=D:\apps\portal\launcher\launcher-server.ps1
+if exist "%~dp0launcher-server.ps1" (
+    set "LAUNCHER_DIR=%~dp0"
+    set "SERVER_SCRIPT=%~dp0launcher-server.ps1"
     goto :found
 )
 
-REM PRIORITÉ 2: W:\portal\HARP\launcher (home directory réseau)
+if exist "D:\apps\portal\launcher\launcher-server.ps1" (
+    set "LAUNCHER_DIR=D:\apps\portal\launcher"
+    set "SERVER_SCRIPT=D:\apps\portal\launcher\launcher-server.ps1"
+    goto :found
+)
+
+if exist "D:\apps\portail\launcher\launcher-server.ps1" (
+    set "LAUNCHER_DIR=D:\apps\portail\launcher"
+    set "SERVER_SCRIPT=D:\apps\portail\launcher\launcher-server.ps1"
+    goto :found
+)
+
 if exist "W:\portal\HARP\launcher\launcher-server.ps1" (
-    set LAUNCHER_DIR=W:\portal\HARP\launcher
-    set SERVER_SCRIPT=W:\portal\HARP\launcher\launcher-server.ps1
+    set "LAUNCHER_DIR=W:\portal\HARP\launcher"
+    set "SERVER_SCRIPT=W:\portal\HARP\launcher\launcher-server.ps1"
     goto :found
 )
 
-REM PRIORITÉ 3: LOCALAPPDATA
 if exist "%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1" (
-    set LAUNCHER_DIR=%LOCALAPPDATA%\HARP\launcher
-    set SERVER_SCRIPT=%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1
+    set "LAUNCHER_DIR=%LOCALAPPDATA%\HARP\launcher"
+    set "SERVER_SCRIPT=%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1"
     goto :found
 )
 
-REM PRIORITÉ 4: TEMP
-if exist "%TEMP%\HARP\launcher\launcher-server.ps1" (
-    set LAUNCHER_DIR=%TEMP%\HARP\launcher
-    set SERVER_SCRIPT=%TEMP%\HARP\launcher\launcher-server.ps1
-    goto :found
-)
-
-REM Si aucun fichier trouvé, afficher un message d'erreur détaillé
 echo ERREUR: Le serveur launcher n'est pas installe
-echo.
-echo Emplacements verifies:
-if exist "D:\apps\portal\launcher\launcher-server.ps1" (
-    echo   [OK] D:\apps\portal\launcher - launcher-server.ps1 present
-) else (
-    if exist "D:\apps\portal\launcher" (
-        echo   [MANQUANT] D:\apps\portal\launcher existe mais launcher-server.ps1 absent
-    ) else (
-        echo   [MANQUANT] D:\apps\portal\launcher n'existe pas
-    )
-)
-if exist "W:\portal\HARP\launcher" (
-    echo   [OK] W:\portal\HARP\launcher existe
-    if exist "W:\portal\HARP\launcher\launcher-server.ps1" (
-        echo   [OK] launcher-server.ps1 trouve dans W:\portal
-    ) else (
-        echo   [MANQUANT] launcher-server.ps1 introuvable dans W:\portal\HARP\launcher
-    )
-) else (
-    echo   [MANQUANT] W:\portal\HARP\launcher n'existe pas
-)
-
-if exist "%LOCALAPPDATA%\HARP\launcher" (
-    echo   [OK] %LOCALAPPDATA%\HARP\launcher existe
-    if exist "%LOCALAPPDATA%\HARP\launcher\launcher-server.ps1" (
-        echo   [OK] launcher-server.ps1 trouve dans LOCALAPPDATA
-    ) else (
-        echo   [MANQUANT] launcher-server.ps1 introuvable dans LOCALAPPDATA
-    )
-) else (
-    echo   [MANQUANT] %LOCALAPPDATA%\HARP\launcher n'existe pas
-)
-
-echo.
-echo SOLUTION: En production, copiez les fichiers dans D:\apps\portal\launcher puis:
-echo   cd D:\apps\portal\launcher
-echo   .\install-launcher-server.ps1 -InstallPath "D:\apps\portal\launcher" -AddToStartup
 pause
 exit /b 1
 
 :found
-REM Vérifier une dernière fois que le fichier existe vraiment
 if not exist "%SERVER_SCRIPT%" (
-    echo ERREUR: Le script launcher-server.ps1 est introuvable dans %LAUNCHER_DIR%
-    echo Chemin teste: %SERVER_SCRIPT%
+    echo ERREUR: launcher-server.ps1 introuvable: %SERVER_SCRIPT%
     pause
     exit /b 1
 )
 
-REM Démarrer le serveur en arrière-plan
-start "" powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File "%SERVER_SCRIPT%"
+echo Dossier launcher: %LAUNCHER_DIR%
+echo TEMP session: %TEMP%
+echo USER: %USERNAME%
+echo.
+echo NOTE: demarre le serveur HTTP sur un PORT DEDIE a votre user (8800-8999).
+echo       Ne lance PAS Putty. Putty se lance depuis le PORTAIL.
+echo.
+
+REM Verifier si NOTRE serveur (port user) repond deja
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$u=$env:USERNAME; if($u -match '\\'){$u=$u.Split('\')[-1]}; $u=$u.ToLower(); $sum=0; foreach($c in $u.ToCharArray()){$sum+=[int]$c}; $p=8800+($sum%%200); try { $r=Invoke-RestMethod -Uri \"http://localhost:$p/health\" -TimeoutSec 2; Write-Host ('DEJA ACTIF port=' + $p + ' ' + ($r|ConvertTo-Json -Compress)) -ForegroundColor Green; exit 0 } catch { Write-Host ('Port preferentiel ' + $p + ' libre - demarrage...') -ForegroundColor Yellow; exit 1 }"
+if %ERRORLEVEL%==0 (
+    echo.
+    echo [OK] Votre launcher tourne deja. Pret pour le portail.
+    echo Logs: W:\portal\HARP\launcher\logs\
+    echo Port:  W:\portal\HARP\launcher\launcher.port
+    if /I not "%NO_PAUSE%"=="1" timeout /t 10 /nobreak
+    endlocal
+    exit /b 0
+)
+
+echo Demarrage du serveur launcher...
+if /I "%VISIBLE%"=="1" (
+    start "HARP-Launcher-Server" powershell.exe -ExecutionPolicy Bypass -NoExit -File "%SERVER_SCRIPT%"
+) else (
+    start "HARP-Launcher-Server" powershell.exe -ExecutionPolicy Bypass -WindowStyle Minimized -File "%SERVER_SCRIPT%"
+)
+
+echo Attente du demarrage (4s)...
+timeout /t 4 /nobreak >nul
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$u=$env:USERNAME; if($u -match '\\'){$u=$u.Split('\')[-1]}; $u=$u.ToLower(); $sum=0; foreach($c in $u.ToCharArray()){$sum+=[int]$c}; $base=8800+($sum%%200); $ok=$false; for($i=0;$i -le 30;$i++){ $p=$base+$i; if($p -gt 8999){$p=8800+(($p-8800)%%200)}; try { $r=Invoke-RestMethod -Uri \"http://localhost:$p/health\" -TimeoutSec 1; Write-Host ('HEALTH OK port=' + $p + ' ' + ($r|ConvertTo-Json -Compress)) -ForegroundColor Green; $ok=$true; break } catch {} }; if(-not $ok){ Write-Host 'HEALTH ECHEC: lisez %%TEMP%%\harp-launcher-server.log et W:\portal\HARP\launcher\logs\server.log' -ForegroundColor Red }"
+
+echo.
+echo Fichier port: W:\portal\HARP\launcher\launcher.port
+echo Logs:         W:\portal\HARP\launcher\logs\server.log
+echo               %TEMP%\harp-launcher-server.log
+echo.
+if /I not "%NO_PAUSE%"=="1" (
+    timeout /t 12 /nobreak
+)
 
 endlocal
-
