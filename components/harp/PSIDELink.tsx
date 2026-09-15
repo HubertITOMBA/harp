@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { normalizePeopleToolsVersion } from '@/lib/ptools-path';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -15,12 +16,10 @@ interface PSIDELinkProps {
 }
 
 /**
- * Composant pour lancer PeopleSoft IDE (PSIDE) via le protocole mylaunch://
- * 
- * @param className - Classes CSS optionnelles
- * @param children - Contenu à afficher dans le lien
- * @param ptversion - Version PeopleTools (ex: "8.60", "8.61")
- * @param aliasql - Alias SQL de l'environnement
+ * Lance PeopleSoft Application Designer (pside.exe) pour la Version PTools de l'environnement.
+ *
+ * @param ptversion - Version PeopleTools de l'env (ex. "8.61" → pt861)
+ * @param aliasql - Alias SQL pour -CD
  */
 export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELinkProps) {
   const { data: session } = useSession();
@@ -32,36 +31,44 @@ export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELink
     setIsLoading(true);
 
     try {
-      // Récupérer le netid
+      const ptCheck = normalizePeopleToolsVersion(ptversion);
+      if (!ptCheck.ok) {
+        toast.error(ptCheck.error, { autoClose: 10000 });
+        return;
+      }
+
       const netid = session?.user?.netid;
       if (!netid) {
         toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
       }
 
-      // Vérifier si l'outil est disponible (en production uniquement)
       const isDevMode = 
         process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
         process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
         process.env.NODE_ENV === 'development';
 
       if (!isDevMode && netid) {
-        const checkResult = await checkToolAvailability('pside', netid);
+        const checkResult = await checkToolAvailability('pside', netid, {
+          ptversion: ptCheck.display,
+          aliasql: aliasql || undefined,
+        });
         if (!checkResult.success) {
           toast.error(checkResult.error || 'PSIDE n\'est pas configuré ou non accessible');
-          setIsLoading(false);
           return;
         }
       }
 
-      const params: Record<string, string | undefined> = {};
-      if (ptversion) params.ptversion = ptversion;
+      const params: Record<string, string | undefined> = {
+        ptversion: ptCheck.display,
+        netid: netid || undefined,
+      };
       if (aliasql) params.aliasql = aliasql;
       
       const doLaunch = async () => {
         const launchResult = await launchExternalTool('pside', params);
 
         if (launchResult.success) {
-          toast.success('PSIDE est en cours de lancement...');
+          toast.success(`Application Designer (PTools ${ptCheck.display} / pt${ptCheck.folderSuffix}) en cours de lancement...`);
         } else {
           toast.error(
             launchResult.error || 'Impossible de lancer PSIDE. Vérifiez que le launcher est installé et démarré.',
@@ -70,7 +77,7 @@ export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELink
         }
       };
 
-      const health = await checkLauncherHealth(800);
+      const health = await checkLauncherHealth(800, netid);
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
         return;
@@ -103,4 +110,3 @@ export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELink
     </span>
   );
 }
-

@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  buildPeopleSoftClientPath,
+  normalizePeopleToolsVersion,
+} from "@/lib/ptools-path";
+
+const PEOPLESOFT_CLIENT_TOOLS = new Set(["pside", "psdmt"]);
 
 /**
  * API endpoint pour récupérer les informations d'un outil depuis la base de données
  * Utilisé par launcher.ps1 pour obtenir dynamiquement les chemins et arguments
- * 
+ *
  * GET /api/launcher/tool?tool=putty&netid=USER123
+ * Pour pside/psdmt : ptversion (ex. 8.61) est obligatoire et détermine pt861, pt862, …
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const tool = searchParams.get("tool");
     const netid = searchParams.get("netid");
-    // Paramètres optionnels pour construire les arguments dynamiquement
     const ptversion = searchParams.get("ptversion");
     const aliasql = searchParams.get("aliasql");
     const envId = searchParams.get("envId");
@@ -32,7 +38,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Récupérer les informations de l'outil depuis harptools
     const toolInfo = await db.harptools.findFirst({
       where: { tool: tool },
       select: {
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
         cmd: true,
         cmdarg: true,
         descr: true,
-        version: true, // Récupérer la version pour construire dynamiquement le chemin
+        version: true,
       },
     });
 
@@ -52,7 +57,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Récupérer la clé SSH de l'utilisateur depuis User
     const user = await db.user.findUnique({
       where: { netid: netid },
       select: {
@@ -60,61 +64,55 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Construire le chemin complet de l'exécutable
-    // TOUS les outils doivent utiliser cmd de harptools
-    let fullPath = "";
     if (!toolInfo.cmd || toolInfo.cmd.trim() === "") {
       return NextResponse.json(
-        { error: `L'outil '${tool}' n'a pas de commande (cmd) définie dans la base de données` },
+        {
+          error: `L'outil '${tool}' n'a pas de commande (cmd) définie dans la base de données`,
+        },
         { status: 400 }
       );
     }
 
-    // Récupérer cmd de harptools (obligatoire pour tous les outils)
     const cmd = toolInfo.cmd.trim();
+    let fullPath = "";
+    let versionToUse: string | null = null;
+    let ptFolder: string | null = null;
 
-    // Pour psdmt et pside, construire dynamiquement le chemin selon la version
-    // Priorité : ptversion depuis les paramètres > version depuis harptools
-    const versionToUse = ptversion || toolInfo.version;
-    
-    if ((tool === "psdmt" || tool === "pside") && versionToUse) {
-      // cmd peut être un chemin complet (ex: D:\...\psdmt.exe) ou un simple nom (psdmt.exe)
-      const isAbsolutePath = /^[a-zA-Z]:[\\/]/.test(cmd);
-      if (isAbsolutePath) {
-        fullPath = cmd;
-      } else {
-        const versionStr = versionToUse.trim();
-        const ptVersion = versionStr.replace(/\./g, "");
-        const basePath = `D:\\apps\\peoplesoft\\pt${ptVersion}\\bin\\client\\winx86`;
-        fullPath = `${basePath}\\${cmd}`;
+    if (PEOPLESOFT_CLIENT_TOOLS.has(tool)) {
+      // Source de vérité : ptversion de l'environnement (pas de fallback silencieux vers une autre version)
+      const normalized = normalizePeopleToolsVersion(ptversion);
+      if (!normalized.ok) {
+        return NextResponse.json({ error: normalized.error }, { status: 400 });
       }
+      versionToUse = normalized.display;
+      ptFolder = `pt${normalized.folderSuffix}`;
+
+      // Sécurité : l'exe est imposé par le tool, pas par harptools.cmd (évite un cmd arbitraire en BDD)
+      if (tool !== "pside" && tool !== "psdmt") {
+        return NextResponse.json(
+          { error: `Outil PeopleSoft non supporté: ${tool}` },
+          { status: 400 }
+        );
+      }
+      fullPath = buildPeopleSoftClientPath(tool, normalized.folderSuffix);
     } else if (toolInfo.cmdpath && toolInfo.cmdpath.trim() !== "") {
-      // Pour les autres outils, utiliser cmdpath + cmd de harptools
-      const cmdpath = toolInfo.cmdpath.trim().replace(/\\$/, ""); // Enlever le \ final s'il existe
-      // Utiliser cmd de harptools
+      const cmdpath = toolInfo.cmdpath.trim().replace(/\\$/, "");
       fullPath = `${cmdpath}\\${cmd}`;
     } else {
-      // Sinon, utiliser seulement cmd de harptools (qui peut être un chemin complet)
       fullPath = cmd;
     }
 
-    // Normaliser les backslashes pour Windows
     fullPath = fullPath.replace(/\//g, "\\");
 
-    // Construire les arguments dynamiquement selon l'outil
     let dynamicArgs = toolInfo.cmdarg || "";
-    
+
     if (tool === "psdmt" || tool === "pside") {
-      // Pour psdmt et pside : -CT ORACLE -CD {aliasql}
-      // On ne veut plus utiliser les placeholders de la base (ex: -CT ORACLE -CD PARAM1).
       if (aliasql && aliasql.trim() !== "") {
         dynamicArgs = `-CT ORACLE -CD ${aliasql.trim()}`;
       } else {
-        // Sans aliasql, on laisse les arguments vides pour que l'utilisateur renseigne la connexion manuellement.
         dynamicArgs = "";
       }
     } else if (tool === "filezilla") {
-      // Pour filezilla : sftp://user@host:port/...?keyfile=... (le / avant ? évite "Invalid port" )
       if (ip && netid) {
         let sftpUrl = `sftp://${netid}@${ip}:22/`;
         if (user?.pkeyfile?.trim()) {
@@ -126,14 +124,10 @@ export async function GET(request: NextRequest) {
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "putty") {
-      // Pour putty : les arguments sont construits par le launcher PowerShell
-      // L'API retourne juste cmdarg de la base de données si disponible
-      // Le launcher PowerShell construit les arguments avec -P, -i, et host depuis l'URL
       if (toolInfo.cmdarg && toolInfo.cmdarg.trim() !== "") {
         dynamicArgs = toolInfo.cmdarg;
       }
     } else if (tool === "sqlplus") {
-      // Pour sqlplus : /@aliasql (ex. /@FHHPP1) — aliasql = champ aliasql de la table envsharp
       if (aliasql && aliasql.trim() !== "") {
         dynamicArgs = `/@${aliasql.trim()}`;
       } else {
@@ -147,10 +141,16 @@ export async function GET(request: NextRequest) {
       path: fullPath,
       cmdpath: toolInfo.cmdpath || "",
       cmd: toolInfo.cmd,
-      cmdarg: dynamicArgs, // Arguments construits dynamiquement
+      cmdarg: dynamicArgs,
       descr: toolInfo.descr,
-      version: versionToUse || toolInfo.version || null, // Inclure la version dans la réponse pour le debugging
+      version: versionToUse || toolInfo.version || null,
       pkeyfile: user?.pkeyfile || null,
+      ...(ptFolder
+        ? {
+            ptversion: versionToUse,
+            ptFolder,
+          }
+        : {}),
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des informations de l'outil:", error);

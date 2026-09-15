@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { normalizePeopleToolsVersion } from '@/lib/ptools-path';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -14,6 +15,9 @@ interface PSDMTLinkProps {
   aliasql?: string | null;
 }
 
+/**
+ * Lance PeopleSoft Data Mover (psdmt.exe) pour la Version PTools de l'environnement.
+ */
 export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
@@ -24,36 +28,44 @@ export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLink
     setIsLoading(true);
 
     try {
-      // Récupérer le netid
+      const ptCheck = normalizePeopleToolsVersion(ptversion);
+      if (!ptCheck.ok) {
+        toast.error(ptCheck.error, { autoClose: 10000 });
+        return;
+      }
+
       const netid = session?.user?.netid;
       if (!netid) {
         toast.warning('Session utilisateur non disponible. Le lancement peut échouer.');
       }
 
-      // Vérifier si l'outil est disponible (en production uniquement)
       const isDevMode = 
         process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
         process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
         process.env.NODE_ENV === 'development';
 
       if (!isDevMode && netid) {
-        const checkResult = await checkToolAvailability('psdmt', netid);
+        const checkResult = await checkToolAvailability('psdmt', netid, {
+          ptversion: ptCheck.display,
+          aliasql: aliasql || undefined,
+        });
         if (!checkResult.success) {
           toast.error(checkResult.error || 'PSDMT n\'est pas configuré ou non accessible');
-          setIsLoading(false);
           return;
         }
       }
 
-      const params: Record<string, string | undefined> = {};
-      if (ptversion) params.ptversion = ptversion;
+      const params: Record<string, string | undefined> = {
+        ptversion: ptCheck.display,
+        netid: netid || undefined,
+      };
       if (aliasql) params.aliasql = aliasql;
 
       const doLaunch = async () => {
         const launchResult = await launchExternalTool('psdmt', params);
 
         if (launchResult.success) {
-          toast.success('PSDMT est en cours de lancement...');
+          toast.success(`Data Mover (PTools ${ptCheck.display} / pt${ptCheck.folderSuffix}) en cours de lancement...`);
         } else {
           toast.error(
             launchResult.error || 'Impossible de lancer PSDMT. Vérifiez que le launcher est installé et démarré.',
@@ -62,7 +74,7 @@ export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLink
         }
       };
 
-      const health = await checkLauncherHealth(800);
+      const health = await checkLauncherHealth(800, netid);
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
         return;
@@ -89,9 +101,9 @@ export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLink
           handleClick(e as any);
         }
       }}
+      style={{ cursor: isLoading ? 'wait' : 'pointer' }}
     >
       {children}
     </span>
   );
 }
-

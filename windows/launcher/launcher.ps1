@@ -515,9 +515,21 @@ try {
         Write-Host "  - Alias SQL*Net (aliasql): $aliasqlParam" -ForegroundColor Gray
         Write-Log "SQLPLUS: netid=$netid aliasql=$aliasqlParam exe=$exe cmdarg=$cmdarg"
     }
+
+    # PeopleSoft client (pside / psdmt) : tracer ptversion et chemin final
+    if ($tool -eq 'pside' -or $tool -eq 'psdmt') {
+        $ptv = $null
+        if ($query.ContainsKey('ptversion')) { $ptv = $query['ptversion'] }
+        Write-Host "  - Version PTools (ptversion): $ptv" -ForegroundColor Gray
+        Write-Log "PEOPLESOFT: tool=$tool ptversion=$ptv exe=$exe cmdarg=$cmdarg"
+    }
     
-    if (-not (Test-Path $exe)) {
-        throw "Exécutable introuvable: $exe"
+    if (-not (Test-Path -LiteralPath $exe)) {
+        $ptHint = ""
+        if ($query.ContainsKey('ptversion')) {
+            $ptHint = " (ptversion=$($query['ptversion']))"
+        }
+        throw "Exécutable introuvable: $exe$ptHint"
     }
     Write-Host "Exécutable trouvé: OK" -ForegroundColor Green
 

@@ -470,15 +470,24 @@ export async function checkLauncherHealth(
  * Vérifie si un outil existe dans la base de données et est configuré
  * @param tool - Le nom de l'outil à vérifier
  * @param netid - Le netid de l'utilisateur
- * @returns Promise avec les informations de l'outil ou une erreur
+ * @param extraParams - Paramètres optionnels (ptversion requis pour pside/psdmt)
  */
 export async function checkToolAvailability(
   tool: string,
-  netid: string
+  netid: string,
+  extraParams?: Record<string, string | undefined>
 ): Promise<{ success: boolean; error?: string; toolInfo?: any }> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
-    const response = await fetch(`${apiUrl}/api/launcher/tool?tool=${encodeURIComponent(tool)}&netid=${encodeURIComponent(netid)}`);
+    const qs = new URLSearchParams({ tool, netid });
+    if (extraParams) {
+      Object.entries(extraParams).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+          qs.set(k, String(v));
+        }
+      });
+    }
+    const response = await fetch(`${apiUrl}/api/launcher/tool?${qs.toString()}`);
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
