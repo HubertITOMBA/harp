@@ -106,6 +106,7 @@ const nextConfig: NextConfig = {
     // Autoriser les origines avec et sans port pour éviter les erreurs de validation
     serverActions: {
       allowedOrigins: [
+        'portails.orange-harp.fr:9052',
         'portails.orange-harp.fr:9352',
         'portails.orange-harp.fr',
         'localhost:9352',

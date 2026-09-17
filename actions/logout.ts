@@ -5,6 +5,6 @@ import { redirect } from "next/navigation";
 
 export const logOut = async () => {
     // votre code ici avant la deconnexion
-    await signOut();
+    await signOut({ redirect: false });
     redirect("/");
 };

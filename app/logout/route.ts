@@ -17,13 +17,13 @@ function getClientOrigin(request: Request): string {
 /**
  * Route de déconnexion.
  * redirect: false évite que NextAuth redirige vers AUTH_URL (ex. localhost en prod).
- * On redirige vers /login sur l'origine côté client (Host / X-Forwarded-Host) pour éviter
+ * On redirige vers / sur l'origine côté client (Host / X-Forwarded-Host) pour éviter
  * localhost et les erreurs CORS / ERR_CONNECTION_REFUSED.
  */
 export async function GET(request: Request) {
   await signOut({ redirect: false });
   const origin = getClientOrigin(request);
-  const loginUrl = new URL("/login", origin);
-  return NextResponse.redirect(loginUrl);
+  const homeUrl = new URL("/", origin);
+  return NextResponse.redirect(homeUrl);
 }
 
