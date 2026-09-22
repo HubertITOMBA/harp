@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { verifyPassword } from "@/lib/password";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -67,26 +68,24 @@ export async function updateMyPassword(formData: FormData) {
       };
     }
 
-    // Vérifier le mot de passe actuel
-    if (user.password) {
-      const isPasswordValid = await bcrypt.compare(
-        validatedData.currentPassword,
-        user.password
-      );
+    // Vérifier le mot de passe actuel (bcrypt ou legacy MySQL PASSWORD())
+    if (!user.password) {
+      return {
+        success: false,
+        error:
+          "Vous n'avez pas de mot de passe défini. Veuillez contacter l'administrateur.",
+      };
+    }
 
-      if (!isPasswordValid) {
-        return { 
-          success: false, 
-          error: "Le mot de passe actuel est incorrect" 
-        };
-      }
-    } else {
-      // Si l'utilisateur n'a pas de mot de passe (connexion via OAuth), 
-      // on peut permettre la création d'un mot de passe
-      // ou exiger une autre méthode d'authentification
-      return { 
-        success: false, 
-        error: "Vous n'avez pas de mot de passe défini. Veuillez contacter l'administrateur." 
+    const isPasswordValid = await verifyPassword(
+      validatedData.currentPassword,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        error: "Le mot de passe actuel est incorrect",
       };
     }
 
@@ -110,7 +109,7 @@ export async function updateMyPassword(formData: FormData) {
             mdp: validatedData.newPassword, // Stocké en clair dans psadm_user
           },
         });
-      } catch (error) {
+      } catch {
         // Si l'utilisateur n'existe pas dans psadm_user, on continue quand même
         console.warn("Utilisateur non trouvé dans psadm_user:", user.netid);
       }
