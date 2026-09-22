@@ -30,7 +30,7 @@ while IFS= read -r line || [ -n "$line" ]; do
         
         # Exporter la variable
         export "$key=$value"
-        echo "  ✅ $key=${value:0:50}${value:+...}"
+        echo "  ✅ $key chargée"
     fi
 done < .env
 
@@ -38,8 +38,10 @@ echo ""
 echo "✅ Variables chargées avec succès !"
 echo ""
 echo "Vérification des variables importantes :"
-echo "  AUTH_URL=${AUTH_URL:-NON DÉFINIE}"
-echo "  NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL:-NON DÉFINIE}"
-echo "  AUTH_SECRET=${AUTH_SECRET:+***${AUTH_SECRET: -4}}"
-echo "  AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-NON DÉFINIE}"
-
+for key in AUTH_URL NEXT_PUBLIC_SERVER_URL AUTH_SECRET AUTH_TRUST_HOST; do
+    if [ -n "${!key:-}" ]; then
+        echo "  ✅ $key définie"
+    else
+        echo "  ❌ $key NON DÉFINIE"
+    fi
+done
