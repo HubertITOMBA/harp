@@ -1,269 +1,515 @@
 /**
- * Système d'initialisation complète de la base de données
- * Exécute toutes les fonctions d'import séquentiellement
- * S'exécute une seule fois lorsque la base est vide
+ * Charge initiale GO LIVE : psadm* en lecture seule vers User, envsharp et harp*.
+ * Mode initial : les destinations du pipeline doivent être vides.
+ * Mode reprise : termine une charge interrompue sans purge et sans écraser les clés déjà créées.
+ * S'arrête à la première étape en erreur. N'écrit jamais dans les tables psadm*.
+ * harpmenurole n'est pas alimentée.
  */
 
 import prisma from "@/lib/prisma";
 import {
-  initDefaultValues,
   insertTypeBases,
-  GenererLesMenus,
   importerLesStatus,
+  importerLesHarproles,
+  GenererLesMenus,
+  importerLesHarpItems,
   importerLesPsoftVersions,
   importerLesPToolsVersions,
   migrateReleaseData,
   importerLesTypesEnv,
-  lierEnvauTypeEnv,
-  importerLesHarproles,
+  importerLesTools,
   migrateServers,
   importerOraInstances,
+  importListEnvs,
   updateInstanceServerIds,
   importerLesEnvServeurs,
   updateEnvsharpInstanceIds,
   updateEnvsharpOrarelease,
-  importListEnvs,
   importInstanceOra,
+  updateReleaseEnvIds,
   importerLesEnvInfos,
-  updateDispoEnvIds,
   importerLesEnvDispos,
+  importerLesMonitors,
   migrerLesUtilisateursNEW,
   migrerLesRolesUtilisateurs,
-  updateReleaseEnvIds,
 } from "@/actions/importharp";
 
-// Variables de contrôle pour éviter les exécutions multiples
-let migrationExecuted = false;
-let migrationInProgress = false;
-let migrationPromise: Promise<{
+type StepPayload = {
+  success?: string | boolean;
+  error?: string;
+  info?: string;
+  warning?: string;
+};
+
+type StepDefinition = {
+  name: string;
+  func: () => Promise<StepPayload>;
+  step: number;
+  /** Une erreur, ou un résultat sans succès en mode initial, arrête le pipeline. */
+  mustSucceed: boolean;
+};
+
+/** Première charge, ou reprise d'une charge GO LIVE interrompue. */
+export type GoLiveMode = "initial" | "reprise";
+
+export type GoLiveResult = {
   success?: boolean;
   skipped?: boolean;
+  blocked?: boolean;
   error?: string;
+  failedStep?: string;
+  mode?: GoLiveMode;
   userCount?: number;
   envCount?: number;
+  portalAdminCount?: number;
   harpTablesStatus?: Record<string, number>;
   requiresPrismaMigration?: boolean;
   reason?: string;
-  results?: Array<{ step: number; name: string; result: { success?: string; error?: string; info?: string } | null; error?: string }>;
+  diagnostics?: Record<string, unknown>;
+  results?: Array<{ step: number; name: string; result: StepPayload | null; error?: string }>;
   totalSteps?: number;
   completedSteps?: number;
-}> | null = null;
+};
 
 /**
- * Définition de l'ordre d'exécution des fonctions d'import
- * L'ordre est important car certaines fonctions dépendent des résultats des précédentes
+ * Destinations écrites par la charge initiale.
+ * En mode initial, toute ligne déjà présente interdit le démarrage.
+ * harpmenurole n'en fait pas partie : elle n'est pas alimentée.
+ * Les tables applicatives (sessions, tâches, emails, notifications, harpevent)
+ * n'en font pas partie non plus.
  */
-const IMPORT_FUNCTIONS = [
-  { name: "Ajuster les valeurs nulles", func: initDefaultValues, step: 1 },
-  { name: "Ajouter les types de bases", func: insertTypeBases, step: 2 },
-  { name: "Générer les Menus", func: GenererLesMenus, step: 3 },
-  { name: "Importer les statuts d'environnement", func: importerLesStatus, step: 4 },
-  { name: "Importer les versions PeopleSoft", func: importerLesPsoftVersions, step: 5 },
-  { name: "Importer les versions PeopleTools", func: importerLesPToolsVersions, step: 6 },
-  { name: "Importer les Harp Release", func: migrateReleaseData, step: 7 },
-  { name: "Importer les types d'environnements", func: importerLesTypesEnv, step: 8 },
-  { name: "Lier les types d'environnement", func: lierEnvauTypeEnv, step: 9 },
-  { name: "Importer les rôles", func: importerLesHarproles, step: 10 },
-  { name: "Importer les serveurs", func: migrateServers, step: 11 },
-  { name: "Importer les instances Oracle", func: importerOraInstances, step: 12 },
-  { name: "Mettre à jour les IDs serveurs des instances", func: updateInstanceServerIds, step: 13 },
-  { name: "Importer les environnements serveurs", func: importerLesEnvServeurs, step: 14 },
-  { name: "Mettre à jour les IDs instances dans les environnements", func: updateEnvsharpInstanceIds, step: 15 },
-  { name: "Mettre à jour les versions Oracle", func: updateEnvsharpOrarelease, step: 16 },
-  { name: "Importer les environnements HARP", func: importListEnvs, step: 17 },
-  { name: "Importer les instances d'environnements", func: importInstanceOra, step: 18 },
-  { name: "Importer l'historique des environnements", func: importerLesEnvInfos, step: 19 },
-  { name: "Mettre à jour les disponibilités", func: updateDispoEnvIds, step: 20 },
-  { name: "Importer les indisponibilités", func: importerLesEnvDispos, step: 21 },
-  // NOTE: importerLesMonitors est exclu de la migration automatique car trop long
-  // Il doit être exécuté manuellement depuis la page /settings
-  { name: "Migrer les utilisateurs", func: migrerLesUtilisateursNEW, step: 22 },
-  { name: "Migrer les rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 23 },
-  { name: "Lier les environnements aux releases", func: updateReleaseEnvIds, step: 24 },
-];
-
-/**
- * Liste des tables commençant par 'harp' à vérifier
- */
-const HARP_TABLES = [
-  'harpora',
-  'harpenvdispo',
-  'harpinstance',
-  'harptypebase',
-  'harpserve',
-  'harpenvserv',
-  'harptypenv',
-  'harpenvinfo',
-  'harpmonitor',
-  'harpmenus',
-  'harpmenurole',
-  'harproles',
-  'harpuseroles',
-  'harpevent',
+const DESTINATION_TABLES = [
+  "user",
+  "harptypebase",
+  "statutenv",
+  "harproles",
+  "harpmenus",
+  "harpitems",
+  "psoftversion",
+  "ptoolsversion",
+  "releaseenv",
+  "harptypenv",
+  "harptools",
+  "harpserve",
+  "harpinstance",
+  "envsharp",
+  "harpenvserv",
+  "harpora",
+  "harpenvinfo",
+  "harpenvdispo",
+  "harpmonitor",
+  "harpuseroles",
 ] as const;
 
+const FINAL_STEP_NAME = "Contrôle PORTAL_ADMIN";
+const TOTAL_STEPS = 25;
+
 /**
- * Vérifie si la table User et toutes les tables harp* sont vides
+ * Ordre de la charge. importerLesMenuRoles n'est pas appelé.
  */
-async function areTablesEmpty(): Promise<{ isEmpty: boolean; userCount: number; harpTablesStatus: Record<string, number> }> {
-  const harpTablesStatus: Record<string, number> = {};
-  let userCount = 0;
-  
-  try {
-    // Vérifier la table User
-    userCount = await prisma.user.count();
-  } catch (error) {
-    console.error("[Init Migration] Erreur lors de la vérification de la table User:", error);
-    return { isEmpty: false, userCount: 0, harpTablesStatus };
-  }
+const IMPORT_FUNCTIONS: StepDefinition[] = [
+  { name: "Types de bases", func: insertTypeBases, step: 1, mustSucceed: true },
+  { name: "Statuts d'environnement", func: importerLesStatus, step: 2, mustSucceed: true },
+  { name: "Rôles harproles", func: importerLesHarproles, step: 3, mustSucceed: true },
+  { name: "Menus", func: GenererLesMenus, step: 4, mustSucceed: true },
+  { name: "Items HARP", func: importerLesHarpItems, step: 5, mustSucceed: true },
+  { name: "Versions PeopleSoft", func: importerLesPsoftVersions, step: 6, mustSucceed: false },
+  { name: "Versions PeopleTools", func: importerLesPToolsVersions, step: 7, mustSucceed: false },
+  { name: "Releases HARP", func: migrateReleaseData, step: 8, mustSucceed: false },
+  { name: "Types d'environnement", func: importerLesTypesEnv, step: 9, mustSucceed: true },
+  { name: "Outils", func: importerLesTools, step: 10, mustSucceed: false },
+  { name: "Serveurs", func: migrateServers, step: 11, mustSucceed: false },
+  { name: "Instances Oracle (SID)", func: importerOraInstances, step: 12, mustSucceed: false },
+  { name: "Environnements envsharp", func: importListEnvs, step: 13, mustSucceed: true },
+  { name: "Lien instance-serveur", func: updateInstanceServerIds, step: 14, mustSucceed: false },
+  { name: "Liens environnement-serveur", func: importerLesEnvServeurs, step: 15, mustSucceed: false },
+  { name: "envsharp.instanceId", func: updateEnvsharpInstanceIds, step: 16, mustSucceed: false },
+  { name: "Version Oracle envsharp", func: updateEnvsharpOrarelease, step: 17, mustSucceed: false },
+  { name: "Instances harpora", func: importInstanceOra, step: 18, mustSucceed: false },
+  { name: "Release envsharp", func: updateReleaseEnvIds, step: 19, mustSucceed: false },
+  { name: "Informations d'environnement", func: importerLesEnvInfos, step: 20, mustSucceed: false },
+  { name: "Indisponibilités", func: importerLesEnvDispos, step: 21, mustSucceed: false },
+  { name: "Monitors", func: importerLesMonitors, step: 22, mustSucceed: false },
+  { name: "Utilisateurs", func: migrerLesUtilisateursNEW, step: 23, mustSucceed: true },
+  { name: "Rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 24, mustSucceed: true },
+];
 
-  // Vérifier toutes les tables harp*
-  let allHarpTablesEmpty = true;
-  for (const tableName of HARP_TABLES) {
-    try {
-      // Utiliser une requête SQL brute pour compter les lignes
-      // Note: Prisma ne permet pas d'utiliser des noms de tables dynamiques dans les template literals
-      // On utilise donc $queryRawUnsafe avec une chaîne complète
-      const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*) as count FROM \`${tableName}\``
-      );
-      const count = Number(result[0]?.count || 0);
-      harpTablesStatus[tableName] = count;
-      
-      if (count > 0) {
-        allHarpTablesEmpty = false;
-      }
-    } catch (error) {
-      // Si la table n'existe pas encore, on la considère comme vide
-      console.warn(`[Init Migration] Table ${tableName} non accessible (peut ne pas exister encore):`, error);
-      harpTablesStatus[tableName] = 0;
-    }
-  }
+let migrationExecuted = false;
+let migrationInProgress = false;
+let migrationPromise: Promise<GoLiveResult> | null = null;
 
-  const isEmpty = userCount === 0 && allHarpTablesEmpty;
-  return { isEmpty, userCount, harpTablesStatus };
+/**
+ * Compte les lignes d'une table moderne dont le nom est dans la liste fixe.
+ */
+async function countTable(tableName: (typeof DESTINATION_TABLES)[number]): Promise<number> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+    `SELECT COUNT(*) AS n FROM \`${tableName}\``
+  );
+  return Number(rows[0]?.n ?? 0);
 }
 
 /**
- * Exécute toutes les fonctions d'import séquentiellement
- * S'exécute uniquement si la table User ET toutes les tables harp* sont vides
+ * Indique qu'une fonction delta ou un seed a volontairement conservé les lignes déjà présentes.
  */
-export async function ensureFullDatabaseMigration() {
-  // Si une migration est déjà en cours, retourner la même promesse
+function isAlreadyPresent(result: StepPayload): boolean {
+  const text = `${result.info ?? ""} ${result.warning ?? ""}`.toLowerCase();
+  return (
+    text.includes("déjà") ||
+    text.includes("deja") ||
+    text.includes("ignor") ||
+    text.includes("aucun nouvel") ||
+    text.includes("aucun nouveau") ||
+    text.includes("existent déjà") ||
+    text.includes("sont déjà")
+  );
+}
+
+/**
+ * Message d'échec d'une étape, ou null si l'étape peut être poursuivie.
+ * En reprise, « déjà importé » est un succès. Une erreur reste bloquante.
+ */
+function failureMessage(
+  step: StepDefinition,
+  result: StepPayload | null,
+  mode: GoLiveMode
+): string | null {
+  if (!result) {
+    return `${step.name} n'a rien retourné`;
+  }
+  if (result.error) {
+    return result.error;
+  }
+  if (result.success) {
+    return null;
+  }
+  if (mode === "reprise" && isAlreadyPresent(result)) {
+    return null;
+  }
+  if (step.mustSucceed) {
+    return result.info || result.warning || `${step.name} ne s'est pas terminée avec succès`;
+  }
+  return null;
+}
+
+/**
+ * Contrôles en lecture seule avant toute écriture moderne.
+ * Le contrôle de vacuité des destinations ne s'applique qu'au mode initial.
+ * Aucun mot de passe n'est lu ni journalisé, seulement des effectifs de format.
+ */
+async function precheckGoLive(
+  mode: GoLiveMode
+): Promise<{ ok: true; diagnostics: Record<string, unknown> } | { ok: false; error: string; diagnostics: Record<string, unknown> }> {
+  const diagnostics: Record<string, unknown> = { mode };
+  const occupied: Record<string, number> = {};
+
+  for (const tableName of DESTINATION_TABLES) {
+    const count = await countTable(tableName);
+    if (count > 0) {
+      occupied[tableName] = count;
+    }
+  }
+  diagnostics.destinationsNonVides = occupied;
+
+  if (mode === "initial" && Object.keys(occupied).length > 0) {
+    return {
+      ok: false,
+      error: "Charge initiale refusée : des tables modernes de destination contiennent déjà des données. Aucune écriture n'a été faite. Aucune purge automatique n'est exécutée. Utilisez le mode reprise pour terminer une charge interrompue.",
+      diagnostics,
+    };
+  }
+
+  const sources = await prisma.$queryRaw<Array<{
+    users: bigint;
+    envs: bigint;
+    servers: bigint;
+    rolesrv: bigint;
+    oracleRows: bigint;
+    envinfo: bigint;
+    dispos: bigint;
+    versions: bigint;
+    ptools: bigint;
+    releases: bigint;
+    typenv: bigint;
+    roleuser: bigint;
+  }>>`
+    SELECT
+      (SELECT COUNT(*) FROM psadm_user) AS users,
+      (SELECT COUNT(*) FROM psadm_env) AS envs,
+      (SELECT COUNT(*) FROM psadm_srv) AS servers,
+      (SELECT COUNT(*) FROM psadm_rolesrv) AS rolesrv,
+      (SELECT COUNT(*) FROM psadm_oracle) AS oracleRows,
+      (SELECT COUNT(*) FROM psadm_envinfo) AS envinfo,
+      (SELECT COUNT(*) FROM psadm_dispo) AS dispos,
+      (SELECT COUNT(*) FROM psadm_version) AS versions,
+      (SELECT COUNT(*) FROM psadm_ptools) AS ptools,
+      (SELECT COUNT(*) FROM psadm_release) AS releases,
+      (SELECT COUNT(*) FROM psadm_typenv) AS typenv,
+      (SELECT COUNT(*) FROM psadm_roleuser) AS roleuser
+  `;
+  const source = sources[0];
+  diagnostics.sources = {
+    psadm_user: Number(source?.users ?? 0),
+    psadm_env: Number(source?.envs ?? 0),
+    psadm_srv: Number(source?.servers ?? 0),
+    psadm_rolesrv: Number(source?.rolesrv ?? 0),
+    psadm_oracle: Number(source?.oracleRows ?? 0),
+    psadm_envinfo: Number(source?.envinfo ?? 0),
+    psadm_dispo: Number(source?.dispos ?? 0),
+    psadm_version: Number(source?.versions ?? 0),
+    psadm_ptools: Number(source?.ptools ?? 0),
+    psadm_release: Number(source?.releases ?? 0),
+    psadm_typenv: Number(source?.typenv ?? 0),
+    psadm_roleuser: Number(source?.roleuser ?? 0),
+  };
+
+  if (Number(source?.users ?? 0) === 0) {
+    return { ok: false, error: "Charge initiale refusée : psadm_user est vide.", diagnostics };
+  }
+  if (Number(source?.envs ?? 0) === 0) {
+    return { ok: false, error: "Charge initiale refusée : psadm_env est vide.", diagnostics };
+  }
+
+  const emailDup = await prisma.$queryRaw<Array<{ n: bigint }>>`
+    SELECT COUNT(*) AS n FROM (
+      SELECT LOWER(TRIM(email)) AS mail
+      FROM psadm_user
+      WHERE email IS NOT NULL AND TRIM(email) <> ''
+      GROUP BY LOWER(TRIM(email))
+      HAVING COUNT(*) > 1
+    ) d
+  `;
+  const duplicateEmailGroups = Number(emailDup[0]?.n ?? 0);
+  diagnostics.duplicateEmailGroups = duplicateEmailGroups;
+  if (duplicateEmailGroups > 0) {
+    return {
+      ok: false,
+      error: "Charge initiale refusée : des emails sont partagés par plusieurs netid. createMany/skipDuplicates omettrait des comptes sans les nommer.",
+      diagnostics,
+    };
+  }
+
+  const adminFormats = await prisma.$queryRaw<Array<{
+    candidats: bigint;
+    dans_user: bigint;
+    mysql_hash: bigint;
+    bcrypt: bigint;
+    vide: bigint;
+    disabled: bigint;
+    autre: bigint;
+  }>>`
+    SELECT
+      COUNT(*) AS candidats,
+      SUM(u.netid IS NOT NULL) AS dans_user,
+      SUM(u.mdp REGEXP '^\\\\*[0-9A-Fa-f]{40}$') AS mysql_hash,
+      SUM(u.mdp REGEXP '^\\\\$2[aby]\\\\$') AS bcrypt,
+      SUM(u.netid IS NOT NULL AND (u.mdp IS NULL OR u.mdp = '')) AS vide,
+      SUM(u.mdp LIKE 'DISABLED\\\\_%') AS disabled,
+      SUM(
+        u.netid IS NOT NULL
+        AND u.mdp IS NOT NULL AND u.mdp <> ''
+        AND u.mdp NOT REGEXP '^\\\\*[0-9A-Fa-f]{40}$'
+        AND u.mdp NOT REGEXP '^\\\\$2[aby]\\\\$'
+        AND u.mdp NOT LIKE 'DISABLED\\\\_%'
+      ) AS autre
+    FROM psadm_roleuser r
+    LEFT JOIN psadm_user u ON u.netid = r.netid
+    WHERE r.role = 'PORTAL_ADMIN'
+  `;
+  const admin = adminFormats[0];
+  const portalAdminCandidates = Number(admin?.candidats ?? 0);
+  const authenticable = Number(admin?.mysql_hash ?? 0) + Number(admin?.bcrypt ?? 0);
+  diagnostics.portalAdmin = {
+    candidats: portalAdminCandidates,
+    presentsDansPsadmUser: Number(admin?.dans_user ?? 0),
+    mysqlHash: Number(admin?.mysql_hash ?? 0),
+    bcrypt: Number(admin?.bcrypt ?? 0),
+    vide: Number(admin?.vide ?? 0),
+    disabled: Number(admin?.disabled ?? 0),
+    autre: Number(admin?.autre ?? 0),
+  };
+
+  if (portalAdminCandidates === 0 || Number(admin?.dans_user ?? 0) === 0) {
+    return {
+      ok: false,
+      error: "BLOQUANT GO LIVE : aucun candidat PORTAL_ADMIN présent à la fois dans psadm_roleuser et psadm_user.",
+      diagnostics,
+    };
+  }
+  if (authenticable === 0) {
+    return {
+      ok: false,
+      error: "BLOQUANT GO LIVE : aucun candidat PORTAL_ADMIN n'a un mot de passe au format accepté par verifyPassword (hash MySQL ou bcrypt). Aucune valeur secrète n'a été lue.",
+      diagnostics,
+    };
+  }
+
+  return { ok: true, diagnostics };
+}
+
+/**
+ * Vérifie qu'au moins un User moderne est relié à harproles.role = PORTAL_ADMIN.
+ * Ne lit pas les mots de passe.
+ */
+async function countModernPortalAdmins(): Promise<number> {
+  return prisma.user.count({
+    where: {
+      harpuseroles: {
+        some: {
+          harproles: { role: "PORTAL_ADMIN" },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Charge initiale GO LIVE, ou reprise d'une charge interrompue.
+ * Les tables psadm* sont lues, jamais mises à jour.
+ * En cas d'échec, les étapes suivantes ne sont pas exécutées
+ * et les lignes modernes déjà écrites sont conservées.
+ *
+ * @param mode - `initial` exige des destinations vides. `reprise` poursuit une charge partielle.
+ * @returns Diagnostic de pré-check, ou le résultat de la charge
+ */
+export async function ensureFullDatabaseMigration(
+  mode: GoLiveMode = "initial"
+): Promise<GoLiveResult> {
+  if (mode !== "initial" && mode !== "reprise") {
+    return {
+      success: false,
+      blocked: true,
+      error: "Mode GO LIVE inconnu. Valeurs acceptées : initial, reprise.",
+      failedStep: "pré-check",
+    };
+  }
+
   if (migrationInProgress && migrationPromise) {
-    console.log("[Init Migration] Migration déjà en cours, réutilisation de la promesse...");
+    console.log("[GO LIVE] Charge déjà en cours, réutilisation de la promesse...");
     return migrationPromise;
   }
 
-  // Si la migration a déjà été exécutée avec succès, ne pas réessayer
   if (migrationExecuted) {
-    return { skipped: true, reason: "Migration déjà exécutée" };
+    return {
+      skipped: true,
+      mode,
+      reason: "Charge GO LIVE déjà exécutée dans ce processus",
+    };
   }
 
-  // Créer une promesse unique pour cette migration
   migrationPromise = (async () => {
     try {
       migrationInProgress = true;
 
-      // Vérifier si la table User existe
       try {
         await prisma.user.count();
       } catch {
-        // Si la table n'existe pas, on doit d'abord créer les tables avec Prisma
-        console.error("[Init Migration] ❌ La table User n'existe pas encore dans la base de données.");
-        console.error("[Init Migration] 💡 Veuillez exécuter: npx prisma db push");
         migrationInProgress = false;
         migrationPromise = null;
         return {
           success: false,
+          mode,
           error: "La table User n'existe pas encore. Veuillez exécuter 'npx prisma db push' ou 'npx prisma migrate dev' pour créer les tables.",
-          requiresPrismaMigration: true
+          requiresPrismaMigration: true,
         };
       }
 
-      // Vérifier si toutes les tables (User + harp*) sont vides
-      const { isEmpty, userCount: checkedUserCount, harpTablesStatus } = await areTablesEmpty();
-      
-      if (!isEmpty) {
-        console.log(`[Init Migration] Les tables contiennent déjà des données. Migration non nécessaire.`);
-        console.log(`[Init Migration] - User: ${checkedUserCount} enregistrement(s)`);
-        console.log(`[Init Migration] - Tables harp*:`, harpTablesStatus);
-        migrationExecuted = true;
+      const precheck = await precheckGoLive(mode);
+      console.log(`[GO LIVE] Pré-check (${mode}) :`, JSON.stringify(precheck.diagnostics));
+      if (!precheck.ok) {
+        console.error("[GO LIVE] Pré-check bloquant :", precheck.error);
         migrationInProgress = false;
         migrationPromise = null;
-        return { 
-          skipped: true, 
-          reason: "Tables non vides", 
-          userCount: checkedUserCount,
-          harpTablesStatus 
+        return {
+          success: false,
+          blocked: true,
+          mode,
+          error: precheck.error,
+          failedStep: "pré-check",
+          diagnostics: precheck.diagnostics,
         };
       }
 
-      console.log("[Init Migration] ⚠️  La table User et toutes les tables harp* sont vides. Démarrage de l'initialisation complète...");
-      console.log(`[Init Migration] ${IMPORT_FUNCTIONS.length} étapes à exécuter`);
+      const results: GoLiveResult["results"] = [];
 
-      const results: Array<{ step: number; name: string; result: { success?: string; error?: string; info?: string } | null; error?: string }> = [];
+      const stopAt = (
+        stepName: string,
+        error: string,
+        extra: Partial<GoLiveResult> = {}
+      ): GoLiveResult => {
+        console.error(`[GO LIVE] Arrêt à l'étape ${stepName}:`, error);
+        migrationInProgress = false;
+        migrationPromise = null;
+        return {
+          success: false,
+          blocked: true,
+          mode,
+          error,
+          failedStep: stepName,
+          diagnostics: precheck.diagnostics,
+          results,
+          totalSteps: TOTAL_STEPS,
+          completedSteps: results.filter((item) => !item.error).length,
+          ...extra,
+        };
+      };
 
-      // Exécuter chaque fonction séquentiellement
-      for (const { name, func, step } of IMPORT_FUNCTIONS) {
+      for (const step of IMPORT_FUNCTIONS) {
         try {
-          console.log(`[Init Migration] Étape ${step}/${IMPORT_FUNCTIONS.length}: ${name}...`);
-          
-          const result = await func();
-          
-          results.push({
-            step,
-            name,
-            result,
-          });
+          console.log(`[GO LIVE] Étape ${step.step}/${TOTAL_STEPS} (${mode}): ${step.name}`);
+          const result = await step.func();
+          const error = failureMessage(step, result, mode);
+          results.push({ step: step.step, name: step.name, result, error: error ?? undefined });
 
-          if (result && 'error' in result && result.error) {
-            console.error(`[Init Migration] ❌ Erreur à l'étape ${step} (${name}):`, result.error);
-            // Continuer malgré l'erreur pour ne pas bloquer les autres imports
-          } else if (result && 'success' in result && result.success) {
-            console.log(`[Init Migration] ✅ Étape ${step} terminée: ${result.success}`);
-          } else if (result && 'info' in result && result.info) {
-            console.log(`[Init Migration] ℹ️  Étape ${step}: ${result.info}`);
+          if (error) {
+            return stopAt(step.name, error);
           }
 
-          // Délai entre les étapes pour éviter de surcharger la base et le pool de connexions
-          // Délai plus long pour laisser le pool de connexions se récupérer
-          await new Promise(resolve => setTimeout(resolve, 500));
-
+          if (step.func === importerLesHarproles) {
+            const seeded = await prisma.harproles.count({ where: { role: "PORTAL_ADMIN" } });
+            if (seeded < 1) {
+              return stopAt(
+                "Rôles harproles",
+                "harproles ne contient pas PORTAL_ADMIN après le seed. Les étapes suivantes ne seront pas lancées."
+              );
+            }
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
-          console.error(`[Init Migration] ❌ Exception à l'étape ${step} (${name}):`, errorMessage);
-          results.push({
-            step,
-            name,
-            result: null,
-            error: errorMessage,
-          });
-          // Continuer malgré l'erreur
+          console.error(`[GO LIVE] Exception à l'étape ${step.step} (${step.name}):`, errorMessage);
+          results.push({ step: step.step, name: step.name, result: null, error: errorMessage });
+          return stopAt(step.name, errorMessage);
         }
       }
 
-      // Vérifier le résultat final
-      const finalUserCount = await prisma.user.count().catch(() => 0);
-      const finalEnvCount = await prisma.envsharp.count().catch(() => 0);
-      
-      // Vérifier les tables harp* après migration
-      const finalHarpTablesStatus: Record<string, number> = {};
-      for (const tableName of HARP_TABLES) {
-        try {
-          const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-            `SELECT COUNT(*) as count FROM \`${tableName}\``
-          );
-          finalHarpTablesStatus[tableName] = Number(result[0]?.count || 0);
-        } catch {
-          finalHarpTablesStatus[tableName] = 0;
-        }
+      const portalAdminCount = await countModernPortalAdmins();
+      if (portalAdminCount < 1) {
+        results.push({
+          step: 25,
+          name: FINAL_STEP_NAME,
+          result: null,
+          error: "BLOQUANT GO LIVE : aucun PORTAL_ADMIN moderne après migration",
+        });
+        return stopAt(
+          FINAL_STEP_NAME,
+          "BLOQUANT GO LIVE : aucun PORTAL_ADMIN moderne après migration",
+          { portalAdminCount }
+        );
       }
-      
-      console.log(`[Init Migration] ✅ Initialisation complète terminée !`);
-      console.log(`[Init Migration] - ${finalUserCount} utilisateur(s)`);
-      console.log(`[Init Migration] - ${finalEnvCount} environnement(s)`);
-      console.log(`[Init Migration] - Tables harp*:`, finalHarpTablesStatus);
+
+      results.push({
+        step: 25,
+        name: FINAL_STEP_NAME,
+        result: { success: `${portalAdminCount} PORTAL_ADMIN moderne(s)` },
+      });
+
+      const harpTablesStatus: Record<string, number> = {};
+      for (const tableName of DESTINATION_TABLES) {
+        harpTablesStatus[tableName] = await countTable(tableName);
+      }
+
+      const userCount = harpTablesStatus.user ?? 0;
+      const envCount = harpTablesStatus.envsharp ?? 0;
+      console.log(`[GO LIVE] Charge terminée (${mode}). Utilisateurs: ${userCount}. Environnements: ${envCount}. PORTAL_ADMIN: ${portalAdminCount}.`);
 
       migrationExecuted = true;
       migrationInProgress = false;
@@ -271,22 +517,22 @@ export async function ensureFullDatabaseMigration() {
 
       return {
         success: true,
-        userCount: finalUserCount,
-        envCount: finalEnvCount,
-        harpTablesStatus: finalHarpTablesStatus,
+        mode,
+        userCount,
+        envCount,
+        portalAdminCount,
+        harpTablesStatus,
+        diagnostics: precheck.diagnostics,
         results,
-        totalSteps: IMPORT_FUNCTIONS.length,
-        completedSteps: results.filter(r => !r.error).length,
+        totalSteps: TOTAL_STEPS,
+        completedSteps: results.length,
       };
-
     } catch (error) {
-      console.error("[Init Migration] ❌ Erreur critique lors de l'initialisation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      console.error("[GO LIVE] Erreur critique:", errorMessage);
       migrationInProgress = false;
       migrationPromise = null;
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Erreur inconnue"
-      };
+      return { success: false, mode, error: errorMessage };
     }
   })();
 
@@ -294,7 +540,7 @@ export async function ensureFullDatabaseMigration() {
 }
 
 /**
- * Réinitialise le flag de migration (utile pour les tests)
+ * Réinitialise le flag de charge (utile pour un nouvel essai dans le même processus).
  */
 export function resetFullMigrationFlag() {
   migrationExecuted = false;
@@ -303,16 +549,15 @@ export function resetFullMigrationFlag() {
 }
 
 /**
- * Vérifie si la migration est en cours
+ * Indique si une charge GO LIVE est en cours dans ce processus.
  */
 export function isMigrationInProgress(): boolean {
   return migrationInProgress;
 }
 
 /**
- * Vérifie si la migration a été exécutée
+ * Indique si une charge GO LIVE s'est terminée avec succès dans ce processus.
  */
 export function isMigrationExecuted(): boolean {
   return migrationExecuted;
 }
-

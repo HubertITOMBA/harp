@@ -1,25 +1,32 @@
 /**
- * Script pour exécuter la migration complète (comme /init/page.tsx)
- * Réinitialise les flags et exécute ensureFullDatabaseMigration autant de fois que nécessaire
- * 
+ * Lance la charge GO LIVE une fois.
+ * Sans argument : mode initial, destinations modernes vides.
+ * Avec --reprise : termine une charge interrompue, sans purge.
+ *
  * Usage: npm run migration:init
+ *        npm run migration:init -- --reprise
  */
 
-import { ensureFullDatabaseMigration, resetFullMigrationFlag } from "@/lib/init-full-migration";
+import { ensureFullDatabaseMigration, resetFullMigrationFlag, type GoLiveMode } from "@/lib/init-full-migration";
 import { resetMigrationFlag } from "@/lib/init-migration";
 
+function goLiveModeFromArgs(): GoLiveMode {
+  return process.argv.includes("--reprise") ? "reprise" : "initial";
+}
+
 /**
- * Exécute la migration complète une fois
+ * Exécute la charge GO LIVE une fois, dans le mode demandé.
  */
 async function runInitMigrationOnce() {
-  console.log("\n🔄 Démarrage de la migration complète (comme /init/page.tsx)...");
+  const mode = goLiveModeFromArgs();
+  console.log(`\nDémarrage de la charge GO LIVE en mode ${mode}.`);
   
   // Réinitialiser les flags pour permettre une nouvelle exécution
   resetMigrationFlag();
   resetFullMigrationFlag();
   
   try {
-    const result = await ensureFullDatabaseMigration();
+    const result = await ensureFullDatabaseMigration(mode);
     
     if (result.success) {
       console.log("✅ Migration complète réussie !");
@@ -70,16 +77,15 @@ async function runInitMigrationLoop() {
     console.log(`${"=".repeat(60)}`);
     
     const success = await runInitMigrationOnce();
-    
-    // Si la migration a été ignorée (tables non vides), arrêter
-    if (!success) {
-      console.log("\n⏹️  Migration non nécessaire. Arrêt de la boucle.");
-      shouldContinue = false;
+
+    // Une seule passe. Le succès ne relance pas la charge.
+    // Un échec ne purge rien : la reprise se fait avec --reprise.
+    if (success) {
+      console.log("\nCharge GO LIVE terminée.");
     } else {
-      // Attendre un peu avant la prochaine itération
-      console.log("\n⏳ Attente de 2 secondes avant la prochaine itération...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("\nCharge GO LIVE arrêtée. Aucune purge. Reprise possible avec --reprise.");
     }
+    shouldContinue = false;
   }
   
   console.log(`\n✅ Processus terminé après ${iteration} itération(s).`);

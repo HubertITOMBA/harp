@@ -2,6 +2,7 @@
 
 import * as z from "zod";
 import { toast } from "react-toastify";
+import type { UserRole } from "@prisma/client";
 import prisma  from "@/lib/prisma";
 
 /**
@@ -50,74 +51,75 @@ function handlePrismaError(
 
 export const insertTypeBases = async () => {
    try {
- 
-     // Vérifier si la table est vide
-      const count = await prisma.harptypebase.count();
-     
-      if (count > 0) {
-       // toast.info("La table statutenv contient déjà des données. Importation ignorée.");
-        return { info: "La table harptypebase contient déjà des données. Insertion ignorée."};
-      }
- 
-     // Réinitialiser l'auto-increment
-     await prisma.$executeRaw`ALTER TABLE harptypebase AUTO_INCREMENT = 1`;
-     
-     // Création des statuts d'environnement
-     await prisma.harptypebase.createMany({
-       data: [
-         { type_base: '2K', descr: 'Base 2K', icone: '' },
-         { type_base: '4K', descr: 'Base 4K', icone: '' },
-         { type_base: '150K', descr: 'Base 150K', icone: '' },
-        ]
+     const catalog = [
+       { type_base: '2K', descr: 'Base 2K', icone: '' },
+       { type_base: '4K', descr: 'Base 4K', icone: '' },
+       { type_base: '150K', descr: 'Base 150K', icone: '' },
+     ];
+
+     const existing = await prisma.harptypebase.findMany({
+       select: { type_base: true },
      });
- 
+     const present = new Set(existing.map((row) => row.type_base));
+     const missing = catalog.filter((row) => !present.has(row.type_base));
 
-    // toast.success("Les statuts d'environnements ont été chargésortés avec succès !") ;
+     if (missing.length === 0) {
+       return { info: "Le seed harptypebase est déjà complet. Aucune ligne manquante." };
+     }
 
-     return { success: "Les stypes de bases ont été ajoutés avec succès !" };
+     if (existing.length === 0) {
+       await prisma.$executeRaw`ALTER TABLE harptypebase AUTO_INCREMENT = 1`;
+     }
+
+     await prisma.harptypebase.createMany({
+       data: missing,
+       skipDuplicates: true,
+     });
+
+     return { success: `${missing.length} type(s) de base ajouté(s).` };
    } catch (error) {
      return handlePrismaError(error, "HARP Erreur lors de l'ajout de type de bases", "insertTypeBases");
    }
-    
  };
 
  export const importerLesStatus = async () => {
   try {
+    const catalog = [
+      { statenv: 'ANONYMISE', descr: 'Données anonymisées', icone: 'anonym.png' },
+      { statenv: 'BASE_ONLY', descr: 'Accès uniquement à la base de données', icone: 'base_only.png' },
+      { statenv: 'DECOMMISSION', descr: 'Environnement à Décommissionner', icone: 'decommission.png' },
+      { statenv: 'DUMMY', descr: 'Divers', icone: 'special.png' },
+      { statenv: 'FERME', descr: 'Evironnement indisponible', icone: 'ferme.png' },
+      { statenv: 'INVISIBLE', descr: 'Invisible', icone: 'invisible.png' },
+      { statenv: 'OBSOLETE', descr: 'Environnement obsolète', icone: 'obsolete.png' },
+      { statenv: 'OUVERT',  descr: 'Environnement disponible', icone: 'ouvert.png' },
+      { statenv: 'REFRESH', descr: 'Environnement en cours de rafraichissement', icone: 'refresh.png' },
+      { statenv: 'RESTREINT', descr: 'Accès reservé à certains utilisateurs', icone: 'restreint.png' }
+    ];
 
-    // Vérifier si la table est vide
-     const count = await prisma.statutenv.count();
-    
-     if (count > 0) {
-      // toast.info("La table statutenv contient déjà des données. Importation ignorée.");
-       return { info: "La table statutenv contient déjà des données. Importation ignorée."};
-     }
+    const existing = await prisma.statutenv.findMany({
+      select: { statenv: true },
+    });
+    const present = new Set(existing.map((row) => row.statenv));
+    const missing = catalog.filter((row) => !present.has(row.statenv));
 
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpmenus AUTO_INCREMENT = 1`;
-    
-    // Création des statuts d'environnement
+    if (missing.length === 0) {
+      return { info: "Le seed statutenv est déjà complet. Aucune ligne manquante." };
+    }
+
+    if (existing.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE statutenv AUTO_INCREMENT = 1`;
+    }
+
     await prisma.statutenv.createMany({
-      data: [
-        { statenv: 'ANONYMISE', descr: 'Données anonymisées', icone: 'anonym.png' },
-        { statenv: 'BASE_ONLY', descr: 'Accès uniquement à la base de données', icone: 'base_only.png' },
-        { statenv: 'DECOMMISSION', descr: 'Environnement à Décommissionner', icone: 'decommission.png' },
-        { statenv: 'DUMMY', descr: 'Divers', icone: 'special.png' },
-        { statenv: 'FERME', descr: 'Evironnement indisponible', icone: 'ferme.png' },
-        { statenv: 'INVISIBLE', descr: 'Invisible', icone: 'invisible.png' },
-        { statenv: 'OBSOLETE', descr: 'Environnement obsolète', icone: 'obsolete.png' },
-        { statenv: 'OUVERT',  descr: 'Environnement disponible', icone: 'ouvert.png' },
-        { statenv: 'REFRESH', descr: 'Environnement en cours de rafraichissement', icone: 'refresh.png' },
-        { statenv: 'RESTREINT', descr: 'Accès reservé à certains utilisateurs', icone: 'restreint.png' }
-      ]
+      data: missing,
+      skipDuplicates: true,
     });
 
-   // toast.success("Les statuts d'environnements ont été chargésortés avec succès !") ;
-
-    return { success: "Les statuts d'environnement ont été importés avec succès !" };
+    return { success: `${missing.length} statut(s) d'environnement ajouté(s).` };
   } catch (error) {
     return handlePrismaError(error, "HARP Erreur lors de l'importation des statuts d'environnement", "importerLesStatus");
   }
-   
 };
 
 
@@ -227,21 +229,7 @@ export const insertTypeBases = async () => {
 
 export const GenererLesMenus = async () => {
   try {
-
-    // Vérifier si la table est vide
-    const count = await prisma.harpmenus.count();
-     
-    if (count > 0) {
-     // toast.info("La table harpmenus contient déjà des données. Importation ignorée.");
-      return { info: "La table harpmenus contient déjà des données. Importation ignorée." };
-    } 
-
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harpmenus AUTO_INCREMENT = 1`;
-
-    // Insérer les données des menus
-    await prisma.harpmenus.createMany({
-      data: [
+    const catalog = [
         { display: 7, level: 3, menu: 'DEVELOPPEMENT HOTFIX', href: '', descr: '', icone: 'pocket-knife.png', active: 1, role: 'TMA_LOCAL' },
         { display: 6, level: 3, menu: 'DEVELOPPEMENT PROJET', href: '', descr: '', icone: 'brain-cog.png', active: 1, role: 'TMA_LOCAL' },
         { display: 2, level: 3, menu: 'DEVOPS 1', href: '', descr: 'Environnements DEVOPS 1', icone: 'workflow.png', active: 1, role: 'TMA_LOCAL' },
@@ -290,10 +278,31 @@ export const GenererLesMenus = async () => {
         { display: 0, level: 2, menu:  'Versions Harp', href: '/list/harpvers', descr: '', icone: 'socialead.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Versions PeopleTools', href: '/list/ptvers', descr: '', icone: 'autov.png', active: 1, role: 'TMA_LOCAL'},
         { display: 0, level: 2, menu:  'Volumetrie', href: '/list/volums', descr: '', icone: 'deployed.png', active: 1, role: 'TMA_LOCAL'},
-      ]
+    ];
+
+    const existing = await prisma.harpmenus.findMany({
+      select: { menu: true },
+    });
+    const present = new Set(existing.map((row) => row.menu));
+    const missing = catalog.filter((row) => !present.has(row.menu));
+
+    if (missing.length === 0) {
+      return { info: "Le seed harpmenus est déjà complet. Aucune ligne manquante." };
+    }
+
+    if (existing.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harpmenus AUTO_INCREMENT = 1`;
+    }
+
+    await prisma.harpmenus.createMany({
+      data: missing.map((row) => ({
+        ...row,
+        role: row.role as UserRole,
+      })),
+      skipDuplicates: true,
     });
 
-    return { success: "Tous les menus sont générés avec succès !" };
+    return { success: `${missing.length} menu(s) ajouté(s).` };
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de la génération des menus !", "GenererLesMenus");
   }
@@ -391,41 +400,48 @@ export const lierEnvauTypeEnv = async () => {
 export const importerLesHarproles = async () => {
   try {
 
-    // Vérifier si la table est vide
-    const count = await prisma.harproles.count();
-    
-    if (count > 0) {
-      return { info: "La table harproles contient déjà des données. Importation ignorée." };
+    // role n'est pas unique en base : le delta est fait ici, sur le libellé.
+    const catalog = [
+      { role: 'DADS', descr: 'Acces Qualif DADS' },
+      { role: 'DMOSTD', descr: 'Acces Demo Standard' },
+      { role: 'DRP', descr: 'Acces DRP' },
+      { role: 'EFO', descr: 'EFO Exploitation' },
+      { role: 'FR-FT-UNIX', descr: 'Equipe FR-FT-UNIX' },
+      { role: 'FT-MOE', descr: 'France Telecom MOE' },
+      { role: 'HP_MUTUALISE', descr: 'Equipe UNIX/NETWORK/DBA/EFO HP' },
+      { role: 'METRO', descr: 'Metrologie' },
+      { role: 'POC92', descr: 'Acces POC' },
+      { role: 'PORTAL_ADMIN', descr: 'Administrateur Portail Harp' },
+      { role: 'PORTAL_SECURITY', descr: 'Administrateur securite Portail' },
+      { role: 'PSADMIN', descr: 'Administrateur PeopleSoft' },
+      { role: 'PUM', descr: 'Acces PUM' },
+      { role: 'REF', descr: 'Acces References Livraison' },
+      { role: 'REFRESH_INFOS', descr: 'Mise à jour infos environnements' },
+      { role: 'TMA_LOCAL', descr: 'Equipe TMA France' },
+      { role: 'TMA_OFFSHORE', descr: 'Equipe TMA OFFSHORE' },
+      { role: 'UPDSTATUS_DEV', descr: 'MAJ status environnements DEV' },
+      { role: 'UPGRADE92', descr: 'Upgrade 9.2' }
+    ];
+
+    const existing = await prisma.harproles.findMany({
+      select: { role: true },
+    });
+    const present = new Set(existing.map((row) => row.role));
+    const missing = catalog.filter((row) => !present.has(row.role));
+
+    if (missing.length === 0) {
+      return { info: "Le seed harproles est déjà complet. Aucune ligne manquante." };
     }
-    // Réinitialiser l'auto-increment
-    await prisma.$executeRaw`ALTER TABLE harproles AUTO_INCREMENT = 1`;
-    
-    // Insérer les rôles
+
+    if (existing.length === 0) {
+      await prisma.$executeRaw`ALTER TABLE harproles AUTO_INCREMENT = 1`;
+    }
+
     await prisma.harproles.createMany({
-      data: [
-        { role: 'DADS', descr: 'Acces Qualif DADS' },
-        { role: 'DMOSTD', descr: 'Acces Demo Standard' },
-        { role: 'DRP', descr: 'Acces DRP' },
-        { role: 'EFO', descr: 'EFO Exploitation' },
-        { role: 'FR-FT-UNIX', descr: 'Equipe FR-FT-UNIX' },
-        { role: 'FT-MOE', descr: 'France Telecom MOE' },
-        { role: 'HP_MUTUALISE', descr: 'Equipe UNIX/NETWORK/DBA/EFO HP' },
-        { role: 'METRO', descr: 'Metrologie' },
-        { role: 'POC92', descr: 'Acces POC' },
-        { role: 'PORTAL_ADMIN', descr: 'Administrateur Portail Harp' },
-        { role: 'PORTAL_SECURITY', descr: 'Administrateur securite Portail' },
-        { role: 'PSADMIN', descr: 'Administrateur PeopleSoft' },
-        { role: 'PUM', descr: 'Acces PUM' },
-        { role: 'REF', descr: 'Acces References Livraison' },
-        { role: 'REFRESH_INFOS', descr: 'Mise à jour infos environnements' },
-        { role: 'TMA_LOCAL', descr: 'Equipe TMA France' },
-        { role: 'TMA_OFFSHORE', descr: 'Equipe TMA OFFSHORE' },
-        { role: 'UPDSTATUS_DEV', descr: 'MAJ status environnements DEV' },
-        { role: 'UPGRADE92', descr: 'Upgrade 9.2' }
-      ]
+      data: missing,
     });
 
-    return { success: "Rôles importés avec succès !" };
+    return { success: `${missing.length} rôle(s) ajouté(s).` };
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de l'importation des rôles", "importerLesHarproles");
   }
@@ -471,9 +487,54 @@ async function mapTypenvIdToHarptypenv(psadmTypenvId: number | null): Promise<nu
  */
 export async function importListEnvs() {
   try {
-    // Récupérer toutes les données de psadm_env
-    // Note: env est la clé primaire, donc elle ne peut pas être null
-    const envData = await prisma.psadm_env.findMany();
+    // Lecture seule de psadm_env. Les dates legacy invalides deviennent NULL
+    // ici, sans UPDATE de la source. typenvid n'est pas lu : il est déduit de typenv.
+    const envData = await prisma.$queryRaw<Array<{
+      env: string;
+      aliasql: string | null;
+      oraschema: string | null;
+      url: string | null;
+      appli: string | null;
+      psversion: string | null;
+      ptversion: string | null;
+      harprelease: string | null;
+      volum: string | null;
+      datmaj: Date | null;
+      gassi: string | null;
+      rpg: string | null;
+      msg: string | null;
+      descr: string | null;
+      anonym: string | null;
+      edi: string | null;
+      typenv: string | null;
+    }>>`
+      SELECT
+        env,
+        aliasql,
+        oraschema,
+        url,
+        appli,
+        psversion,
+        ptversion,
+        harprelease,
+        volum,
+        CASE
+          WHEN datmaj IS NULL
+            OR datmaj = '0000-00-00 00:00:00'
+            OR datmaj = '0000-00-00'
+            OR DATE(datmaj) = '0000-00-00'
+          THEN NULL
+          ELSE datmaj
+        END AS datmaj,
+        gassi,
+        rpg,
+        msg,
+        descr,
+        anonym,
+        edi,
+        typenv
+      FROM psadm_env
+    `;
 
     if (!envData.length) {
       return { warning: "Aucune donnée trouvée dans psadm_env" };
@@ -538,6 +599,13 @@ export async function importListEnvs() {
     const validTypenvIdSet = new Set(validHarptypenvTypenvIds.map(t => t.typenvid).filter((id): id is number => id !== null));
     console.log(`[importListEnvs] ${validTypenvIdSet.size} typenvid valide(s) trouvé(s) dans harptypenv`);
 
+    // Correspondance calculée à la lecture : psadm_env.typenv -> psadm_typenv.display
+    // -> harptypenv.typenvid. psadm_env.typenvid n'est ni lu ni réécrit.
+    const typenvRows = await prisma.psadm_typenv.findMany({
+      select: { typenv: true, display: true },
+    });
+    const displayByTypenv = new Map(typenvRows.map((row) => [row.typenv, row.display]));
+
     // Préparer les données à importer avec validation et mapping
     const dataToImportPromises = envsToImport.map(async (record) => {
       // Vérifier que les champs requis sont présents
@@ -546,8 +614,9 @@ export async function importListEnvs() {
         return null;
       }
 
-      // Mapper le typenvid de psadm_env vers harptypenv.typenvid
-      const mappedTypenvId = await mapTypenvIdToHarptypenv(record.typenvid || null);
+      // display legacy du type, résolu par le nom, sans écrire dans psadm_env
+      const legacyDisplay = record.typenv ? displayByTypenv.get(record.typenv) ?? null : null;
+      const mappedTypenvId = await mapTypenvIdToHarptypenv(legacyDisplay);
       
       // Vérifier que le typenvid mappé existe dans harptypenv
       let finalTypenvId: number | null = mappedTypenvId;
@@ -1717,47 +1786,19 @@ export const importerLesTypesEnv = async () => {
     }
 
     // Insérer uniquement les nouveaux types d'environnement
-    const result = await prisma.harptypenv.createMany({
+    const result =     // typenvid = psadm_typenv.display, clé métier du type, pas l'id auto-incrémenté.
+    // Les lignes déjà présentes ne sont pas réécrites.
+    await prisma.harptypenv.createMany({
       data: typenvsToImport.map(record => ({
         typenv: record.typenv,
-        href: `/list/envs/${record.display}`,  // Génération du href basé sur display
+        href: `/list/envs/${record.display}`,
         descr: record.descr,
-        typenvid: record.display // Utiliser display comme typenvid pour la correspondance avec psadm_env.typenvid
+        typenvid: record.display
       })),
-      skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
+      skipDuplicates: true
     });
 
-    // Mettre à jour les typenvid pour les enregistrements existants selon le mapping défini
-    const typenvidMappings = [
-      { id: 1, typenvid: 7 },
-      { id: 2, typenvid: 6 },
-      { id: 3, typenvid: 2 },
-      { id: 4, typenvid: 3 },
-      { id: 5, typenvid: 4 },
-      { id: 6, typenvid: 5 },
-      { id: 7, typenvid: 19 },
-      { id: 8, typenvid: 11 },
-      { id: 9, typenvid: 12 },
-      { id: 10, typenvid: 16 },
-      { id: 11, typenvid: 21 },
-      { id: 12, typenvid: 9 },
-      { id: 13, typenvid: 10 },
-      { id: 14, typenvid: 15 },
-      { id: 15, typenvid: 13 },
-      { id: 16, typenvid: 8 }
-    ];
-
-    for (const mapping of typenvidMappings) {
-      await prisma.harptypenv.update({
-        where: { id: mapping.id },
-        data: { typenvid: mapping.typenvid }
-      }).catch((error) => {
-        // Ignorer les erreurs si l'enregistrement n'existe pas (idempotent)
-        console.warn(`[importerLesTypesEnv] Impossible de mettre à jour harptypenv.id=${mapping.id}:`, error);
-      });
-    }
-
-    return { 
+    return {
       success: `${result.count} nouveau(x) type(s) d'environnement importé(s) avec succès !`,
       details: {
         totalInSource: allTypenvData.length,
@@ -2390,9 +2431,9 @@ export const updateInstanceServerIds = async () => {
  */
 export const importerLesEnvServeurs = async () => {
   try {
-    // Mettre à jour les statuts avant l'import
-    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status = 21`;
-    await prisma.$executeRaw`update psadm_rolesrv set status = 8 where status is null`;
+    // psadm_rolesrv reste en lecture seule.
+    // Le statut legacy (21 ou NULL) n'est pas réécrit : la destination
+    // reçoit status null pour ne pas dépendre d'un id statutenv inexistant.
 
     // Récupérer toutes les données avec la requête (MySQL peut renvoyer envid/serverid en minuscules)
     const rawResults = await prisma.$queryRaw<Array<{
@@ -2575,25 +2616,42 @@ export const importerLesEnvDispos = async () => {
     // Récupérer toutes les données avec la requête
     const allResults = await prisma.$queryRaw<Array<{
       envId: number;
-      fromdate: Date;
+      fromdate: Date | null;
       msg: string | null;
       statenvId: number | null;
     }>>`
       SELECT 
         e.id as envId,
-        d.fromdate,
+        CASE
+          WHEN d.fromdate IS NULL
+            OR d.fromdate = '0000-00-00 00:00:00'
+            OR d.fromdate = '0000-00-00'
+            OR DATE(d.fromdate) = '0000-00-00'
+          THEN NULL
+          ELSE d.fromdate
+        END AS fromdate,
         d.msg,
-        d.statenvId 
-      FROM 
-        envsharp e,
-        psadm_dispo d
-      WHERE d.env = e.env
+        st.id AS statenvId
+      FROM envsharp e
+      INNER JOIN psadm_dispo d ON d.env = e.env
+      LEFT JOIN statutenv st ON st.statenv = d.statenv
       ORDER BY e.env, d.fromdate DESC
     `;
 
     if (allResults.length === 0) {
       return { info: "Aucune disposition d'environnement trouvée à importer." };
     }
+
+    // Une date legacy invalide reste absente de la destination.
+    // Elle n'est pas remplacée par NOW() et la source psadm_dispo n'est pas modifiée.
+    const readableDispos = allResults.filter((result) => {
+      if (!result.fromdate) {
+        return false;
+      }
+      const parsed = new Date(result.fromdate);
+      return !isNaN(parsed.getTime()) && parsed.getFullYear() > 1900;
+    });
+    const skippedInvalidDates = allResults.length - readableDispos.length;
 
     // Récupérer les dispositions déjà présentes dans harpenvdispo
     const existingDispos = await prisma.harpenvdispo.findMany({
@@ -2610,8 +2668,8 @@ export const importerLesEnvDispos = async () => {
     );
 
     // Filtrer uniquement les dispositions qui n'existent pas encore (delta)
-    const disposToImport = allResults.filter(result => {
-      const key = `${result.envId}-${result.fromdate.getTime()}`;
+    const disposToImport = readableDispos.filter(result => {
+      const key = `${result.envId}-${new Date(result.fromdate as Date).getTime()}`;
       return !existingDisposSet.has(key);
     });
 
@@ -2621,7 +2679,8 @@ export const importerLesEnvDispos = async () => {
         details: {
           totalInSource: allResults.length,
           totalInHarpenvdispo: existingDispos.length,
-          imported: 0
+          imported: 0,
+          skippedInvalidDates
         }
       };
     }
@@ -2635,7 +2694,7 @@ export const importerLesEnvDispos = async () => {
     const importedData = await prisma.harpenvdispo.createMany({
       data: disposToImport.map(result => ({
         envId: result.envId,
-        fromdate: result.fromdate || new Date(),
+        fromdate: result.fromdate as Date,
         msg: result.msg,
         statenvId: result.statenvId || 8 // Utilise 8 (OUVERT) comme valeur par défaut si statenvId est null
       })),
@@ -2648,7 +2707,8 @@ export const importerLesEnvDispos = async () => {
         totalInSource: allResults.length,
         totalInHarpenvdispo: existingDispos.length + importedData.count,
         imported: importedData.count,
-        skipped: allResults.length - disposToImport.length
+        skipped: readableDispos.length - disposToImport.length,
+        skippedInvalidDates
       }
     };
   } catch (error) {
@@ -2941,24 +3001,16 @@ export const importerLesMonitors = async () => {
       return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
     }
 
-    // Nettoyer les dates invalides dans psadm_monitor avant l'import
-    // Remplacer les dates '0000-00-00' par la date actuelle
-    try {
-      await prisma.$executeRaw`
-        UPDATE psadm_monitor 
-        SET monitordt = NOW() 
-        WHERE monitordt IS NULL 
-           OR monitordt = '0000-00-00 00:00:00'
-           OR DATE(monitordt) = '0000-00-00'
-      `;
-    } catch (error) {
-      console.warn("[importerLesMonitors] Impossible de nettoyer les dates invalides, continuation...", error);
-    }
-
-    // Récupérer toutes les données de psadm_monitor avec une requête SQL brute
-    // pour gérer les dates invalides (0000-00-00) que Prisma ne peut pas lire directement
+    // Lecture seule de psadm_monitor.
+    // Une monitordt NULL ou 0000-00-00 reste NULL dans le SELECT.
+    // La date écrite dans harpmonitor est déterministe : la même ligne source
+    // produit toujours le même monitordt, jamais l'horloge courante.
+    // NULL -> 1970-01-01 00:00:01 UTC, zéro -> 1970-01-01 00:00:02 UTC,
+    // autre date illisible -> 1970-01-01 00:00:03 UTC.
+    // La clé primaire legacy est (env, monitordt) : une seule ligne invalide de chaque sorte par env.
     const allMonitorDataRaw = await prisma.$queryRaw<Array<{
       env: string;
+      monitordtKind: string;
       monitordt: string | null;
       dbstatus: number | null;
       nbdom: number | null;
@@ -2977,6 +3029,12 @@ export const importerLesMonitors = async () => {
     }>>`
       SELECT 
         env,
+        CASE
+          WHEN monitordt IS NULL THEN 'null'
+          WHEN monitordt = '0000-00-00 00:00:00'
+            OR DATE(monitordt) = '0000-00-00' THEN 'zero'
+          ELSE 'valid'
+        END as monitordtKind,
         CASE 
           WHEN monitordt IS NULL 
              OR monitordt = '0000-00-00 00:00:00' 
@@ -3057,27 +3115,25 @@ export const importerLesMonitors = async () => {
           return null;
         }
 
-        // Convertir monitordt (qui est maintenant une chaîne ou null depuis la requête SQL)
+        // Identité stable. TIMESTAMP MySQL commence à 1970-01-01 00:00:01 UTC.
+        const invalidMonitorDate = (seconds: number) => new Date(Date.UTC(1970, 0, 1, 0, 0, seconds));
+        const kind = String(
+          monitor.monitordtKind
+          ?? (monitor as { monitordtkind?: string }).monitordtkind
+          ?? ""
+        ).toLowerCase();
         let monitordtDate: Date;
-        if (!monitor.monitordt) {
-          // Si null, utiliser la date actuelle
-          monitordtDate = new Date();
+        if (kind === "zero") {
+          monitordtDate = invalidMonitorDate(2);
+        } else if (kind === "null" || !monitor.monitordt) {
+          monitordtDate = invalidMonitorDate(1);
         } else {
-          try {
-            const date = new Date(monitor.monitordt);
-            if (isNaN(date.getTime()) || date.getFullYear() < 1900) {
-              monitordtDate = new Date();
-            } else {
-              monitordtDate = date;
-            }
-          } catch {
-            monitordtDate = new Date();
+          const date = new Date(monitor.monitordt);
+          if (isNaN(date.getTime()) || date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2037) {
+            monitordtDate = invalidMonitorDate(3);
+          } else {
+            monitordtDate = date;
           }
-        }
-        
-        // S'assurer que la date est valide avant de continuer
-        if (isNaN(monitordtDate.getTime())) {
-          monitordtDate = new Date();
         }
 
         // Convertir les dates optionnelles (déjà filtrées par la requête SQL)
@@ -3263,7 +3319,19 @@ export const importerLesMonitors = async () => {
       }
     });
 
-    if (monitorsToImport.length === 0) {
+    // Une même identité envId+monitordt ne doit être insérée qu'une fois,
+    // même si deux lectures source aboutissent au même sentinelle.
+    const identitySeen = new Set<string>();
+    const uniqueMonitorsToImport = monitorsToImport.filter((data) => {
+      const key = `${data.envId}-${normalizeDate(data.monitordt)}`;
+      if (identitySeen.has(key)) {
+        return false;
+      }
+      identitySeen.add(key);
+      return true;
+    });
+
+    if (uniqueMonitorsToImport.length === 0) {
       return { 
         info: "Toutes les données de monitoring sont déjà importées. Aucun nouveau enregistrement à importer.",
         details: {
@@ -3315,10 +3383,10 @@ export const importerLesMonitors = async () => {
       throw new Error('Toutes les tentatives ont échoué');
     };
 
-    for (let i = 0; i < monitorsToImport.length; i += BATCH_SIZE) {
-      const batch = monitorsToImport.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < uniqueMonitorsToImport.length; i += BATCH_SIZE) {
+      const batch = uniqueMonitorsToImport.slice(i, i + BATCH_SIZE);
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(monitorsToImport.length / BATCH_SIZE);
+      const totalBatches = Math.ceil(uniqueMonitorsToImport.length / BATCH_SIZE);
       
       try {
         // Afficher la progression
@@ -3337,7 +3405,7 @@ export const importerLesMonitors = async () => {
         totalImported += result.count;
         
         // Petit délai entre les lots pour laisser la connexion se récupérer
-        if (i + BATCH_SIZE < monitorsToImport.length) {
+        if (i + BATCH_SIZE < uniqueMonitorsToImport.length) {
           await new Promise(resolve => setTimeout(resolve, 200)); // 200ms entre les lots
         }
       } catch (error) {
@@ -3386,27 +3454,15 @@ export const importerLesMonitors = async () => {
       }
     }
 
-    if (errors.length > 0 && totalImported === 0) {
+    if (totalImported < uniqueMonitorsToImport.length) {
       return {
-        error: `Aucune donnée n'a pu être importée. ${errors.length} erreur(s) rencontrée(s).`,
+        error: `${uniqueMonitorsToImport.length - totalImported} ligne(s) de monitoring attendue(s) n'ont pas été importées. ${errors.length} erreur(s) de lot.`,
         details: {
           totalInSource: allMonitorDataRaw.length,
           totalInHarpmonitor: existingMonitors.length,
           imported: totalImported,
-          errors: errors.slice(0, 5) // Limiter à 5 erreurs pour éviter un message trop long
-        }
-      };
-    }
-
-    if (errors.length > 0) {
-      return {
-        warning: `${totalImported} donnée(s) de monitoring importée(s) avec ${errors.length} erreur(s).`,
-        details: {
-          totalInSource: allMonitorDataRaw.length,
-          totalInHarpmonitor: existingMonitors.length + totalImported,
-          imported: totalImported,
-          skipped: allDataToImport.length - monitorsToImport.length,
-          errors: errors.slice(0, 3) // Limiter à 3 erreurs
+          expected: uniqueMonitorsToImport.length,
+          errors: errors.slice(0, 5)
         }
       };
     }
@@ -3426,7 +3482,7 @@ export const importerLesMonitors = async () => {
         totalInSource: allMonitorDataRaw.length,
         totalInHarpmonitor: existingMonitors.length + totalImported,
         imported: totalImported,
-        skipped: allDataToImport.length - monitorsToImport.length,
+        skipped: allDataToImport.length - uniqueMonitorsToImport.length,
         ignoredEnvironments: ignoredEnvs.size,
         ignoredRecords: ignoredCount,
         ignoredEnvNames: ignoredEnvNames
