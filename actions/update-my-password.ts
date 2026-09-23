@@ -57,7 +57,6 @@ export async function updateMyPassword(formData: FormData) {
       select: {
         id: true,
         password: true,
-        netid: true,
       },
     });
 
@@ -99,21 +98,6 @@ export async function updateMyPassword(formData: FormData) {
         password: hashedPassword,
       },
     });
-
-    // Mettre à jour aussi dans psadm_user si l'utilisateur existe
-    if (user.netid) {
-      try {
-        await db.psadm_user.update({
-          where: { netid: user.netid },
-          data: {
-            mdp: validatedData.newPassword, // Stocké en clair dans psadm_user
-          },
-        });
-      } catch {
-        // Si l'utilisateur n'existe pas dans psadm_user, on continue quand même
-        console.warn("Utilisateur non trouvé dans psadm_user:", user.netid);
-      }
-    }
 
     revalidatePath("/user/profile");
     
