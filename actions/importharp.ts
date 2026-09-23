@@ -2987,61 +2987,178 @@ export const importerLesMenuRoles = async () => {
 };
 
 /**
- * Importe les données de monitoring de psadm_monitor vers harpmonitor
- * Détecte et importe uniquement les enregistrements manquants (delta)
- * 
- * @returns Un objet avec success/info/warning/error et les détails de l'importation
+ * Taille d'une page lue sur la clé primaire (env, monitordt).
+ * 2 000 lignes restent négligeables en mémoire et permettent un parcours d'index.
+ */
+const MONITOR_PAGE_SIZE = 2000;
+
+/**
+ * Taille d'un createMany.
+ * 500 lignes × 15 colonnes = 7 500 paramètres, très en dessous des limites
+ * usuelles de paquets MySQL, tout en divisant par dix le nombre d'allers-retours
+ * par rapport aux anciens lots de 50.
+ */
+const MONITOR_INSERT_BATCH_SIZE = 500;
+
+const MONITOR_LOG_EVERY_PAGES = 50;
+
+type MonitorInsertRow = {
+  envId: number;
+  monitordt: Date;
+  dbstatus: number | null;
+  nbdom: number | null;
+  asstatus1: number | null;
+  asstatus2: number | null;
+  asstatus3: number | null;
+  asstatus4: number | null;
+  asstatus5: number | null;
+  lastasdt: Date | null;
+  prcsunxstatus: number | null;
+  lastprcsunxdt: Date | null;
+  prcsntstatus: number | null;
+  lastprcsntdt: Date | null;
+  lastlogin: string | null;
+  lastlogindt: Date | null;
+};
+
+type MonitorCursor = {
+  env: string;
+  dt: string;
+};
+
+/**
+ * Clé logique envId + instant UTC tronqué à la seconde.
+ * La même Date, écrite puis relue par Prisma, produit la même clé.
+ */
+function monitorLogicalKey(envId: number, monitordt: Date): string {
+  const normalized = new Date(monitordt.getTime());
+  normalized.setUTCMilliseconds(0);
+  return `${envId}-${normalized.toISOString().slice(0, 19)}`;
+}
+
+/**
+ * Sentinelles historiques, en UTC, indépendantes de l'horloge courante.
+ * 1 = NULL, 2 = date zéro, 3 = autre date illisible.
+ */
+function sentinelMonitorDate(seconds: 1 | 2 | 3): Date {
+  return new Date(Date.UTC(1970, 0, 1, 0, 0, seconds));
+}
+
+function monitorField(row: Record<string, unknown>, name: string): unknown {
+  if (name in row) {
+    return row[name];
+  }
+  return row[name.toLowerCase()];
+}
+
+function asMonitorInt(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const numeric = typeof value === "bigint" ? Number(value) : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function asMonitorUnix(value: unknown): number | null {
+  return asMonitorInt(value);
+}
+
+function asMonitorCursor(value: unknown): string {
+  if (value instanceof Date) {
+    const pad = (part: number) => String(part).padStart(2, "0");
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+  }
+  return String(value ?? "").trim();
+}
+
+/**
+ * Date optionnelle déjà filtrée en SQL. Une valeur illisible reste null.
+ */
+function parseOptionalMonitorDate(value: unknown): Date | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    const date = value instanceof Date ? value : new Date(String(value));
+    if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+      return date;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Instant de destination.
+ * Les dates valides viennent de UNIX_TIMESTAMP, donc de l'instant UTC réel
+ * du TIMESTAMP, pas d'une chaîne interprétée selon le fuseau.
+ */
+function destinationMonitorDate(kind: string, unixValue: number | null): Date {
+  if (kind === "zero") {
+    return sentinelMonitorDate(2);
+  }
+  if (kind === "null" || kind === "") {
+    return sentinelMonitorDate(1);
+  }
+  if (unixValue === null) {
+    return sentinelMonitorDate(3);
+  }
+  const date = new Date(unixValue * 1000);
+  if (isNaN(date.getTime()) || date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2037) {
+    return sentinelMonitorDate(3);
+  }
+  return date;
+}
+
+/**
+ * Importe psadm_monitor vers harpmonitor par pages sur la clé (env, monitordt).
+ * psadm_monitor est lue uniquement. harpmonitor n'est jamais chargée en entier :
+ * chaque lot ne relit que les clés susceptibles de collision.
+ *
+ * @returns Succès avec le nombre créé, un info si tout est déjà importé,
+ * ou error si une insertion échoue. Les lignes déjà écrites sont conservées.
  */
 export const importerLesMonitors = async () => {
-  try {
-    // Vérifier si la table envsharp contient des données
-    const countEnvs = await prisma.envsharp.count();
-    
-    if (countEnvs === 0) {
-      return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
-    }
+  const ignoredEnvs = new Map<string, number>();
+  let sourceLue = 0;
+  let sourceJoignable = 0;
+  let dejaPresents = 0;
+  let crees = 0;
+  let doublonsInternes = 0;
+  let pagesTraitees = 0;
 
-    // Lecture seule de psadm_monitor.
-    // Une monitordt NULL ou 0000-00-00 reste NULL dans le SELECT.
-    // La date écrite dans harpmonitor est déterministe : la même ligne source
-    // produit toujours le même monitordt, jamais l'horloge courante.
-    // NULL -> 1970-01-01 00:00:01 UTC, zéro -> 1970-01-01 00:00:02 UTC,
-    // autre date illisible -> 1970-01-01 00:00:03 UTC.
-    // La clé primaire legacy est (env, monitordt) : une seule ligne invalide de chaque sorte par env.
-    const allMonitorDataRaw = await prisma.$queryRaw<Array<{
-      env: string;
-      monitordtKind: string;
-      monitordt: string | null;
-      dbstatus: number | null;
-      nbdom: number | null;
-      asstatus1: number | null;
-      asstatus2: number | null;
-      asstatus3: number | null;
-      asstatus4: number | null;
-      asstatus5: number | null;
-      lastasdt: string | null;
-      prcsunxstatus: number | null;
-      lastprcsunxdt: string | null;
-      prcsntstatus: number | null;
-      lastprcsntdt: string | null;
-      lastlogin: string | null;
-      lastlogindt: string | null;
-    }>>`
-      SELECT 
+  const details = () => {
+    const enregistrementsIgnores = Array.from(ignoredEnvs.values()).reduce((sum, count) => sum + count, 0);
+    return {
+      sourceLue,
+      sourceJoignable,
+      environnementsAbsents: ignoredEnvs.size,
+      enregistrementsIgnores,
+      dejaPresents,
+      crees,
+      doublonsInternes,
+      pagesTraitees,
+      ignoredEnvNames: Array.from(ignoredEnvs.keys()),
+    };
+  };
+
+  const selectList = `
         env,
+        DATE_FORMAT(monitordt, '%Y-%m-%d %H:%i:%s') AS cursordt,
         CASE
           WHEN monitordt IS NULL THEN 'null'
           WHEN monitordt = '0000-00-00 00:00:00'
             OR DATE(monitordt) = '0000-00-00' THEN 'zero'
           ELSE 'valid'
-        END as monitordtKind,
-        CASE 
-          WHEN monitordt IS NULL 
-             OR monitordt = '0000-00-00 00:00:00' 
-             OR DATE(monitordt) = '0000-00-00'
-          THEN NULL 
-          ELSE monitordt 
-        END as monitordt,
+        END AS monitordtkind,
+        CASE
+          WHEN monitordt IS NULL
+            OR monitordt = '0000-00-00 00:00:00'
+            OR DATE(monitordt) = '0000-00-00'
+          THEN NULL
+          ELSE UNIX_TIMESTAMP(monitordt)
+        END AS monitordtunix,
         dbstatus,
         nbdom,
         asstatus1,
@@ -3049,444 +3166,214 @@ export const importerLesMonitors = async () => {
         asstatus3,
         asstatus4,
         asstatus5,
-        CASE 
-          WHEN lastasdt IS NULL 
-             OR lastasdt = '0000-00-00 00:00:00' 
-             OR DATE(lastasdt) = '0000-00-00'
-          THEN NULL 
-          ELSE lastasdt 
-        END as lastasdt,
+        CASE
+          WHEN lastasdt IS NULL
+            OR lastasdt = '0000-00-00 00:00:00'
+            OR DATE(lastasdt) = '0000-00-00'
+          THEN NULL
+          ELSE lastasdt
+        END AS lastasdt,
         prcsunxstatus,
-        CASE 
-          WHEN lastprcsunxdt IS NULL 
-             OR lastprcsunxdt = '0000-00-00 00:00:00' 
-             OR DATE(lastprcsunxdt) = '0000-00-00'
-          THEN NULL 
-          ELSE lastprcsunxdt 
-        END as lastprcsunxdt,
+        CASE
+          WHEN lastprcsunxdt IS NULL
+            OR lastprcsunxdt = '0000-00-00 00:00:00'
+            OR DATE(lastprcsunxdt) = '0000-00-00'
+          THEN NULL
+          ELSE lastprcsunxdt
+        END AS lastprcsunxdt,
         prcsntstatus,
-        CASE 
-          WHEN lastprcsntdt IS NULL 
-             OR lastprcsntdt = '0000-00-00 00:00:00' 
-             OR DATE(lastprcsntdt) = '0000-00-00'
-          THEN NULL 
-          ELSE lastprcsntdt 
-        END as lastprcsntdt,
+        CASE
+          WHEN lastprcsntdt IS NULL
+            OR lastprcsntdt = '0000-00-00 00:00:00'
+            OR DATE(lastprcsntdt) = '0000-00-00'
+          THEN NULL
+          ELSE lastprcsntdt
+        END AS lastprcsntdt,
         lastlogin,
-        CASE 
-          WHEN lastlogindt IS NULL 
-             OR lastlogindt = '0000-00-00 00:00:00' 
-             OR DATE(lastlogindt) = '0000-00-00'
-          THEN NULL 
-          ELSE lastlogindt 
-        END as lastlogindt
-      FROM psadm_monitor
-      ORDER BY env ASC, monitordt DESC
-    `;
+        CASE
+          WHEN lastlogindt IS NULL
+            OR lastlogindt = '0000-00-00 00:00:00'
+            OR DATE(lastlogindt) = '0000-00-00'
+          THEN NULL
+          ELSE lastlogindt
+        END AS lastlogindt`;
 
-    if (allMonitorDataRaw.length === 0) {
-      return { info: "Aucune donnée de monitoring trouvée à importer." };
+  try {
+    const countEnvs = await prisma.envsharp.count();
+    if (countEnvs === 0) {
+      return { info: "La table envsharp est vide. Veuillez d'abord importer les environnements." };
     }
 
-    // Récupérer tous les environnements de envsharp pour le mapping
     const allEnvs = await prisma.envsharp.findMany({
-      select: {
-        id: true,
-        env: true
-      }
+      select: { id: true, env: true },
     });
+    const envMap = new Map(allEnvs.map((env) => [env.env, env.id]));
 
-    // Créer un Map pour une recherche rapide des envId
-    const envMap = new Map(allEnvs.map(env => [env.env, env.id]));
+    let cursor: MonitorCursor | null = null;
 
-    // Préparer toutes les données pour l'import avec validation
-    // Compter les environnements ignorés pour éviter de logger chaque occurrence
-    const ignoredEnvs = new Map<string, number>();
-    
-    const allDataToImport = allMonitorDataRaw
-      .map(monitor => {
-        const envId = envMap.get(monitor.env);
-        
-        // Ignorer les enregistrements sans environnement correspondant dans envsharp
-        if (!envId) {
-          // Compter les occurrences au lieu de logger chaque fois
-          const count = ignoredEnvs.get(monitor.env) || 0;
-          ignoredEnvs.set(monitor.env, count + 1);
-          return null;
-        }
-
-        // Identité stable. TIMESTAMP MySQL commence à 1970-01-01 00:00:01 UTC.
-        const invalidMonitorDate = (seconds: number) => new Date(Date.UTC(1970, 0, 1, 0, 0, seconds));
-        const kind = String(
-          monitor.monitordtKind
-          ?? (monitor as { monitordtkind?: string }).monitordtkind
-          ?? ""
-        ).toLowerCase();
-        let monitordtDate: Date;
-        if (kind === "zero") {
-          monitordtDate = invalidMonitorDate(2);
-        } else if (kind === "null" || !monitor.monitordt) {
-          monitordtDate = invalidMonitorDate(1);
-        } else {
-          const date = new Date(monitor.monitordt);
-          if (isNaN(date.getTime()) || date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2037) {
-            monitordtDate = invalidMonitorDate(3);
-          } else {
-            monitordtDate = date;
-          }
-        }
-
-        // Convertir les dates optionnelles (déjà filtrées par la requête SQL)
-        let lastasdtDate: Date | null = null;
-        if (monitor.lastasdt) {
-          try {
-            const date = new Date(monitor.lastasdt);
-            if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
-              lastasdtDate = date;
-            }
-          } catch {
-            // Garder null si la conversion échoue
-          }
-        }
-
-        let lastprcsunxdtDate: Date | null = null;
-        if (monitor.lastprcsunxdt) {
-          try {
-            const date = new Date(monitor.lastprcsunxdt);
-            if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
-              lastprcsunxdtDate = date;
-            }
-          } catch {
-            // Garder null si la conversion échoue
-          }
-        }
-
-        let lastprcsntdtDate: Date | null = null;
-        if (monitor.lastprcsntdt) {
-          try {
-            const date = new Date(monitor.lastprcsntdt);
-            if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
-              lastprcsntdtDate = date;
-            }
-          } catch {
-            // Garder null si la conversion échoue
-          }
-        }
-
-        let lastlogindtDate: Date | null = null;
-        if (monitor.lastlogindt) {
-          try {
-            const date = new Date(monitor.lastlogindt);
-            if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
-              lastlogindtDate = date;
-            }
-          } catch {
-            // Garder null si la conversion échoue
-          }
-        }
-
-        return {
-          envId: envId,
-          monitordt: monitordtDate,
-          dbstatus: monitor.dbstatus ?? null,
-          nbdom: monitor.nbdom ?? null,
-          asstatus1: monitor.asstatus1 ?? null,
-          asstatus2: monitor.asstatus2 ?? null,
-          asstatus3: monitor.asstatus3 ?? null,
-          asstatus4: monitor.asstatus4 ?? null,
-          asstatus5: monitor.asstatus5 ?? null,
-          lastasdt: lastasdtDate,
-          prcsunxstatus: monitor.prcsunxstatus ?? null,
-          lastprcsunxdt: lastprcsunxdtDate,
-          prcsntstatus: monitor.prcsntstatus ?? null,
-          lastprcsntdt: lastprcsntdtDate,
-          lastlogin: monitor.lastlogin ?? null,
-          lastlogindt: lastlogindtDate
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-
-    // Logger un résumé des environnements ignorés si nécessaire
-    if (ignoredEnvs.size > 0) {
-      const ignoredSummary = Array.from(ignoredEnvs.entries())
-        .map(([env, count]) => `${env} (${count} enregistrement(s))`)
-        .join(', ');
-      const ignoredEnvNames = Array.from(ignoredEnvs.keys());
-      
-      console.warn(`[importerLesMonitors] ${ignoredEnvs.size} environnement(s) ignoré(s) car non trouvé(s) dans envsharp: ${ignoredSummary}`);
-      console.warn(`[importerLesMonitors] 💡 Suggestion: Exécutez d'abord 'importListEnvs()' pour importer ces environnements depuis psadm_env vers envsharp`);
-      console.warn(`[importerLesMonitors] Environnements à importer: ${ignoredEnvNames.join(', ')}`);
-      
-      // Vérifier si ces environnements existent dans psadm_env
-      const envsInPsadmEnv = await prisma.psadm_env.findMany({
-        where: {
-          env: {
-            in: ignoredEnvNames
-          }
-        },
-        select: {
-          env: true
-        }
-      });
-      
-      const envsInPsadmEnvNames = envsInPsadmEnv.map(e => e.env);
-      const envsNotInPsadmEnv = ignoredEnvNames.filter(env => !envsInPsadmEnvNames.includes(env));
-      
-      if (envsInPsadmEnvNames.length > 0) {
-        console.warn(`[importerLesMonitors] ✓ ${envsInPsadmEnvNames.length} environnement(s) trouvé(s) dans psadm_env: ${envsInPsadmEnvNames.join(', ')}`);
-        console.warn(`[importerLesMonitors] → Ces environnements peuvent être importés avec 'importListEnvs()'`);
-      }
-      
-      if (envsNotInPsadmEnv.length > 0) {
-        console.warn(`[importerLesMonitors] ⚠ ${envsNotInPsadmEnv.length} environnement(s) non trouvé(s) dans psadm_env: ${envsNotInPsadmEnv.join(', ')}`);
-        console.warn(`[importerLesMonitors] → Ces environnements n'existent pas dans psadm_env et ne peuvent pas être importés`);
-      }
-    }
-
-    if (allDataToImport.length === 0) {
-      const ignoredEnvNames = Array.from(ignoredEnvs.keys());
-      const ignoredCount = Array.from(ignoredEnvs.values()).reduce((sum, count) => sum + count, 0);
-      
-      // Vérifier si ces environnements existent dans psadm_env
-      let suggestion = "";
-      if (ignoredEnvs.size > 0) {
-        const envsInPsadmEnv = await prisma.psadm_env.findMany({
-          where: {
-            env: {
-              in: ignoredEnvNames
-            }
-          },
-          select: {
-            env: true
-          }
-        });
-        
-        if (envsInPsadmEnv.length > 0) {
-          suggestion = ` Exécutez d'abord 'importListEnvs()' pour importer ${envsInPsadmEnv.length} environnement(s) depuis psadm_env vers envsharp.`;
-        }
-      }
-      
-      return { 
-        info: `Aucune donnée de monitoring valide trouvée à importer.${suggestion}`,
-        details: {
-          totalInSource: allMonitorDataRaw.length,
-          ignoredEnvironments: ignoredEnvs.size,
-          ignoredRecords: ignoredCount,
-          ignoredEnvNames: ignoredEnvNames
-        }
-      };
-    }
-
-    // Récupérer les données de monitoring déjà présentes dans harpmonitor
-    const existingMonitors = await prisma.harpmonitor.findMany({
-      select: {
-        envId: true,
-        monitordt: true
-      }
-    });
-
-    // Fonction pour normaliser une date (arrondir à la seconde pour éviter les problèmes de précision)
-    const normalizeDate = (date: Date): string => {
-      const normalized = new Date(date);
-      normalized.setMilliseconds(0);
-      return normalized.toISOString().slice(0, 19).replace('T', ' ');
-    };
-
-    // Créer un Set des monitors existants pour une recherche rapide
-    // Clé unique: envId + monitordt normalisé (format YYYY-MM-DD HH:mm:ss)
-    const existingMonitorsSet = new Set(
-      existingMonitors.map(monitor => {
-        try {
-          const normalized = normalizeDate(monitor.monitordt);
-          return `${monitor.envId}-${normalized}`;
-        } catch {
-          // Si la date est invalide, utiliser le timestamp
-          return `${monitor.envId}-${monitor.monitordt.getTime()}`;
-        }
-      })
-    );
-
-    // Filtrer uniquement les monitors qui n'existent pas encore (delta)
-    const monitorsToImport = allDataToImport.filter(data => {
-      try {
-        const normalized = normalizeDate(data.monitordt);
-        const key = `${data.envId}-${normalized}`;
-        return !existingMonitorsSet.has(key);
-      } catch {
-        // Si la normalisation échoue, utiliser le timestamp
-        const key = `${data.envId}-${data.monitordt.getTime()}`;
-        return !existingMonitorsSet.has(key);
-      }
-    });
-
-    // Une même identité envId+monitordt ne doit être insérée qu'une fois,
-    // même si deux lectures source aboutissent au même sentinelle.
-    const identitySeen = new Set<string>();
-    const uniqueMonitorsToImport = monitorsToImport.filter((data) => {
-      const key = `${data.envId}-${normalizeDate(data.monitordt)}`;
-      if (identitySeen.has(key)) {
-        return false;
-      }
-      identitySeen.add(key);
-      return true;
-    });
-
-    if (uniqueMonitorsToImport.length === 0) {
-      return { 
-        info: "Toutes les données de monitoring sont déjà importées. Aucun nouveau enregistrement à importer.",
-        details: {
-          totalInSource: allDataToImport.length,
-          totalInHarpmonitor: existingMonitors.length,
-          imported: 0
-        }
-      };
-    }
-
-    // Si c'est le premier import (table vide), réinitialiser l'auto-increment
-    if (existingMonitors.length === 0) {
-      await prisma.$executeRaw`ALTER TABLE harpmonitor AUTO_INCREMENT = 1`;
-    }
-
-    // Insérer uniquement les nouvelles données de monitoring
-    // Traiter par petits lots avec délais pour éviter les erreurs de connexion (ECONNRESET)
-    const BATCH_SIZE = 50; // Réduit de 100 à 50 pour éviter les timeouts
-    let totalImported = 0;
-    const errors: string[] = [];
-    
-    // Fonction de retry pour les erreurs de connexion
-    const retryOperation = async <T>(
-      operation: () => Promise<T>,
-      maxRetries: number = 3,
-      delay: number = 1000
-    ): Promise<T> => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          return await operation();
-        } catch (error) {
-          const errorObj = error as { code?: string; message?: string };
-          const isConnectionError = error instanceof Error && (
-            error.message.includes('ECONNRESET') ||
-            error.message.includes('aborted') ||
-            errorObj.code === 'ECONNRESET' ||
-            errorObj.code === 'P1001' ||
-            errorObj.code === 'P1017'
+    for (;;) {
+      const page = cursor
+        ? await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+            `SELECT ${selectList}
+             FROM psadm_monitor
+             WHERE env > ? OR (env = ? AND monitordt > ?)
+             ORDER BY env ASC, monitordt ASC
+             LIMIT ${MONITOR_PAGE_SIZE}`,
+            cursor.env,
+            cursor.env,
+            cursor.dt
+          )
+        : await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+            `SELECT ${selectList}
+             FROM psadm_monitor
+             ORDER BY env ASC, monitordt ASC
+             LIMIT ${MONITOR_PAGE_SIZE}`
           );
-          
-          if (isConnectionError && attempt < maxRetries) {
-            console.warn(`[importerLesMonitors] Tentative ${attempt}/${maxRetries} échouée, nouvelle tentative dans ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay * attempt)); // Délai progressif
-            continue;
+
+      if (page.length === 0) {
+        break;
+      }
+
+      pagesTraitees += 1;
+      sourceLue += page.length;
+
+      const lastRow = page[page.length - 1];
+      const nextCursor: MonitorCursor = {
+        env: String(monitorField(lastRow, "env") ?? "").trim(),
+        dt: asMonitorCursor(monitorField(lastRow, "cursordt")),
+      };
+      if (!nextCursor.env || !nextCursor.dt) {
+        return {
+          error: "Import des monitors interrompu : curseur source illisible. Les lignes déjà insérées sont conservées.",
+          details: details(),
+        };
+      }
+      if (cursor && cursor.env === nextCursor.env && cursor.dt === nextCursor.dt) {
+        return {
+          error: "Import des monitors interrompu : le curseur n'avance pas. Les lignes déjà insérées sont conservées.",
+          details: details(),
+        };
+      }
+
+      const seenInPage = new Set<string>();
+      const toInsert: MonitorInsertRow[] = [];
+
+      for (const row of page) {
+        const envName = String(monitorField(row, "env") ?? "");
+        const envId = envMap.get(envName);
+        if (!envId) {
+          ignoredEnvs.set(envName, (ignoredEnvs.get(envName) ?? 0) + 1);
+          continue;
+        }
+
+        sourceJoignable += 1;
+        const kind = String(monitorField(row, "monitordtkind") ?? "").toLowerCase();
+        const monitordt = destinationMonitorDate(kind, asMonitorUnix(monitorField(row, "monitordtunix")));
+        const key = monitorLogicalKey(envId, monitordt);
+        if (seenInPage.has(key)) {
+          doublonsInternes += 1;
+          continue;
+        }
+        seenInPage.add(key);
+
+        const lastloginRaw = monitorField(row, "lastlogin");
+        toInsert.push({
+          envId,
+          monitordt,
+          dbstatus: asMonitorInt(monitorField(row, "dbstatus")),
+          nbdom: asMonitorInt(monitorField(row, "nbdom")),
+          asstatus1: asMonitorInt(monitorField(row, "asstatus1")),
+          asstatus2: asMonitorInt(monitorField(row, "asstatus2")),
+          asstatus3: asMonitorInt(monitorField(row, "asstatus3")),
+          asstatus4: asMonitorInt(monitorField(row, "asstatus4")),
+          asstatus5: asMonitorInt(monitorField(row, "asstatus5")),
+          lastasdt: parseOptionalMonitorDate(monitorField(row, "lastasdt")),
+          prcsunxstatus: asMonitorInt(monitorField(row, "prcsunxstatus")),
+          lastprcsunxdt: parseOptionalMonitorDate(monitorField(row, "lastprcsunxdt")),
+          prcsntstatus: asMonitorInt(monitorField(row, "prcsntstatus")),
+          lastprcsntdt: parseOptionalMonitorDate(monitorField(row, "lastprcsntdt")),
+          lastlogin: lastloginRaw === null || lastloginRaw === undefined ? null : String(lastloginRaw),
+          lastlogindt: parseOptionalMonitorDate(monitorField(row, "lastlogindt")),
+        });
+      }
+
+      for (let offset = 0; offset < toInsert.length; offset += MONITOR_INSERT_BATCH_SIZE) {
+        const batch = toInsert.slice(offset, offset + MONITOR_INSERT_BATCH_SIZE);
+        const existing = await prisma.harpmonitor.findMany({
+          where: {
+            OR: batch.map((row) => ({
+              envId: row.envId,
+              monitordt: row.monitordt,
+            })),
+          },
+          select: { envId: true, monitordt: true },
+        });
+        const existingKeys = new Set(existing.map((row) => monitorLogicalKey(row.envId, row.monitordt)));
+        const missing = batch.filter((row) => !existingKeys.has(monitorLogicalKey(row.envId, row.monitordt)));
+        dejaPresents += batch.length - missing.length;
+
+        if (missing.length === 0) {
+          continue;
+        }
+
+        try {
+          const inserted = await prisma.harpmonitor.createMany({ data: missing });
+          if (inserted.count !== missing.length) {
+            return {
+              error: `Import des monitors interrompu : ${inserted.count} ligne(s) créée(s) sur ${missing.length} attendue(s). Les lignes déjà insérées sont conservées. Relancer en mode reprise.`,
+              details: { ...details(), crees: crees + inserted.count },
+            };
           }
-          throw error;
+          crees += inserted.count;
+        } catch (insertError) {
+          const message = insertError instanceof Error ? insertError.message : String(insertError);
+          console.error("[importerLesMonitors] Échec d'insertion:", insertError);
+          return {
+            error: `Import des monitors interrompu : ${message}. Les lignes déjà insérées sont conservées. Relancer en mode reprise.`,
+            details: details(),
+          };
         }
       }
-      throw new Error('Toutes les tentatives ont échoué');
-    };
 
-    for (let i = 0; i < uniqueMonitorsToImport.length; i += BATCH_SIZE) {
-      const batch = uniqueMonitorsToImport.slice(i, i + BATCH_SIZE);
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(uniqueMonitorsToImport.length / BATCH_SIZE);
-      
-      try {
-        // Afficher la progression
-        if (batchNumber % 10 === 0 || batchNumber === 1) {
-          console.log(`[importerLesMonitors] Traitement du lot ${batchNumber}/${totalBatches} (${batch.length} enregistrement(s))...`);
-        }
-        
-        // Utiliser retry pour les erreurs de connexion
-        const result = await retryOperation(async () => {
-          return await prisma.harpmonitor.createMany({
-            data: batch,
-            skipDuplicates: true // Sécurité supplémentaire pour éviter les doublons
-          });
-        });
-        
-        totalImported += result.count;
-        
-        // Petit délai entre les lots pour laisser la connexion se récupérer
-        if (i + BATCH_SIZE < uniqueMonitorsToImport.length) {
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms entre les lots
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        const errorObj = error as { code?: string };
-        const isConnectionError = errorMsg.includes('ECONNRESET') || 
-                                 errorMsg.includes('aborted') ||
-                                 errorObj.code === 'ECONNRESET';
-        
-        errors.push(`Lot ${batchNumber}: ${errorMsg}`);
-        console.error(`[importerLesMonitors] Erreur lors de l'import du lot ${batchNumber}:`, error);
-        
-        // Pour les erreurs de connexion, essayer d'insérer un par un avec délais
-        if (isConnectionError) {
-          console.warn(`[importerLesMonitors] Erreur de connexion détectée, insertion un par un avec délais...`);
-          for (const item of batch) {
-            try {
-              await retryOperation(async () => {
-                await prisma.harpmonitor.create({
-                  data: item
-                });
-              }, 2, 500); // 2 tentatives avec 500ms de délai
-              totalImported++;
-              
-              // Petit délai entre chaque insertion pour éviter de surcharger la connexion
-              await new Promise(resolve => setTimeout(resolve, 50));
-            } catch (itemError) {
-              const itemErrorMsg = itemError instanceof Error ? itemError.message : String(itemError);
-              console.error(`[importerLesMonitors] Erreur persistante pour envId ${item.envId}, monitordt ${item.monitordt}:`, itemErrorMsg);
-            }
-          }
-        } else {
-          // Pour les autres erreurs, essayer d'insérer un par un sans délai supplémentaire
-          for (const item of batch) {
-            try {
-              await prisma.harpmonitor.create({
-                data: item
-              });
-              totalImported++;
-            } catch (itemError) {
-              const itemErrorMsg = itemError instanceof Error ? itemError.message : String(itemError);
-              console.error(`[importerLesMonitors] Erreur pour envId ${item.envId}, monitordt ${item.monitordt}:`, itemErrorMsg);
-            }
-          }
-        }
+      cursor = nextCursor;
+
+      if (pagesTraitees % MONITOR_LOG_EVERY_PAGES === 0) {
+        console.log(`[importerLesMonitors] Page ${pagesTraitees} : ${sourceLue} lue(s), ${crees} créée(s), ${dejaPresents} déjà présente(s).`);
+      }
+
+      if (page.length < MONITOR_PAGE_SIZE) {
+        break;
       }
     }
 
-    if (totalImported < uniqueMonitorsToImport.length) {
+    if (ignoredEnvs.size > 0) {
+      const ignoredCount = Array.from(ignoredEnvs.values()).reduce((sum, count) => sum + count, 0);
+      console.warn(`[importerLesMonitors] ${ignoredEnvs.size} environnement(s) ignoré(s), ${ignoredCount} ligne(s) : ${Array.from(ignoredEnvs.keys()).join(", ")}`);
+    }
+
+    if (sourceLue === 0) {
       return {
-        error: `${uniqueMonitorsToImport.length - totalImported} ligne(s) de monitoring attendue(s) n'ont pas été importées. ${errors.length} erreur(s) de lot.`,
-        details: {
-          totalInSource: allMonitorDataRaw.length,
-          totalInHarpmonitor: existingMonitors.length,
-          imported: totalImported,
-          expected: uniqueMonitorsToImport.length,
-          errors: errors.slice(0, 5)
-        }
+        info: "Aucune donnée de monitoring trouvée à importer.",
+        details: details(),
+      };
+    }
+
+    if (crees === 0) {
+      return {
+        info: "Toutes les données de monitoring sont déjà importées. Aucun nouveau enregistrement à importer.",
+        details: details(),
       };
     }
 
     const ignoredCount = Array.from(ignoredEnvs.values()).reduce((sum, count) => sum + count, 0);
-    const ignoredEnvNames = Array.from(ignoredEnvs.keys());
-    
-    // Construire le message de succès avec information sur les environnements ignorés
-    let successMessage = `${totalImported} nouvelle(s) donnée(s) de monitoring importée(s) avec succès !`;
+    let successMessage = `${crees} nouvelle(s) donnée(s) de monitoring importée(s) avec succès !`;
     if (ignoredEnvs.size > 0) {
       successMessage += ` (${ignoredCount} enregistrement(s) ignoré(s) pour ${ignoredEnvs.size} environnement(s) non trouvé(s) dans envsharp)`;
     }
-    
-    return { 
+
+    return {
       success: successMessage,
-      details: {
-        totalInSource: allMonitorDataRaw.length,
-        totalInHarpmonitor: existingMonitors.length + totalImported,
-        imported: totalImported,
-        skipped: allDataToImport.length - uniqueMonitorsToImport.length,
-        ignoredEnvironments: ignoredEnvs.size,
-        ignoredRecords: ignoredCount,
-        ignoredEnvNames: ignoredEnvNames
-      }
+      details: details(),
     };
   } catch (error) {
     return handlePrismaError(error, "Erreur lors de l'importation des données de monitoring", "importerLesMonitors");
