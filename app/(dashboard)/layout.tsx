@@ -5,7 +5,7 @@ import { MobileMenuButton } from "@/components/ui/mobile-menu-button";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { getAllUserRoles } from "@/actions/get-all-user-roles";
-import { formatRolesForMenu, hasAnyRole, parseRolesFromString } from "@/lib/user-roles";
+import { formatRolesForMenu, hasRole, parseRolesFromString } from "@/lib/user-roles";
 
 import Navbar from "@/components/home/Navbar";
 import MenuDash from "@/components/harp/MenuDash";
@@ -52,10 +52,9 @@ export default async function HarpLayout ( {
       allUserRolesArray = await getAllUserRoles();
     }
     
-    // Vérifier que l'utilisateur a au moins un des rôles requis pour accéder au dashboard
-    // Rôles requis : PSADMIN ou PORTAL_ADMIN
-    const requiredRoles = ["PSADMIN", "PORTAL_ADMIN"];
-    const hasRequiredRole = hasAnyRole(allUserRolesArray, requiredRoles);
+    // Accès administratif du dashboard : PORTAL_ADMIN uniquement.
+    // PSADMIN reste un rôle métier PeopleSoft et n'ouvre pas cette section.
+    const hasRequiredRole = hasRole(allUserRolesArray, "PORTAL_ADMIN");
     
      if (!hasRequiredRole) {
       // Rediriger vers la page d'accueil ou afficher un message d'accès refusé
@@ -67,7 +66,7 @@ export default async function HarpLayout ( {
               Vous n&apos;avez pas les permissions nécessaires pour accéder à cette section.
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              Rôles requis : PSADMIN ou PORTAL_ADMIN
+              Rôle requis : PORTAL_ADMIN
             </p>
             <p className="text-sm text-gray-500 mb-4">
               Vos rôles actuels : {allUserRolesArray.length > 0 ? allUserRolesArray.join(", ") : "Aucun"}

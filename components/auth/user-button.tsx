@@ -14,6 +14,7 @@ import {
     AvatarFallback
  } from "@/components/ui/avatar";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { rolesStringIncludesAny } from "@/lib/user-roles";
 import { LogoutButton } from '@/components/auth/logout-button';
 import Link from "next/link";
 import Image from "next/image";
@@ -24,6 +25,7 @@ export const UserButton = () => {
     const user = useCurrentUser();
     
     const firstInitial = user?.name?.charAt(0).toUpperCase() ?? 'U';
+    const isPortalAdmin = rolesStringIncludesAny(user?.role ?? "", ["PORTAL_ADMIN"]);
 
     return (
        <div className="flex gap-2 items-center">
@@ -69,7 +71,7 @@ export const UserButton = () => {
           </DropdownMenuItem>
          
 
-          {user?.role === 'PORTAL_ADMIN' && (
+          {isPortalAdmin && (
                 <DropdownMenuItem>
                 <Link href='/admin' className='w-full'>
                     Administration
