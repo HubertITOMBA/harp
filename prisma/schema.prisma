@@ -100,6 +100,7 @@ model envsharp {
   typenvid      Int?
   statenvId     Int?           @default(8)
   releaseId     Int?
+  scopeId       Int?
   createddt     DateTime       @default(now()) @db.Timestamp(0)
   harpenvinfo   harpenvinfo[]
   harpmonitor   harpmonitor[]
@@ -110,6 +111,7 @@ model envsharp {
   harpinstance  harpinstance?  @relation(fields: [instanceId], references: [id])
   psoftversion  psoftversion?  @relation(fields: [psversionId], references: [id])
   ptoolsversion ptoolsversion? @relation(fields: [ptversionId], references: [id])
+  harpscope     harpscope?     @relation(fields: [scopeId], references: [id], onDelete: SetNull)
 
   @@index([appli, psversion])
   @@index([harprelease])
@@ -121,6 +123,7 @@ model envsharp {
   @@index([releaseId])
   @@index([psversionId])
   @@index([ptversionId])
+  @@index([scopeId])
   @@index([env])
 }
 
@@ -178,6 +181,15 @@ model harptypebase {
   harpinstance harpinstance[]
 
   @@unique([type_base])
+}
+
+/// Périmètre d'habilitation d'un environnement. Distinct du type technique harptypebase.
+model harpscope {
+  id            Int             @id @default(autoincrement())
+  code          String          @unique @db.VarChar(16)
+  descr         String          @db.VarChar(50)
+  envsharp      envsharp[]
+  harpuserscope harpuserscope[]
 }
 
 model harpserve {
@@ -918,6 +930,7 @@ model User {
   accounts      Account[]
   session       Session[]
   harpuseroles  harpuseroles[]
+  harpuserscope harpuserscope[]
   notificationsCreated harpnotification[]
   emailsSent          harpsentemail[]
   taskItems     harptaskitem[] // Tâches assignées à cet utilisateur
@@ -966,6 +979,18 @@ model harpuseroles {
 
   @@id([userId, roleId])
   @@index([roleId])
+  @@index([userId])
+}
+
+model harpuserscope {
+  userId    Int
+  scopeId   Int
+  datmaj    DateTime  @default(now()) @db.Timestamp(0)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  harpscope harpscope @relation(fields: [scopeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, scopeId])
+  @@index([scopeId])
   @@index([userId])
 }
 
