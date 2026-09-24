@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import { equal } from 'assert';
 import { HarpserSchema } from '@/schemas';
 import { getUserRoles } from '@/actions/menurigth';
-import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
+import { parseRolesFromString, canAccessActiveMenu } from '@/lib/user-roles';
 import { EnvLink } from './EnvLink';
  
 
@@ -131,10 +131,9 @@ const Menu = async ({ DroitsUser, sessionCount }: RoleMenuProps) => {
        // (harpmenus.role + harpmenurole via harproles) on retrouve un ou plusieurs rôles identiques
        // de la fusion des rôles de l'utilisateur (User.role + harpuseroles via harproles)
        // 
-       // Le menu est affiché si :
-       // - Le menu n'a aucun rôle défini (accessible à tous) OU
-       // - Le menu a au moins un rôle défini ET l'utilisateur a au moins un rôle correspondant
-       const hasAccess = menuRolesArray.length === 0 || hasAnyRole(userRolesArray, menuRolesArray);
+       // PORTAL_ADMIN voit tous les menus actifs, y compris PRE-PRODUCTION.
+       // Les autres rôles restent sur l'intersection des rôles du menu.
+       const hasAccess = canAccessActiveMenu(userRolesArray, menuRolesArray);
        
        // Ne pas rendre le menu si l'utilisateur n'a pas accès
        if (!hasAccess) {

@@ -2,7 +2,7 @@ import Image from "next/image";
 import { UserButton } from "@/components/auth/user-button";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
-import { parseRolesFromString, hasAnyRole } from '@/lib/user-roles';
+import { parseRolesFromString, canAccessActiveMenu } from '@/lib/user-roles';
 import { NavbarMobileMenu } from "./navbar-mobile-menu";
 import { HomeLink } from "./HomeLink";
 import { NotificationBell } from "@/components/notification/NotificationBell";
@@ -85,7 +85,7 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
     // Filtrer les menus accessibles pour le menu mobile (sans doublon Accueil)
     const accessibleMenuItems = optionMenuSansAccueil.filter((item) => {
       const menuRolesArray = rolesArrayByMenuId.get(item.id) || [];
-      return menuRolesArray.length === 0 || hasAnyRole(userRolesArray, menuRolesArray);
+      return canAccessActiveMenu(userRolesArray, menuRolesArray);
     });
 
   return (
@@ -116,10 +116,9 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
                   // (harpmenus.role + harpmenurole via harproles) on retrouve un ou plusieurs rôles identiques
                   // de la fusion des rôles de l'utilisateur (User.role + harpuseroles via harproles)
                   //
-                  // Le menu est affiché si :
-                  // - Le menu n'a aucun rôle défini (accessible à tous) OU
-                  // - Le menu a au moins un rôle défini ET l'utilisateur a au moins un rôle correspondant
-                  const hasAccess = menuRolesArray.length === 0 || hasAnyRole(userRolesArray, menuRolesArray);
+                  // PORTAL_ADMIN voit tous les menus actifs.
+                  // Les autres rôles restent sur l'intersection des rôles du menu.
+                  const hasAccess = canAccessActiveMenu(userRolesArray, menuRolesArray);
                   
                   // Ne pas rendre le menu si l'utilisateur n'a pas accès
                   if (!hasAccess) {
@@ -132,7 +131,7 @@ const Navbar = async ({ DroitsUser }: RoleMenuProps) => {
                     href.startsWith("http://") || href.startsWith("https://");
 
                   return (
-                    <div className="flex gap-2" key={item.display}>
+                    <div className="flex gap-2" key={item.id}>
                       {isExternal ? (
                         <a
                           href={href}
