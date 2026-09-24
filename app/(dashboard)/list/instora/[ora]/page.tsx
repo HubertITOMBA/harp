@@ -42,11 +42,11 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
      
     // const enfInfos = await prisma.psadm_envinfo.findUnique({ where: { env: env } });  
       
-    const InfoServ = await prisma.harpserve.findFirst({
-      where: {
-        id: OraIns?.serverId
-      },
-      }); 
+    const InfoServ = OraIns.serverId != null
+      ? await prisma.harpserve.findUnique({
+          where: { id: OraIns.serverId },
+        })
+      : null;
         
       const OraInfos = await prisma.envsharp.findMany({
         where: {
@@ -176,29 +176,34 @@ const OraSinglePage = async ({ params }: { params: { ora: string } }) => {
               {/** TOP */}
               
                          <div className="bg-white w-1/3 rounded-xl shadow-xl p-2 gap-5 text-gray-500">
+                              {InfoServ ? (
+                                <>
                               <div className="w-full flex items-center gap-2 ">
-                                  <Label className="text-xl font-medium">Serveur  :</Label><Label className="text-xl font-medium uppercase">{InfoServ?.srv}</Label>
+                                  <Label className="text-xl font-medium">Serveur  :</Label><Label className="text-xl font-medium uppercase">{InfoServ.srv}</Label>
                               </div> 
                               <div className="w-full flex items-center gap-2">
-                                  <Label className="text-2xl font-medium">Ip  :</Label> <Label className="text-xl font-medium">{InfoServ?.ip}</Label>
+                                  <Label className="text-2xl font-medium">Ip  :</Label> <Label className="text-xl font-medium">{InfoServ.ip}</Label>
                               </div> 
                               <div className="w-full flex items-center gap-2">
-                              <Label className="text-2xl font-medium">Version Harp  :</Label><Label>{InfoServ?.os}</Label>
+                              <Label className="text-2xl font-medium">Version Harp  :</Label><Label>{InfoServ.os}</Label>
                               </div>
                             
                               <div className="w-full flex items-center gap-2">
-                              <Label className="text-2xl font-medium">Domaine  :</Label> <Label>{InfoServ?.domain}</Label>
+                              <Label className="text-2xl font-medium">Domaine  :</Label> <Label>{InfoServ.domain}</Label>
                               </div>
                               <div className="w-full flex items-center gap-2">
-                              <Label className="text-2xl font-medium">PS Home  :</Label><Label className="">{InfoServ?.pshome}</Label>
+                              <Label className="text-2xl font-medium">PS Home  :</Label><Label className="">{InfoServ.pshome}</Label>
                               </div>
                               <div className="w-full flex items-center gap-2">
-                              <Label className="text-2xl font-medium">Os User  :</Label> <Label>{InfoServ?.psuser}</Label>
+                              <Label className="text-2xl font-medium">Os User  :</Label> <Label>{InfoServ.psuser}</Label>
                               </div>
                               <div className="w-full flex items-center gap-2">
-                              <Label className="text-2xl font-medium">Statut  :</Label> <Label>{InfoServ?.statenvId}</Label>
+                              <Label className="text-2xl font-medium">Statut  :</Label> <Label>{InfoServ.statenvId}</Label>
                               </div>
-                              
+                                </>
+                              ) : (
+                                <p className="text-sm text-slate-600">Aucun serveur associé à cette instance.</p>
+                              )}
                        </div>
 
                     {/* <div className="bg-white  w-full rounded-xl shadow-md overflow-hidden">

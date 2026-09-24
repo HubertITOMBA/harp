@@ -2386,6 +2386,11 @@ export const importerOraInstances = async () => {
 };
 
 
+/**
+ * Fonction historique hors pipeline GO LIVE.
+ * Ne pas utiliser après GO LIVE :
+ * harpinstance.serverId ne doit plus être recalculé automatiquement depuis psadm*.
+ */
 export const updateInstanceServerIds = async () => {
   try {
     // Vérifier si les tables nécessaires contiennent des données
@@ -2717,8 +2722,29 @@ export const importerLesEnvDispos = async () => {
 };
 
 /**
+ * Forme de cmd enregistrée dans harptools : les guillemets legacy sont retirés.
+ * L'identité logique doit utiliser exactement cette forme.
+ */
+function normalizeHarptoolCmd(cmd: string | null | undefined): string {
+  return (cmd ?? "").replace(/"/g, "");
+}
+
+/**
+ * Identité logique d'un outil : commande normalisée, type et description.
+ * La commande source et la commande déjà stockée passent par la même normalisation.
+ */
+function harptoolIdentity(
+  cmd: string | null | undefined,
+  tooltype: string | null | undefined,
+  descr: string | null | undefined
+): string {
+  return `${normalizeHarptoolCmd(cmd)}-${tooltype}-${descr}`;
+}
+
+/**
  * Importe les outils de psadm_tools vers harptools
- * Détecte et importe uniquement les enregistrements manquants (delta)
+ * Détecte et importe uniquement les enregistrements manquants (delta).
+ * Ne met pas à jour et ne supprime pas les lignes déjà présentes.
  * 
  * @returns Un objet avec success/info/warning/error et les détails de l'importation
  */
@@ -2745,17 +2771,17 @@ export const importerLesTools = async () => {
     });
 
     // Si la table harptools est vide, on importe TOUT psadm_tools (premier import).
-    // Sinon, on ne prend que le delta basé sur cmd + tooltype + descr.
+    // Sinon, on ne prend que le delta basé sur la commande normalisée + tooltype + descr.
     let toolsToImport: typeof allPsadmTools;
     if (existingTools.length === 0) {
       toolsToImport = allPsadmTools;
     } else {
       const existingToolsSet = new Set(
-        existingTools.map(tool => `${tool.cmd}-${tool.tooltype}-${tool.descr}`)
+        existingTools.map(tool => harptoolIdentity(tool.cmd, tool.tooltype, tool.descr))
       );
 
       toolsToImport = allPsadmTools.filter(tool => {
-        const key = `${tool.cmd}-${tool.tooltype}-${tool.descr}`;
+        const key = harptoolIdentity(tool.cmd, tool.tooltype, tool.descr);
         return !existingToolsSet.has(key);
       });
     }
@@ -2781,8 +2807,7 @@ export const importerLesTools = async () => {
       data: toolsToImport.map((tool) => ({
         tool: tool.tool,           // identifiant logique (putty, sqlplus, ...)
         cmdpath: null,             // non géré pour l'instant
-        // Certains cmd dans psadm_tools sont déjà entourés de guillemets -> on les enlève
-        cmd: tool.cmd.replace(/"/g, ""),
+        cmd: normalizeHarptoolCmd(tool.cmd),
         version: null,
         descr: tool.descr,
         tooltype: tool.tooltype,

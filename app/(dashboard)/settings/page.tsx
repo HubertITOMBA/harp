@@ -1,21 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarproles, 
+import { GenererLesMenus, importerLesStatus, importerLesHarproles,
  // importInstanceOra, 
-  importListEnvs, 
-  lierTypeEnvs, updateDispoEnvIds, migrerLesUtilisateurs, migrerLesRolesUtilisateurs, verifierDoublonsOracleSid, importerLesPsoftVersions, migrateReleaseData, importerLesTypesEnv, updateReleaseEnvIds, 
+  importListEnvs,
+  migrerLesUtilisateurs, migrerLesRolesUtilisateurs, verifierDoublonsOracleSid, importerLesPsoftVersions, migrateReleaseData, importerLesTypesEnv, updateReleaseEnvIds,
   migrateDataToEnvsharp,
-  lierEnvauTypeEnv,
   migrerLesUtilisateursNEW,
   importerInstancesOracle,
   importInstanceOra,
   migrateServers,
   importerLesEnvInfos,
   importerOraInstances,
-  updateInstanceServerIds,
   importerLesEnvServeurs,
-  importerEnvServeursPUM,
   importerLesEnvPUMInfos,
   updateEnvsharpInstanceIds,
   updateEnvsharpOrarelease,
@@ -24,7 +21,6 @@ import { GenererLesMenus, importerLesStatus, initDefaultValues, importerLesHarpr
   importerLesTools,
   importerLesMenuRoles,
   insertTypeBases,
-  forceImportSpecificEnvs,
   importerLesMonitors,
   importerLesHarpItems} from "@/actions/importharp";
 import { toast } from "react-toastify";
@@ -49,22 +45,6 @@ import VerifierDoublons from '@/components/harp/VerifierDoublons';
     }
   };
 
- const handleDefaultValues = async () => {
-    try {
-      const result = await initDefaultValues();
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.success) {
-        toast.success(result.success);
-       }
-       else if (result.info) {
-        toast.info(result.info);
-      }
-    } catch (error) {
-      toast.error("Une erreur est survenue lors de l'importation");
-    }
-  };
-
   const handleGenererMenus = async () => {
     try {
       const result = await GenererLesMenus();
@@ -78,24 +58,6 @@ import VerifierDoublons from '@/components/harp/VerifierDoublons';
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors de le génération des Menus !");
-    }
-  };
-
-
-  const handleLinksEnv = async () => {
-    try {
-      //const result = await lierTypeEnvs()
-      const result = await lierEnvauTypeEnv();
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.success) {
-        toast.success(result.success);
-       }
-      //  else if (result.info) {
-      //   toast.info(result.info);
-      // }
-    } catch (error) {
-      toast.error("Une erreur est survenue lors de la liaison des environnements aux menus !");
     }
   };
 
@@ -139,52 +101,10 @@ import VerifierDoublons from '@/components/harp/VerifierDoublons';
     }
   };
 
-  const handleForceImportSpecificEnvs = async () => {
-    try {
-      const result = await forceImportSpecificEnvs();
-      if (result?.error) {
-        toast.error(result.error);
-      } else if (result?.success) {
-        toast.success(result.success);
-        // Afficher les détails si disponibles
-        if (result.details) {
-          console.log("Détails de l'import forcé:", result.details);
-        }
-      } else if (result?.info) {
-        toast.info(result.info);
-      } else if (result?.warning) {
-        toast.warning(result.warning);
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'appel de forceImportSpecificEnvs:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Une erreur est survenue lors de l'import forcé des environnements spécifiques !";
-      toast.error(errorMessage);
-    }
-  };
-
   const handeleInstancesEnvs = async () => {
     try {
       const result = await importInstanceOra();
       //const result = await importerInstancesOracle();
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.success) {
-        toast.success(result.success);
-       }
-       else if (result.info) {
-        toast.info(result.info);
-      }
-    } catch (error) {
-      toast.error("Une erreur est survenue lors de l'importation d'instance d'environnement !");
-    }
-  };
-
-
-  const handleStatutDisponible = async () => {
-    try {
-      const result = await updateDispoEnvIds();
       if (result.error) {
         toast.error(result.error);
       } else if (result.success) {
@@ -384,24 +304,6 @@ toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
 }
 
 
-const handleMAjINSTANCES = async () => {
-  try {
-    const result = await  updateInstanceServerIds();
-if (result.error) {
-  toast.error(result.error);
-} else if (result.success) {
-  toast.success(result.success);
- }
- else if (result.info) {
-  toast.info(result.info);
-}
-} catch (error) {
-toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
-}
-}
-
-
-
 const handleLesEnvServeurs = async () => {
   try {
     const result = await  importerLesEnvServeurs();
@@ -416,21 +318,6 @@ if (result.error) {
 } catch (error) {
 toast.error("Une erreur est survenue lors de la mise à jour des HARPSERVE !");
 }
-}
-
-const handleEnvServeursPUM = async () => {
-  try {
-    const result = await importerEnvServeursPUM();
-    if (result.error) {
-      toast.error(result.error);
-    } else if (result.success) {
-      toast.success(result.success);
-    } else if (result.info) {
-      toast.info(result.info);
-    }
-  } catch (error) {
-    toast.error("Une erreur est survenue lors de l'import des serveurs PUM.");
-  }
 }
 
 const handleEnvPUMInfos = async () => {
@@ -654,13 +541,6 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button 
-                onClick={handleDefaultValues}
-                variant="outline"
-                className="w-full justify-start"
-              >
-                Ajuster les valeurs nulles
-              </Button>
-              <Button 
                 onClick={handleLesTypeBases}
                 variant="outline"
                 className="w-full justify-start"
@@ -702,25 +582,11 @@ export default function Home() {
                 Importer les types d&apos;environnements
               </Button>
               <Button 
-                onClick={handleLinksEnv}
-                variant="outline"
-                className="w-full justify-start"
-              >
-                Lier les Types d&apos;environnement
-              </Button>
-              <Button 
                 onClick={handleEnvsHarp}
                 variant="outline"
                 className="w-full justify-start"
               >
                 Importer les environnements HARP
-              </Button>
-              <Button 
-                onClick={handleForceImportSpecificEnvs}
-                variant="outline"
-                className="w-full justify-start border-orange-300 hover:bg-orange-50"
-              >
-                Forcer l&apos;import d&apos;environnements PUM
               </Button>
               <Button 
                 onClick={handeleInstancesEnvs}
@@ -798,25 +664,11 @@ export default function Home() {
                 Importer les ORACLE_SID
               </Button>
               <Button 
-                onClick={handleMAjINSTANCES}
-                variant="outline"
-                className="w-full justify-start"
-              >
-                MAJ les ORACLE_SID
-              </Button>
-              <Button 
                 onClick={handleLesEnvServeurs}
                 variant="outline"
                 className="w-full justify-start"
               >
                 Importer les ENVS Serveurs
-              </Button>
-              <Button 
-                onClick={handleEnvServeursPUM}
-                variant="outline"
-                className="w-full justify-start"
-              >
-                Serveurs PUM (typenvid = 21)
               </Button>
               <Button 
                 onClick={handleEnvPUMInfos}
@@ -901,13 +753,6 @@ export default function Home() {
                 className="w-full justify-start"
               >
                 Dates de refresh et historique
-              </Button>
-              <Button 
-                onClick={handleStatutDisponible}
-                variant="outline"
-                className="w-full justify-start"
-              >
-                Mettre à jour les disponibilités
               </Button>
               <Button 
                 onClick={handleLesEnvDispos}

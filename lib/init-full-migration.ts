@@ -21,7 +21,6 @@ import {
   migrateServers,
   importerOraInstances,
   importListEnvs,
-  updateInstanceServerIds,
   importerLesEnvServeurs,
   updateEnvsharpInstanceIds,
   updateEnvsharpOrarelease,
@@ -102,7 +101,7 @@ const DESTINATION_TABLES = [
 ] as const;
 
 const FINAL_STEP_NAME = "Contrôle PORTAL_ADMIN";
-const TOTAL_STEPS = 25;
+const TOTAL_STEPS = 24;
 
 /**
  * Ordre de la charge. importerLesMenuRoles n'est pas appelé.
@@ -121,17 +120,16 @@ const IMPORT_FUNCTIONS: StepDefinition[] = [
   { name: "Serveurs", func: migrateServers, step: 11, mustSucceed: false },
   { name: "Instances Oracle (SID)", func: importerOraInstances, step: 12, mustSucceed: false },
   { name: "Environnements envsharp", func: importListEnvs, step: 13, mustSucceed: true },
-  { name: "Lien instance-serveur", func: updateInstanceServerIds, step: 14, mustSucceed: false },
-  { name: "Liens environnement-serveur", func: importerLesEnvServeurs, step: 15, mustSucceed: false },
-  { name: "envsharp.instanceId", func: updateEnvsharpInstanceIds, step: 16, mustSucceed: false },
-  { name: "Version Oracle envsharp", func: updateEnvsharpOrarelease, step: 17, mustSucceed: false },
-  { name: "Instances harpora", func: importInstanceOra, step: 18, mustSucceed: false },
-  { name: "Release envsharp", func: updateReleaseEnvIds, step: 19, mustSucceed: false },
-  { name: "Informations d'environnement", func: importerLesEnvInfos, step: 20, mustSucceed: false },
-  { name: "Indisponibilités", func: importerLesEnvDispos, step: 21, mustSucceed: false },
-  { name: "Monitors", func: importerLesMonitors, step: 22, mustSucceed: false },
-  { name: "Utilisateurs", func: migrerLesUtilisateursNEW, step: 23, mustSucceed: true },
-  { name: "Rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 24, mustSucceed: true },
+  { name: "Liens environnement-serveur", func: importerLesEnvServeurs, step: 14, mustSucceed: false },
+  { name: "envsharp.instanceId", func: updateEnvsharpInstanceIds, step: 15, mustSucceed: false },
+  { name: "Version Oracle envsharp", func: updateEnvsharpOrarelease, step: 16, mustSucceed: false },
+  { name: "Instances harpora", func: importInstanceOra, step: 17, mustSucceed: false },
+  { name: "Release envsharp", func: updateReleaseEnvIds, step: 18, mustSucceed: false },
+  { name: "Informations d'environnement", func: importerLesEnvInfos, step: 19, mustSucceed: false },
+  { name: "Indisponibilités", func: importerLesEnvDispos, step: 20, mustSucceed: false },
+  { name: "Monitors", func: importerLesMonitors, step: 21, mustSucceed: false },
+  { name: "Utilisateurs", func: migrerLesUtilisateursNEW, step: 22, mustSucceed: true },
+  { name: "Rôles utilisateurs", func: migrerLesRolesUtilisateurs, step: 23, mustSucceed: true },
 ];
 
 let migrationExecuted = false;
@@ -484,7 +482,7 @@ export async function ensureFullDatabaseMigration(
       const portalAdminCount = await countModernPortalAdmins();
       if (portalAdminCount < 1) {
         results.push({
-          step: 25,
+          step: TOTAL_STEPS,
           name: FINAL_STEP_NAME,
           result: null,
           error: "BLOQUANT GO LIVE : aucun PORTAL_ADMIN moderne après migration",
@@ -497,7 +495,7 @@ export async function ensureFullDatabaseMigration(
       }
 
       results.push({
-        step: 25,
+        step: TOTAL_STEPS,
         name: FINAL_STEP_NAME,
         result: { success: `${portalAdminCount} PORTAL_ADMIN moderne(s)` },
       });
