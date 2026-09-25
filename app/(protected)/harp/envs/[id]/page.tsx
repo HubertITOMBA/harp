@@ -95,8 +95,8 @@ const EnvSinglePage = async ({ params }: { params: { id: string } }) => {
       return <FamilyAccessDenied />;
     }
 
-    // Point d'insertion ultérieur : périmètre d'équipe, puis filtre envsharp.
-    // PORTAL_ADMIN contournera ce niveau. Il n'est pas implémenté ici.
+    // L'autorisation de famille s'arrête ici.
+    // Le filtre de périmètre est appliqué dans ListEnvs.
     return (
       <div>
         <HarpEnvPage typenvid={typenvid} />

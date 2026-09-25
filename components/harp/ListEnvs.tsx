@@ -1,4 +1,11 @@
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
+import { getAllUserRoles } from "@/actions/get-all-user-roles";
+import {
+  hasPortalAdminRole,
+  resolveEnvironmentScopeFilter,
+  type EnvironmentScopeFilter,
+} from "@/lib/user-scopes";
 import Image from "next/image";
 import type { Prisma } from "@prisma/client";
 import { Label } from "@/components/ui/label";
@@ -66,14 +73,62 @@ type EnvsharpRow = Prisma.envsharpGetPayload<{
   };
 }>;
 
+/**
+ * Périmètre de lecture de l'utilisateur connecté.
+ * En cas d'erreur, aucun environnement n'est chargé.
+ */
+async function loadEnvironmentScopeFilter(): Promise<EnvironmentScopeFilter> {
+  const userRoles = await getAllUserRoles();
+  if (hasPortalAdminRole(userRoles)) {
+    return { mode: "all" };
+  }
+
+  const session = await auth();
+  const userId = Number.parseInt(session?.user?.id ?? "", 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return { mode: "restricted", scopeIds: [] };
+  }
+
+  const assignments = await prisma.harpuserscope.findMany({
+    where: { userId },
+    select: {
+      harpscope: {
+        select: { id: true, code: true },
+      },
+    },
+  });
+
+  return resolveEnvironmentScopeFilter({
+    userRoles,
+    assignedScopes: assignments.map((row) => row.harpscope),
+  });
+}
+
 const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
   // Optimisation : Une seule requête avec tous les includes nécessaires
   // Ajout de gestion d'erreur pour éviter les crashes du worker
   let DescEnvs: EnvsharpRow[] = [];
+  let scopeFilter: EnvironmentScopeFilter = { mode: "restricted", scopeIds: [] };
   try {
+    scopeFilter = await loadEnvironmentScopeFilter();
+  } catch (error) {
+    console.error("Erreur lors de la lecture des périmètres:", error);
+    scopeFilter = { mode: "restricted", scopeIds: [] };
+  }
+
+  const skipEnvironments =
+    scopeFilter.mode === "restricted" && scopeFilter.scopeIds.length === 0;
+
+  try {
+    if (skipEnvironments) {
+      DescEnvs = [];
+    } else {
     DescEnvs = await prisma.envsharp.findMany({
       where: {
         typenvid: typenvid,
+        ...(scopeFilter.mode === "restricted"
+          ? { scopeId: { in: scopeFilter.scopeIds } }
+          : {}),
       },
       select: {
         id: true,
@@ -117,6 +172,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
         env: "asc",
       },
     });
+    }
   } catch (error) {
     console.error("Erreur lors de la récupération des environnements:", error);
     // Retourner un tableau vide en cas d'erreur pour éviter un crash
@@ -126,8 +182,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
   // Récupérer les serveurs pour chaque environnement avec gestion d'erreur
   const envIds = DescEnvs.map(env => env.id);
   
-  // Récupérer tous les serveurs en une seule requête pour optimiser
-  const allServers = await prisma.harpenvserv.findMany({
+  // Uniquement les environnements déjà retenus par le filtre de périmètre.
+  const allServers = envIds.length === 0 ? [] : await prisma.harpenvserv.findMany({
     where: {
       envId: { in: envIds },
     },
@@ -178,20 +234,9 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
     };
   });
 
-  // Récupérer le compteur et le menu avec gestion d'erreur
-  let envCount = 0;
+  // Le compteur suit la liste déjà filtrée, pas la famille entière.
+  const envCount = DescEnvs.length;
   let menuName = `Menu ${typenvid}`;
-  
-  try {
-    envCount = await prisma.envsharp.count({
-      where: {
-        typenvid: typenvid,
-      },
-    });
-  } catch (error) {
-    console.error("Erreur lors du comptage des environnements:", error);
-    envCount = DescEnvs.length; // Utiliser la longueur du tableau comme fallback
-  }
 
   try {
     const menu = await prisma.harpmenus.findFirst({

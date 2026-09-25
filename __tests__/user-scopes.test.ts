@@ -1,4 +1,4 @@
-import { prepareUserScopeUpdate, normalizeRequestedScopeCodes } from "@/lib/user-scopes";
+import { prepareUserScopeUpdate, normalizeRequestedScopeCodes, resolveEnvironmentScopeFilter } from "@/lib/user-scopes";
 
 const catalog = [
   { id: 10, code: "4K" },
@@ -110,6 +110,94 @@ describe("prepareUserScopeUpdate", () => {
       catalog,
     });
     expect(result).toEqual({ ok: true, scopeIds: [10] });
+  });
+});
+
+describe("resolveEnvironmentScopeFilter", () => {
+  const assigned = [
+    { id: 41, code: "4K" },
+    { id: 52, code: "150K" },
+    { id: 63, code: "UNASSIGNED" },
+    { id: 77, code: "INCONNU" },
+  ];
+
+  it("PORTAL_ADMIN n'applique aucun filtre, même sans affectation", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["PORTAL_ADMIN"],
+        assignedScopes: [],
+      })
+    ).toEqual({ mode: "all" });
+  });
+
+  it("PORTAL_ADMIN ignore une ligne UNASSIGNED et ne filtre pas", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["PORTAL_ADMIN", "TMA_LOCAL"],
+        assignedScopes: [{ id: 63, code: "UNASSIGNED" }],
+      })
+    ).toEqual({ mode: "all" });
+  });
+
+  it("conserve 4K et 150K et écarte UNASSIGNED ainsi qu'un code inconnu", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["TMA_LOCAL"],
+        assignedScopes: assigned,
+      })
+    ).toEqual({ mode: "restricted", scopeIds: [41, 52] });
+  });
+
+  it("un utilisateur seulement 4K ne reçoit pas 150K", () => {
+    const result = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL", "REF"],
+      assignedScopes: [{ id: 41, code: "4K" }, { id: 63, code: "UNASSIGNED" }],
+    });
+    expect(result).toEqual({ mode: "restricted", scopeIds: [41] });
+  });
+
+  it("un utilisateur seulement 150K ne reçoit pas 4K", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["TMA_LOCAL"],
+        assignedScopes: [{ id: 52, code: "150K" }],
+      })
+    ).toEqual({ mode: "restricted", scopeIds: [52] });
+  });
+
+  it("4K et 150K forment l'union, dans l'ordre du catalogue affectable", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["DRP"],
+        assignedScopes: [
+          { id: 52, code: "150K" },
+          { id: 41, code: "4K" },
+        ],
+      })
+    ).toEqual({ mode: "restricted", scopeIds: [41, 52] });
+  });
+
+  it("aucun scope autorisé produit une liste vide", () => {
+    expect(
+      resolveEnvironmentScopeFilter({
+        userRoles: ["TMA_LOCAL", "POC92"],
+        assignedScopes: [],
+      })
+    ).toEqual({ mode: "restricted", scopeIds: [] });
+  });
+
+  it("UNASSIGNED et un code inconnu sont ignorés", () => {
+    const result = resolveEnvironmentScopeFilter({
+      userRoles: ["FT-MOE"],
+      assignedScopes: [
+        { id: 63, code: "UNASSIGNED" },
+        { id: 77, code: "INCONNU" },
+      ],
+    });
+    expect(result).toEqual({ mode: "restricted", scopeIds: [] });
+    if (result.mode === "restricted") {
+      expect(result.scopeIds).not.toEqual(expect.arrayContaining([1, 2, 3, 63, 77]));
+    }
   });
 });
 

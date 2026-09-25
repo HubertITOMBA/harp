@@ -98,3 +98,45 @@ export function prepareUserScopeUpdate(input: {
 
   return { ok: true, scopeIds };
 }
+
+/** Aucun prédicat scopeId, ou restriction aux identifiants 4K/150K réellement affectés. */
+export type EnvironmentScopeFilter =
+  | { mode: "all" }
+  | { mode: "restricted"; scopeIds: number[] };
+
+/**
+ * Décide le filtre de lecture des environnements.
+ * PORTAL_ADMIN ne reçoit aucun filtre : UNASSIGNED, NULL et tout futur code restent visibles.
+ * Un autre utilisateur ne conserve que les codes 4K et 150K de ses affectations.
+ * Les identifiants viennent des lignes fournies, jamais d'une constante.
+ * Une liste vide signifie zéro environnement, pas un accès global.
+ *
+ * @param input.userRoles - Rôles de la session, User.role et harpuseroles
+ * @param input.assignedScopes - Lignes harpscope liées à l'utilisateur
+ * @returns mode all, ou les scopeId autorisés
+ */
+export function resolveEnvironmentScopeFilter(input: {
+  userRoles: string[];
+  assignedScopes: ScopeCatalogRow[];
+}): EnvironmentScopeFilter {
+  if (hasPortalAdminRole(input.userRoles)) {
+    return { mode: "all" };
+  }
+
+  const scopeIdByCode = new Map<string, number>();
+  for (const scope of input.assignedScopes) {
+    if (!ASSIGNABLE_USER_SCOPE_CODES.includes(scope.code as AssignableUserScopeCode)) {
+      continue;
+    }
+    if (!scopeIdByCode.has(scope.code)) {
+      scopeIdByCode.set(scope.code, scope.id);
+    }
+  }
+
+  const scopeIds = ASSIGNABLE_USER_SCOPE_CODES.flatMap((code) => {
+    const scopeId = scopeIdByCode.get(code);
+    return scopeId == null ? [] : [scopeId];
+  });
+
+  return { mode: "restricted", scopeIds };
+}
