@@ -1,6 +1,8 @@
 "use server";
 
 import { auth } from "@/auth";
+import { loadEnvironmentScopeFilter } from "@/lib/load-environment-scope-filter";
+import { environmentScopeWhere } from "@/lib/user-scopes";
 import { sendMail } from "@/lib/mail";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -171,20 +173,27 @@ export async function sendEnvsExportByEmail(formData: FormData) {
 
     const validatedData = SendExportEmailSchema.parse(rawData);
 
-    // Récupérer les environnements
-    const envsData = await db.envsharp.findMany({
-      include: {
-        statutenv: true,
-      },
-      orderBy: {
-        env: 'asc',
-      },
-    });
+    const scopeFilter = await loadEnvironmentScopeFilter();
+    const scopeWhere = environmentScopeWhere(scopeFilter);
+
+    // PORTAL_ADMIN : where vide. Utilisateur normal : scopeId IN des identifiants 4K/150K.
+    // Aucun scope autorisé : ne pas charger envsharp.
+    const envsData = scopeWhere == null
+      ? []
+      : await db.envsharp.findMany({
+          where: scopeWhere,
+          include: {
+            statutenv: true,
+          },
+          orderBy: {
+            env: 'asc',
+          },
+        });
 
     const envIds = envsData.map(env => env.id);
     
     // Récupérer les données harpora
-    const harporaData = await db.harpora.findMany({
+    const harporaData = envIds.length === 0 ? [] : await db.harpora.findMany({
       where: {
         envId: { in: envIds },
       },
@@ -205,8 +214,8 @@ export async function sendEnvsExportByEmail(formData: FormData) {
       }
     });
 
-    // Récupérer les serveurs
-    const harpenvservData = await db.harpenvserv.findMany({
+    // Récupérer les serveurs des environnements déjà retenus
+    const harpenvservData = envIds.length === 0 ? [] : await db.harpenvserv.findMany({
       where: {
         envId: { in: envIds },
         typsrv: 'DB',

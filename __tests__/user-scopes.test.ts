@@ -1,4 +1,10 @@
-import { prepareUserScopeUpdate, normalizeRequestedScopeCodes, resolveEnvironmentScopeFilter } from "@/lib/user-scopes";
+import {
+  prepareUserScopeUpdate,
+  normalizeRequestedScopeCodes,
+  resolveEnvironmentScopeFilter,
+  environmentScopeWhere,
+  decideEnvironmentServerAccess,
+} from "@/lib/user-scopes";
 
 const catalog = [
   { id: 10, code: "4K" },
@@ -198,6 +204,177 @@ describe("resolveEnvironmentScopeFilter", () => {
     if (result.mode === "restricted") {
       expect(result.scopeIds).not.toEqual(expect.arrayContaining([1, 2, 3, 63, 77]));
     }
+  });
+});
+
+const scope4k = { id: 41, code: "4K" };
+const scope150k = { id: 52, code: "150K" };
+const scopeUnassigned = { id: 63, code: "UNASSIGNED" };
+const scopeUnknown = { id: 77, code: "INCONNU" };
+
+describe("export des environnements par scope", () => {
+  it("PORTAL_ADMIN exporte sans clause de scope", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["PORTAL_ADMIN"],
+      assignedScopes: [],
+    });
+    expect(environmentScopeWhere(filter)).toEqual({});
+  });
+
+  it("un utilisateur 4K n'exporte que son identifiant de scope", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scope4k],
+    });
+    expect(environmentScopeWhere(filter)).toEqual({ scopeId: { in: [41] } });
+  });
+
+  it("un utilisateur 150K n'exporte que son identifiant de scope", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scope150k],
+    });
+    expect(environmentScopeWhere(filter)).toEqual({ scopeId: { in: [52] } });
+  });
+
+  it("4K et 150K forment l'union exportée", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["DRP"],
+      assignedScopes: [scope150k, scope4k],
+    });
+    expect(environmentScopeWhere(filter)).toEqual({ scopeId: { in: [41, 52] } });
+  });
+
+  it("aucun scope n'autorise aucun chargement", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [],
+    });
+    expect(environmentScopeWhere(filter)).toBeNull();
+  });
+
+  it("UNASSIGNED seul n'autorise aucun chargement", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scopeUnassigned],
+    });
+    expect(environmentScopeWhere(filter)).toBeNull();
+  });
+
+  it("un scope inconnu est ignoré", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["FT-MOE"],
+      assignedScopes: [scopeUnknown, scopeUnassigned],
+    });
+    expect(environmentScopeWhere(filter)).toBeNull();
+  });
+
+  it("PSADMIN seul n'ouvre pas l'export global", () => {
+    const filter = resolveEnvironmentScopeFilter({
+      userRoles: ["PSADMIN"],
+      assignedScopes: [],
+    });
+    expect(filter).toEqual({ mode: "restricted", scopeIds: [] });
+    expect(environmentScopeWhere(filter)).toBeNull();
+  });
+});
+
+describe("accès GET /api/envserv", () => {
+  const env4k = { scopeId: 41 };
+  const env150k = { scopeId: 52 };
+  const envUnassigned = { scopeId: 63 };
+  const envNull = { scopeId: null };
+
+  it("refuse sans session avant de regarder l'environnement", () => {
+    expect(
+      decideEnvironmentServerAccess({
+        authenticated: false,
+        environment: env4k,
+        scopeFilter: { mode: "restricted", scopeIds: [41] },
+      })
+    ).toBe(401);
+  });
+
+  it("PORTAL_ADMIN lit 4K, 150K, UNASSIGNED et un scope nul sans affectation", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["PORTAL_ADMIN"],
+      assignedScopes: [],
+    });
+    for (const environment of [env4k, env150k, envUnassigned, envNull]) {
+      expect(
+        decideEnvironmentServerAccess({
+          authenticated: true,
+          environment,
+          scopeFilter,
+        })
+      ).toBe(200);
+    }
+  });
+
+  it("un utilisateur 4K lit son environnement et pas celui du 150K", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scope4k],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(403);
+  });
+
+  it("un utilisateur 150K lit son environnement et pas celui du 4K", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scope150k],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(403);
+  });
+
+  it("4K et 150K autorisent les deux environnements", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["DRP"],
+      assignedScopes: [scope4k, scope150k],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(200);
+  });
+
+  it("aucun scope, UNASSIGNED et un scope nul sont refusés", () => {
+    const empty = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [],
+    });
+    const unassignedOnly = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [scopeUnassigned],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter: empty })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envUnassigned, scopeFilter: unassignedOnly })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envNull, scopeFilter: empty })).toBe(403);
+  });
+
+  it("un environnement absent répond 404", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["PORTAL_ADMIN"],
+      assignedScopes: [],
+    });
+    expect(
+      decideEnvironmentServerAccess({
+        authenticated: true,
+        environment: null,
+        scopeFilter,
+      })
+    ).toBe(404);
+  });
+
+  it("PSADMIN seul n'obtient pas les environnements hors affectation", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["PSADMIN"],
+      assignedScopes: [scopeUnassigned],
+    });
+    expect(scopeFilter.mode).toBe("restricted");
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envUnassigned, scopeFilter })).toBe(403);
   });
 });
 

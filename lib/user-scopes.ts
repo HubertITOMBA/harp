@@ -140,3 +140,57 @@ export function resolveEnvironmentScopeFilter(input: {
 
   return { mode: "restricted", scopeIds };
 }
+
+/**
+ * Traduit le filtre de lecture en clause Prisma.
+ * Une restriction vide signifie de ne pas interroger envsharp.
+ *
+ * @param filter - Décision déjà produite par resolveEnvironmentScopeFilter
+ * @returns null s'il ne faut rien charger, sinon le where de scope
+ */
+export function environmentScopeWhere(
+  filter: EnvironmentScopeFilter
+): { scopeId?: { in: number[] } } | null {
+  if (filter.mode === "all") {
+    return {};
+  }
+  if (filter.scopeIds.length === 0) {
+    return null;
+  }
+  return { scopeId: { in: filter.scopeIds } };
+}
+
+/** Code HTTP de l'accès aux serveurs d'un environnement. */
+export type EnvironmentServerAccess = 200 | 401 | 403 | 404;
+
+/**
+ * Autorise la lecture des serveurs d'un environnement.
+ * Sans session : 401, avant de révéler si l'environnement existe.
+ * PORTAL_ADMIN (mode all) : 200, y compris UNASSIGNED et scopeId null.
+ * Un autre utilisateur : 200 seulement si scopeId est dans ses identifiants 4K/150K.
+ *
+ * @param input.authenticated - Présence d'une session serveur
+ * @param input.environment - Ligne envsharp, ou null si elle n'existe pas
+ * @param input.scopeFilter - Filtre déjà résolu pour l'utilisateur
+ * @returns 200, 401, 403 ou 404
+ */
+export function decideEnvironmentServerAccess(input: {
+  authenticated: boolean;
+  environment: { scopeId: number | null } | null;
+  scopeFilter: EnvironmentScopeFilter;
+}): EnvironmentServerAccess {
+  if (!input.authenticated) {
+    return 401;
+  }
+  if (input.environment == null) {
+    return 404;
+  }
+  if (input.scopeFilter.mode === "all") {
+    return 200;
+  }
+  const scopeId = input.environment.scopeId;
+  if (scopeId == null || !input.scopeFilter.scopeIds.includes(scopeId)) {
+    return 403;
+  }
+  return 200;
+}

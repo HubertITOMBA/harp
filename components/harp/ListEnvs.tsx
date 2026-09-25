@@ -1,11 +1,6 @@
 import prisma from "@/lib/prisma";
-import { auth } from "@/auth";
-import { getAllUserRoles } from "@/actions/get-all-user-roles";
-import {
-  hasPortalAdminRole,
-  resolveEnvironmentScopeFilter,
-  type EnvironmentScopeFilter,
-} from "@/lib/user-scopes";
+import { loadEnvironmentScopeFilter } from "@/lib/load-environment-scope-filter";
+import { type EnvironmentScopeFilter } from "@/lib/user-scopes";
 import Image from "next/image";
 import type { Prisma } from "@prisma/client";
 import { Label } from "@/components/ui/label";
@@ -72,37 +67,6 @@ type EnvsharpRow = Prisma.envsharpGetPayload<{
     };
   };
 }>;
-
-/**
- * Périmètre de lecture de l'utilisateur connecté.
- * En cas d'erreur, aucun environnement n'est chargé.
- */
-async function loadEnvironmentScopeFilter(): Promise<EnvironmentScopeFilter> {
-  const userRoles = await getAllUserRoles();
-  if (hasPortalAdminRole(userRoles)) {
-    return { mode: "all" };
-  }
-
-  const session = await auth();
-  const userId = Number.parseInt(session?.user?.id ?? "", 10);
-  if (!Number.isInteger(userId) || userId <= 0) {
-    return { mode: "restricted", scopeIds: [] };
-  }
-
-  const assignments = await prisma.harpuserscope.findMany({
-    where: { userId },
-    select: {
-      harpscope: {
-        select: { id: true, code: true },
-      },
-    },
-  });
-
-  return resolveEnvironmentScopeFilter({
-    userRoles,
-    assignedScopes: assignments.map((row) => row.harpscope),
-  });
-}
 
 const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
   // Optimisation : Une seule requête avec tous les includes nécessaires
