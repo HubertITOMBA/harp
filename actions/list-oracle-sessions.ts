@@ -6,6 +6,7 @@ import path from "path";
 import { promisify } from "util";
 import { parseSessionsLog } from "@/lib/parse-sessions-log";
 import type { SessionRow } from "@/lib/parse-sessions-log";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 
 const execAsync = promisify(exec);
 
@@ -29,6 +30,11 @@ export async function listOracleSessions(
   aliasql: string,
   ip: string,
 ): Promise<ListOracleSessionsResult> {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error, sessions: [] };
+  }
+
   const alias = (aliasql || "").trim();
   const targetIp = (ip || "").trim();
   if (!alias || !targetIp) {
@@ -111,6 +117,11 @@ export async function killOracleSession(
   sessionSid: string,
   serial: string,
 ): Promise<KillOracleSessionResult> {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   const alias = (aliasql || "").trim();
   const targetIp = (ip || "").trim();
   const sid = (sessionSid || "").trim();

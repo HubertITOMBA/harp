@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -24,6 +25,11 @@ const CreateEnvSchema = z.object({
 });
 
 export async function createEnv(formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       env: formData.get("env") as string,

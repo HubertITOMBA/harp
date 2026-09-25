@@ -24,6 +24,49 @@ export function hasPortalAdminRole(roles: string[]): boolean {
   return roles.includes(PORTAL_ADMIN_ROLE);
 }
 
+/** Décision d'une mutation ou d'une opération technique d'administration. */
+export type PortalAdminAccess = "allowed" | "unauthenticated" | "forbidden";
+
+/**
+ * Autorise une mutation seulement pour une session PORTAL_ADMIN.
+ * Les scopes 4K et 150K ne sont pas des rôles et n'entrent pas dans cette décision.
+ * PSADMIN n'est pas accepté.
+ *
+ * @param input.authenticated - Présence d'une session serveur
+ * @param input.userRoles - Rôles lus en base, jamais fournis par le client
+ * @returns allowed, unauthenticated ou forbidden
+ */
+/**
+ * Nettoie le nom d'environnement saisi, sans en changer la casse ni le contenu.
+ * Une valeur vide ou plus longue que la colonne envsharp.env est refusée.
+ *
+ * @param value - Texte reçu de l'appelant
+ * @returns Le nom conservé, ou null
+ */
+export function normalizeEnvironmentName(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const name = value.trim();
+  if (name.length === 0 || name.length > 32) {
+    return null;
+  }
+  return name;
+}
+
+export function decidePortalAdminAccess(input: {
+  authenticated: boolean;
+  userRoles: string[];
+}): PortalAdminAccess {
+  if (!input.authenticated) {
+    return "unauthenticated";
+  }
+  if (!hasPortalAdminRole(input.userRoles)) {
+    return "forbidden";
+  }
+  return "allowed";
+}
+
 /**
  * Normalise les codes envoyés par le client.
  * Un tableau qui n'est pas composé uniquement de chaînes est refusé.

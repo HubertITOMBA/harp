@@ -8,10 +8,16 @@ import { insertEnvSchema, updateEnvSchema } from "@/schemas";
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { formatError } from "../utils";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 
 
 // Create Env
 export async function createEnv(data: z.infer<typeof insertEnvSchema>) {
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, message: admin.error };
+    }
+
     try {
       const envs = insertEnvSchema.parse(data);
       await prisma.envsharp.create({ data: envs });
@@ -29,6 +35,11 @@ export async function createEnv(data: z.infer<typeof insertEnvSchema>) {
   
   // Update Env
   export async function updateEnv(data: z.infer<typeof updateEnvSchema>) {
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, message: admin.error };
+    }
+
     try {
       const envs = updateEnvSchema.parse(data);
       const envExists = await prisma.envsharp.findFirst({
@@ -58,6 +69,11 @@ export async function createEnv(data: z.infer<typeof insertEnvSchema>) {
 
   // Delete ENV
 export async function deleteEnvs(id: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, message: admin.error };
+  }
+
   try {
     const envExists = await prisma.envsharp.findFirst({
       where: { id  },

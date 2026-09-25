@@ -1,7 +1,7 @@
 "use server"
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import * as fs from "fs";
 import * as path from "path";
@@ -17,6 +17,11 @@ const execAsync = promisify(exec);
  * Retourne le statut et, si possible, le contenu du log.
  */
 export async function executeRefreshInfo() {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   const HARPSHELL = "/data/exploit/harpadm/outils/scripts";
   const HARPLOG = "/data/exploit/harpadm/outils/logs";
   const LOG_FILE = `${HARPLOG}/portail_refresh_info.log`;
@@ -275,9 +280,9 @@ export async function getEnvUpdateFileList(): Promise<
   { success: true; envFiles: string[] } | { success: false; error: string }
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.netid) {
-      return { success: false, error: "Utilisateur non authentifié." };
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
     }
     if (!fs.existsSync(FILES_DIR)) {
       return {
@@ -310,9 +315,9 @@ export async function getReleaseUpdateFileList(): Promise<
   { success: true; releaseFiles: string[] } | { success: false; error: string }
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.netid) {
-      return { success: false, error: "Utilisateur non authentifié." };
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
     }
     if (!fs.existsSync(FILES_DIR)) {
       return {
@@ -345,9 +350,9 @@ export async function getReleaseUpdateFileList(): Promise<
  */
 export async function processOneEnvFile(fileName: string, options?: { startNewLog?: boolean }): Promise<UpdateEnvFromFilesResult> {
   try {
-    const session = await auth();
-    if (!session?.user?.netid) {
-      return { success: false, error: "Utilisateur non authentifié." };
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
     }
     if (!fileName.startsWith("env.")) {
       return { success: false, error: `Fichier invalide : ${fileName}` };
@@ -414,9 +419,9 @@ export async function processOneEnvFile(fileName: string, options?: { startNewLo
  */
 export async function processOneReleaseFile(fileName: string): Promise<UpdateEnvFromFilesResult> {
   try {
-    const session = await auth();
-    if (!session?.user?.netid) {
-      return { success: false, error: "Utilisateur non authentifié." };
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
     }
     if (!fileName.startsWith("release.")) {
       return { success: false, error: `Fichier invalide : ${fileName}` };
@@ -481,9 +486,9 @@ export async function processOneReleaseFile(fileName: string): Promise<UpdateEnv
  */
 export async function applyLastCheckStatus(): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user?.netid) {
-      return { success: false, error: "Utilisateur non authentifié." };
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
     }
 
     const monitors = await db.harpmonitor.findMany({
@@ -551,6 +556,11 @@ export async function applyLastCheckStatus(): Promise<{ success: boolean; error?
  */
 export async function updateEnvFromFiles(): Promise<UpdateEnvFromFilesResult> {
   try {
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, error: admin.error };
+    }
+
     const list = await getEnvUpdateFileList();
     if (!list.success) return { success: false, error: list.error };
 

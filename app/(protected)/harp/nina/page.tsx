@@ -49,12 +49,12 @@ export default function HarpPage() {
           <tbody>
             {serverData.map((item, index) => (
               <tr key={index}>
-                <td className="border p-2">{item.psadm_srv.srv}</td>
-                <td className="border p-2">{item.psadm_srv.ip}</td>
-                <td className="border p-2">{item.psadm_srv.pshome}</td>
-                <td className="border p-2">{item.psadm_srv.os}</td>
-                <td className="border p-2">{item.psadm_srv.psuser}</td>
-                <td className="border p-2">{item.psadm_srv.domain}</td>
+                <td className="border p-2">{item.harpserve?.srv}</td>
+                <td className="border p-2">{item.harpserve?.ip}</td>
+                <td className="border p-2">{item.harpserve?.pshome}</td>
+                <td className="border p-2">{item.harpserve?.os}</td>
+                <td className="border p-2">{item.harpserve?.psuser}</td>
+                <td className="border p-2">{item.harpserve?.domain}</td>
                 <td className="border p-2">{item.env}</td>
                 <td className="border p-2">{item.typsrv}</td>
                 <td className="border p-2">{item.status}</td>

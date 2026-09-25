@@ -4,7 +4,10 @@ import {
   resolveEnvironmentScopeFilter,
   environmentScopeWhere,
   decideEnvironmentServerAccess,
+  decidePortalAdminAccess,
+  normalizeEnvironmentName,
 } from "@/lib/user-scopes";
+import { updateInstance } from "@/schemas";
 
 const catalog = [
   { id: 10, code: "4K" },
@@ -375,6 +378,136 @@ describe("accès GET /api/envserv", () => {
     expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(403);
     expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(403);
     expect(decideEnvironmentServerAccess({ authenticated: true, environment: envUnassigned, scopeFilter })).toBe(403);
+  });
+});
+
+describe("mutations réservées à PORTAL_ADMIN", () => {
+  it("refuse une session absente", () => {
+    expect(decidePortalAdminAccess({ authenticated: false, userRoles: [] })).toBe("unauthenticated");
+  });
+
+  it("refuse un utilisateur normal, un libellé de scope ou PSADMIN", () => {
+    for (const userRoles of [
+      ["TMA_LOCAL"],
+      ["REF"],
+      ["DRP"],
+      ["4K"],
+      ["150K"],
+      ["4K", "150K"],
+      ["PSADMIN"],
+      ["PSADMIN", "TMA_LOCAL"],
+      [],
+    ]) {
+      expect(decidePortalAdminAccess({ authenticated: true, userRoles })).toBe("forbidden");
+    }
+  });
+
+  it("autorise seulement PORTAL_ADMIN", () => {
+    expect(decidePortalAdminAccess({ authenticated: true, userRoles: ["PORTAL_ADMIN"] })).toBe("allowed");
+    expect(
+      decidePortalAdminAccess({ authenticated: true, userRoles: ["PSADMIN", "PORTAL_ADMIN"] })
+    ).toBe("allowed");
+  });
+});
+
+describe("lecture getServerData", () => {
+  const env4k = { scopeId: 41 };
+  const env150k = { scopeId: 52 };
+  const envUnassigned = { scopeId: 63 };
+  const envNull = { scopeId: null };
+
+  it("PORTAL_ADMIN lit tous les classements, sans affectation", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["PORTAL_ADMIN"],
+      assignedScopes: [],
+    });
+    expect(scopeFilter).toEqual({ mode: "all" });
+    for (const environment of [env4k, env150k, envUnassigned, envNull]) {
+      expect(
+        decideEnvironmentServerAccess({ authenticated: true, environment, scopeFilter })
+      ).toBe(200);
+    }
+  });
+
+  it("un utilisateur 4K ne lit pas le 150K", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [{ id: 41, code: "4K" }],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(403);
+  });
+
+  it("un utilisateur 150K ne lit pas le 4K", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [{ id: 52, code: "150K" }],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(403);
+  });
+
+  it("4K et 150K autorisent les deux environnements", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["DRP"],
+      assignedScopes: [
+        { id: 41, code: "4K" },
+        { id: 52, code: "150K" },
+      ],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(200);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(200);
+  });
+
+  it("aucun scope, UNASSIGNED, un code inconnu, un environnement non affecté ou un scope nul sont refusés", () => {
+    const empty = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [],
+    });
+    const unassignedOnly = resolveEnvironmentScopeFilter({
+      userRoles: ["TMA_LOCAL"],
+      assignedScopes: [{ id: 63, code: "UNASSIGNED" }],
+    });
+    const unknown = resolveEnvironmentScopeFilter({
+      userRoles: ["FT-MOE"],
+      assignedScopes: [{ id: 77, code: "INCONNU" }],
+    });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter: empty })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envUnassigned, scopeFilter: unassignedOnly })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter: unknown })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envNull, scopeFilter: empty })).toBe(403);
+  });
+
+  it("PSADMIN seul n'obtient pas l'accès global", () => {
+    const scopeFilter = resolveEnvironmentScopeFilter({
+      userRoles: ["PSADMIN"],
+      assignedScopes: [],
+    });
+    expect(scopeFilter).toEqual({ mode: "restricted", scopeIds: [] });
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env4k, scopeFilter })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: env150k, scopeFilter })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envUnassigned, scopeFilter })).toBe(403);
+    expect(decideEnvironmentServerAccess({ authenticated: true, environment: envNull, scopeFilter })).toBe(403);
+  });
+
+  it("conserve le nom métier saisi, après suppression des blancs de bord", () => {
+    expect(normalizeEnvironmentName("FHHPR1")).toBe("FHHPR1");
+    expect(normalizeEnvironmentName("  FHHPR1  ")).toBe("FHHPR1");
+    expect(normalizeEnvironmentName("")).toBeNull();
+    expect(normalizeEnvironmentName("   ")).toBeNull();
+    expect(normalizeEnvironmentName(12)).toBeNull();
+  });
+});
+
+describe("cible de updateInst", () => {
+  it("le payload correspond aux colonnes de harpinstance, pas à envsharp", () => {
+    expect(Object.keys(updateInstance.shape).sort()).toEqual([
+      "descr",
+      "id",
+      "oracle_sid",
+      "serverId",
+      "typebaseId",
+    ]);
   });
 });
 

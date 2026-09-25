@@ -1,6 +1,7 @@
 "use server"
 
 import { auth } from "@/auth";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import * as fs from "fs";
 import * as path from "path";
@@ -111,6 +112,11 @@ export async function getApplicationStatusList(): Promise<{
 
 /** Lance le script Unix de refresh des statuts d'applications */
 export async function executeAppStatusRefresh() {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   // À adapter côté Unix : script qui génère les fichiers appstatus.*.txt dans FILES_DIR
   const HARPSHELL = "/data/exploit/harpadm/outils/scripts";
   const LOG_DIR = "/data/exploit/harpadm/outils/logs";

@@ -8,10 +8,16 @@ import { InstSchema, updateInstance } from "@/schemas";
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { formatError } from "../utils";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 
 
 // Create Env
 export async function createInst(data: z.infer<typeof InstSchema>) {
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, message: admin.error };
+    }
+
     try {
       const inst = InstSchema.parse(data);
       await prisma.harpinstance.create({ data: inst });
@@ -29,6 +35,11 @@ export async function createInst(data: z.infer<typeof InstSchema>) {
   
   // Update Env
   export async function updateInst(data: z.infer<typeof updateInstance>) {
+    const admin = await requirePortalAdmin();
+    if (!admin.ok) {
+      return { success: false, message: admin.error };
+    }
+
     try {
       const inst = updateInstance.parse(data);
       const instExists = await prisma.harpinstance.findFirst({
@@ -36,10 +47,11 @@ export async function createInst(data: z.infer<typeof InstSchema>) {
       });
   
       if (!instExists) throw new Error('Instance non trouvée !');
-  
-      await prisma.envsharp.update({
-        where: { id: inst.id  },
-        data: inst,
+
+      const { id, ...updateData } = inst;
+      await prisma.harpinstance.update({
+        where: { id },
+        data: updateData,
       });
   
       revalidatePath('/list/instora');
@@ -56,6 +68,11 @@ export async function createInst(data: z.infer<typeof InstSchema>) {
 
   // Delete ENV
 export async function deleteInst(id: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, message: admin.error };
+  }
+
   try {
     const instExists = await prisma.harpinstance.findFirst({
       where: { id  },
