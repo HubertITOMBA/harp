@@ -15,12 +15,19 @@ import {
   Lock, 
   UserCircle,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Layers
 } from "lucide-react";
 import Link from 'next/link';
 import { RemoveRoleButton } from '@/components/user/RemoveRoleButton';
 import { UpdatePasswordDialogWrapper } from '@/components/user/UpdatePasswordDialogWrapper';
 import { AddRolesModalWrapper } from '@/components/user/AddRolesModalWrapper';
+import { UserScopesForm } from '@/components/user/UserScopesForm';
+import {
+  ASSIGNABLE_USER_SCOPE_CODES,
+  type AssignableUserScopeCode,
+} from '@/lib/user-scopes';
+import { PORTAL_ADMIN_ROLE } from '@/lib/user-roles';
 
 const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
   const { netid } = await params;
@@ -43,6 +50,16 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
           datmaj: 'desc',
         },
       },
+      harpuserscope: {
+        include: {
+          harpscope: {
+            select: {
+              code: true,
+              descr: true,
+            },
+          },
+        },
+      },
     },
   });  
 
@@ -62,6 +79,27 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
 
   const assignedRoleNames = userRoles.map(ur => ur.harproles.role);
   const availableRoles = allRoles.filter(role => !assignedRoleNames.includes(role.role));
+  const isPortalAdmin =
+    user.role === PORTAL_ADMIN_ROLE || assignedRoleNames.includes(PORTAL_ADMIN_ROLE);
+  const assignedScopeCodes = new Set(user.harpuserscope.map((row) => row.harpscope.code));
+  const scopeCatalog = await prisma.harpscope.findMany({
+    where: { code: { in: [...ASSIGNABLE_USER_SCOPE_CODES] } },
+    select: { code: true, descr: true },
+  });
+  const scopeOptions = ASSIGNABLE_USER_SCOPE_CODES.flatMap((code) => {
+    const row = scopeCatalog.find((scope) => scope.code === code);
+    if (!row) {
+      return [];
+    }
+    return [{
+      code: code as AssignableUserScopeCode,
+      descr: row.descr,
+      checked: assignedScopeCodes.has(code),
+    }];
+  });
+  const unexpectedScopeCodes = user.harpuserscope
+    .map((row) => row.harpscope.code)
+    .filter((code) => !ASSIGNABLE_USER_SCOPE_CODES.includes(code as AssignableUserScopeCode));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6 lg:p-8">
@@ -278,6 +316,63 @@ const UserSinglePage = async ({ params }: { params: { netid: string } }) => {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Layers className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-white">Périmètres d&apos;environnements</CardTitle>
+                <CardDescription className="text-orange-100">
+                  Limite les environnements d&apos;une famille déjà autorisée par les rôles
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isPortalAdmin ? (
+              <div className="space-y-2 rounded-md border border-orange-200 bg-orange-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">
+                  Accès global — PORTAL_ADMIN
+                </p>
+                <p className="text-sm text-slate-700">
+                  Cet utilisateur dispose d&apos;un accès global aux environnements.
+                  Aucune affectation de périmètre individuelle n&apos;est nécessaire.
+                </p>
+                {user.harpuserscope.length > 0 && (
+                  <p className="text-sm font-medium text-red-700">
+                    Anomalie : des périmètres individuels sont déjà enregistrés
+                    ({user.harpuserscope.map((row) => row.harpscope.code).join(", ")}).
+                    Ils ne sont pas modifiés depuis cette fiche.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {unexpectedScopeCodes.length > 0 && (
+                  <p className="text-sm font-medium text-red-700">
+                    Anomalie : un périmètre hors 4K et 150K est déjà enregistré
+                    ({unexpectedScopeCodes.join(", ")}).
+                    L&apos;enregistrement ne conservera que la sélection affichée.
+                  </p>
+                )}
+                {scopeOptions.length > 0 ? (
+                  <UserScopesForm
+                    key={`${netid}:${scopeOptions.map((option) => `${option.code}:${option.checked}`).join("|")}`}
+                    netid={netid}
+                    options={scopeOptions}
+                  />
+                ) : (
+                  <p className="text-sm text-slate-700">
+                    Aucun périmètre affectable n&apos;est disponible.
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
         
