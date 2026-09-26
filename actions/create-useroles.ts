@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -10,9 +11,18 @@ const CreateUserRolesSchema = z.object({
 });
 
 /**
- * Crée une attribution de rôle HARP à un utilisateur
+ * Crée une attribution de rôle HARP à un utilisateur.
+ * Réservé à PORTAL_ADMIN, rôles lus en base, avant toute lecture ou écriture.
+ *
+ * @param formData - NetID et rôle à attribuer
+ * @returns success, ou error sans modification de harpuseroles
  */
 export async function createUserRoles(formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       netid: formData.get("netid") as string,

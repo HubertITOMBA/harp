@@ -31,7 +31,7 @@ import {
   importerLesMonitors,
   migrerLesUtilisateursNEW,
   migrerLesRolesUtilisateurs,
-} from "@/actions/importharp";
+} from "@/lib/harp-import-core";
 
 type StepPayload = {
   success?: string | boolean;

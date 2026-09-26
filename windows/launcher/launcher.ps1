@@ -144,6 +144,11 @@ function Get-LauncherLogDir {
     return $null
 }
 
+function Hide-LaunchToken([string]$text) {
+    if ([string]::IsNullOrEmpty($text)) { return $text }
+    return [regex]::Replace($text, 'token=[^&\s]+', 'token=(présent)')
+}
+
 function Write-Log($message) {
     try {
         $logDir = Get-LauncherLogDir
@@ -184,7 +189,7 @@ function Get-UserNetId {
     return $netid
 }
 
-function Get-ToolInfoFromAPI($tool, $netid) {
+function Get-ToolInfoFromAPI($tool, $launchToken) {
     $maxRetries = 3
     $retryDelay = 2 # secondes
     
@@ -240,8 +245,12 @@ function Get-ToolInfoFromAPI($tool, $netid) {
         Write-Log "Avertissement: Validation SSL non configurée - $($_.Exception.Message)"
     }
     
-    # Construire l'URL de l'API avec les paramètres de base
-    $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$tool&netid=$netid"
+    if ([string]::IsNullOrWhiteSpace([string]$launchToken)) {
+        throw "Jeton de lancement absent. Relancez l'outil depuis le portail."
+    }
+
+    # Le jeton porte l'identité. Le netid n'est pas envoyé.
+    $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$([System.Uri]::EscapeDataString($tool))&token=$([System.Uri]::EscapeDataString([string]$launchToken))"
     
     # Ajouter les paramètres optionnels depuis l'URL mylaunch://
     $apiParams = @()
@@ -262,8 +271,8 @@ function Get-ToolInfoFromAPI($tool, $netid) {
         $apiUrl += "&" + ($apiParams -join "&")
     }
     
-    Write-Host "Appel API: $apiUrl" -ForegroundColor Cyan
-    Write-Log "Appel API: $apiUrl"
+    Write-Host "Appel API: $(Hide-LaunchToken $apiUrl)" -ForegroundColor Cyan
+    Write-Log "Appel API: $(Hide-LaunchToken $apiUrl)"
     
     # Vérifier si un proxy est configuré
     $proxyUrl = $env:HTTP_PROXY
@@ -358,8 +367,8 @@ function Get-ToolInfoFromAPI($tool, $netid) {
 
 try {
     Write-Host "`n=== Launcher PowerShell ===" -ForegroundColor Green
-    Write-Log "Launch request: $Url"
-    Write-Host "URL reçue: $Url" -ForegroundColor Yellow
+    Write-Log "Launch request: $(Hide-LaunchToken $Url)"
+    Write-Host "URL reçue: $(Hide-LaunchToken $Url)" -ForegroundColor Yellow
 
     if (-not ($Url -match '^mylaunch://')) {
         throw "Protocole invalide. Attendu: mylaunch://, reçu: $($Url.Substring(0, [Math]::Min(20, $Url.Length)))"
@@ -373,14 +382,18 @@ try {
     # Parse query
     $query = @{ }
     if ($uri.Query) {
-        Write-Host "Paramètres de requête: $($uri.Query)" -ForegroundColor Yellow
+        Write-Host "Paramètres de requête: $(Hide-LaunchToken $uri.Query)" -ForegroundColor Yellow
         $pairs = $uri.Query.TrimStart('?').Split('&') | Where-Object { $_ -ne '' }
         foreach ($pair in $pairs) {
             $kv = $pair.Split('=',2)
             $k = [System.Uri]::UnescapeDataString($kv[0])
             $v = if ($kv.Count -gt 1) { [System.Uri]::UnescapeDataString($kv[1]) } else { '' }
             $query[$k] = $v
-            Write-Host "  - $k = $v" -ForegroundColor Gray
+            if ($k -eq 'token') {
+                Write-Host "  - token = (présent)" -ForegroundColor Gray
+            } else {
+                Write-Host "  - $k = $v" -ForegroundColor Gray
+            }
         }
     } else {
         Write-Host "Aucun paramètre de requête" -ForegroundColor Gray
@@ -490,7 +503,8 @@ try {
 
     # Récupérer les informations de l'outil depuis l'API
     Write-Host "Récupération des informations de l'outil depuis la base de données..." -ForegroundColor Cyan
-    $toolInfo = Get-ToolInfoFromAPI -tool $tool -netid $netid
+    $launchToken = $query['token']
+    $toolInfo = Get-ToolInfoFromAPI -tool $tool -launchToken $launchToken
     
     if (-not $toolInfo -or -not $toolInfo.success) {
         throw "Impossible de récupérer les informations de l'outil '$tool' depuis la base de données"

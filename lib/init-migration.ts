@@ -5,7 +5,7 @@
  */
 
 import prisma from "@/lib/prisma";
-import { migrerLesUtilisateurs, migrerLesUtilisateursNEW, migrerLesRolesUtilisateurs } from "@/actions/importharp";
+import { migrerLesUtilisateurs, migrerLesUtilisateursNEW, migrerLesRolesUtilisateurs } from "@/lib/harp-import-core";
 import { ensureFullDatabaseMigration } from "./init-full-migration";
 
 // Variables de contrôle pour éviter les exécutions multiples
@@ -66,24 +66,24 @@ export async function ensureUserMigration(force?: boolean) {
       // Utiliser migrerLesUtilisateurs() qui force l'import des utilisateurs manquants
       const usersResult = await migrerLesUtilisateurs();
       
-      if (usersResult.error) {
+      if ("error" in usersResult && usersResult.error) {
         console.error(`[Migration] Erreur lors de la synchronisation des utilisateurs: ${usersResult.error}`);
         // Ne pas bloquer si l'erreur est que psadm_user est vide
         if (usersResult.error.includes("psadm_user est vide")) {
           return { skipped: true, reason: "Table psadm_user vide, aucun utilisateur à synchroniser", userCount };
         }
-      } else if (usersResult.success) {
+      } else if ("success" in usersResult && usersResult.success) {
         console.log(`[Migration] ${usersResult.success}`);
-      } else if (usersResult.info) {
+      } else if ("info" in usersResult && usersResult.info) {
         console.log(`[Migration] ${usersResult.info}`);
       }
       
       // Migrer aussi les rôles des utilisateurs
       try {
         const rolesResult = await migrerLesRolesUtilisateurs();
-        if (rolesResult.success) {
+        if ("success" in rolesResult && rolesResult.success) {
           console.log(`[Migration] ${rolesResult.success}`);
-        } else if (rolesResult.info) {
+        } else if ("info" in rolesResult && rolesResult.info) {
           console.log(`[Migration] ${rolesResult.info}`);
         }
       } catch (rolesError) {

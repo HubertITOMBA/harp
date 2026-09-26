@@ -3,6 +3,13 @@
  * Utilisé pour lancer des applications Windows locales depuis le navigateur
  */
 
+import { issueLauncherToken } from "@/actions/issue-launcher-token";
+
+/** Retire la valeur du jeton avant tout log. */
+function redactLaunchUrl(url: string): string {
+  return url.replace(/([?&]token=)[^&]*/g, "$1(présent)");
+}
+
 export type ExternalTool = 'putty' | 'pside' | 'ptsmt' | 'sqldeveloper' | 'psdmt' | 'pscfg' | 'sqlplus' | 'filezilla' | 'perl' | 'winscp' | 'winmerge';
 
 export interface PuttyParams {
@@ -109,7 +116,7 @@ export function buildMyLaunchUrl(
 ): string {
   switch (tool) {
     case 'putty':
-      return buildPuttyUrl(params as PuttyParams);
+      return buildPuttyUrl(params as unknown as PuttyParams);
     case 'pside':
     case 'ptsmt':
       return buildPeopleSoftUrl(tool, params as PeopleSoftParams);
@@ -318,6 +325,16 @@ export async function launchExternalTool(
   // Sans droits registre Citrix, on force le serveur local.
   const allowProtocolFallback = transport === "auto";
 
+  const issued = await issueLauncherToken(tool);
+  if (!issued.success) {
+    return { success: false, error: issued.error };
+  }
+
+  const launchParams: Record<string, string | number | undefined> = {
+    ...params,
+    token: issued.token,
+  };
+
   const netid =
     (params?.netid as string | undefined) ||
     (params?.user as string | undefined) ||
@@ -335,13 +352,11 @@ export async function launchExternalTool(
   const buildLaunchUrl = (format?: "html") => {
     const serverUrl = `http://localhost:${port}/launch?tool=${encodeURIComponent(tool)}`;
     const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && key !== "netid") {
-          searchParams.append(key, String(value));
-        }
-      });
-    }
+    Object.entries(launchParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && key !== "netid") {
+        searchParams.append(key, String(value));
+      }
+    });
     if (format) searchParams.set("format", format);
     const qs = searchParams.toString();
     return qs ? `${serverUrl}&${qs}` : serverUrl;
@@ -349,7 +364,7 @@ export async function launchExternalTool(
 
   const tryFetchLaunch = async (): Promise<{ success: boolean; error?: string }> => {
     const fullUrl = buildLaunchUrl();
-    console.info("[mylaunch] fetch", fullUrl);
+    console.info("[mylaunch] fetch", redactLaunchUrl(fullUrl));
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
@@ -376,7 +391,7 @@ export async function launchExternalTool(
         return;
       }
       const fullUrl = buildLaunchUrl("html");
-      console.info("[mylaunch] navigation", fullUrl);
+      console.info("[mylaunch] navigation", redactLaunchUrl(fullUrl));
       const iframe = document.createElement("iframe");
       iframe.setAttribute("aria-hidden", "true");
       iframe.style.cssText =
@@ -423,7 +438,10 @@ export async function launchExternalTool(
       if (navResult.success) return navResult;
 
       if (allowProtocolFallback) {
-        const url = buildMyLaunchUrl(tool, params);
+        let url = buildMyLaunchUrl(tool, launchParams);
+        if (!/[?&]token=/.test(url)) {
+          url += `${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(issued.token)}`;
+        }
         const a = document.createElement("a");
         a.href = url;
         a.style.display = "none";
@@ -469,7 +487,7 @@ export async function checkLauncherHealth(
 /**
  * Vérifie si un outil existe dans la base de données et est configuré
  * @param tool - Le nom de l'outil à vérifier
- * @param netid - Le netid de l'utilisateur
+ * @param netid - Ignoré pour l'identité. Le jeton est émis depuis la session.
  * @param extraParams - Paramètres optionnels (ptversion requis pour pside/psdmt)
  */
 export async function checkToolAvailability(
@@ -478,10 +496,18 @@ export async function checkToolAvailability(
   extraParams?: Record<string, string | undefined>
 ): Promise<{ success: boolean; error?: string; toolInfo?: any }> {
   try {
+    // Le netid passé par l'interface n'est pas une preuve d'identité.
+    void netid;
+    const issued = await issueLauncherToken(tool);
+    if (!issued.success) {
+      return { success: false, error: issued.error };
+    }
+
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
-    const qs = new URLSearchParams({ tool, netid });
+    const qs = new URLSearchParams({ tool, token: issued.token });
     if (extraParams) {
       Object.entries(extraParams).forEach(([k, v]) => {
+        if (k === "netid" || k === "token") return;
         if (v !== undefined && v !== null && String(v).trim() !== "") {
           qs.set(k, String(v));
         }

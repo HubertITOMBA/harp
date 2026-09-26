@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -17,7 +18,20 @@ const UpdateUserSchema = z.object({
   expora: z.string().optional(),
 });
 
+/**
+ * Met à jour un utilisateur psadm_user, y compris pkeyfile.
+ * Réservé à PORTAL_ADMIN, rôles lus en base, avant toute lecture ou écriture.
+ *
+ * @param netid - NetID cible
+ * @param formData - Champs à enregistrer
+ * @returns success et message, ou error sans écriture
+ */
 export async function updateUser(netid: string, formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       nom: formData.get("nom") as string || undefined,

@@ -5,7 +5,7 @@
  * Usage: npx tsx scripts/run-migrate-users.ts
  */
 
-import { migrerLesUtilisateurs } from "../actions/importharp";
+import { migrerLesUtilisateurs } from "@/lib/harp-import-core";
 
 async function main() {
   console.log("🚀 Démarrage de la migration des utilisateurs...");
@@ -14,13 +14,13 @@ async function main() {
   try {
     const result = await migrerLesUtilisateurs();
     
-    if (result.error) {
+    if ("error" in result && result.error) {
       console.error("❌ Erreur:", result.error);
       process.exit(1);
-    } else if (result.success) {
+    } else if ("success" in result && result.success) {
       console.log("✅ Succès:", result.success);
       process.exit(0);
-    } else if (result.info) {
+    } else if ("info" in result && result.info) {
       console.log("ℹ️  Info:", result.info);
       process.exit(0);
     } else {

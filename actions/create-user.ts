@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -19,7 +20,19 @@ const CreateUserSchema = z.object({
   expora: z.string().optional(),
 });
 
+/**
+ * Crée un utilisateur psadm_user.
+ * Réservé à PORTAL_ADMIN, rôles lus en base, avant toute lecture ou écriture.
+ *
+ * @param formData - Champs du formulaire, mot de passe inclus
+ * @returns success et message, ou error sans écriture
+ */
 export async function createUser(formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       netid: formData.get("netid") as string,

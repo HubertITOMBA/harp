@@ -1,32 +1,21 @@
 import { NextResponse } from "next/server";
-import { checkOrCreateUser } from "@/actions/check-or-create-user";
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { netid, password } = body;
-
-    if (!netid || !password) {
-      return NextResponse.json(
-        { error: "NetID et mot de passe requis" },
-        { status: 400 }
-      );
-    }
-
-    const result = await checkOrCreateUser(netid, password);
-    
-    return NextResponse.json(result);
-  } catch (error) {
-    return NextResponse.json(
-      { error: `Erreur: ${error instanceof Error ? error.message : "Erreur inconnue"}` },
-      { status: 500 }
-    );
-  }
+/**
+ * Ancienne route de test. Elle ne crée plus de compte et ne modifie plus de mot de passe.
+ */
+export async function POST() {
+  return NextResponse.json(
+    { success: false, error: "Accès refusé" },
+    { status: 403 }
+  );
 }
 
+/**
+ * Ancienne route de test. Elle ne décrit plus comment écrire un utilisateur.
+ */
 export async function GET() {
-  return NextResponse.json({
-    message: "Utilisez POST avec { netid: 'hitomba', password: 'hitomba' }"
-  });
+  return NextResponse.json(
+    { success: false, error: "Accès refusé" },
+    { status: 403 }
+  );
 }
-

@@ -1,12 +1,23 @@
 "use server"
 
 import prisma from "@/lib/prisma";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 
 /**
- * Ajouter un ou plusieurs rôles HARP à un utilisateur
+ * Ajoute un ou plusieurs rôles HARP à un utilisateur.
+ * Réservé à PORTAL_ADMIN, rôles lus en base, avant toute lecture ou écriture.
+ *
+ * @param netid - NetID de l'utilisateur cible
+ * @param roles - Noms de rôles harproles à attribuer
+ * @returns success, ou error sans modification de harpuseroles
  */
 export async function addUserRoles(netid: string, roles: string[]) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     if (!netid || !roles || roles.length === 0) {
       return { 
@@ -87,9 +98,19 @@ export async function addUserRoles(netid: string, roles: string[]) {
 }
 
 /**
- * Retirer un rôle HARP d'un utilisateur
+ * Retire un rôle HARP d'un utilisateur.
+ * Réservé à PORTAL_ADMIN, rôles lus en base, avant toute lecture ou écriture.
+ *
+ * @param netid - NetID de l'utilisateur cible
+ * @param role - Nom du rôle à retirer
+ * @returns success, ou error sans modification de harpuseroles
  */
 export async function removeUserRole(netid: string, role: string) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     if (!netid || !role) {
       return { 

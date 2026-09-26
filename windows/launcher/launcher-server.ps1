@@ -35,6 +35,11 @@ function Get-HarpUserLauncherPort([string]$UserName) {
     return 8800 + ($sum % 200)
 }
 
+function Hide-LaunchToken([string]$text) {
+    if ([string]::IsNullOrEmpty($text)) { return $text }
+    return [regex]::Replace($text, 'token=[^&\s]+', 'token=(présent)')
+}
+
 function Write-ServerBootLog([string]$message) {
     $stamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss.fff")
     $line = "[$stamp] SERVER $message"
@@ -246,6 +251,7 @@ try {
             $ptversion = $request.QueryString["ptversion"]
             $envId = $request.QueryString["envId"]
             $ip = $request.QueryString["ip"]
+            $token = $request.QueryString["token"]
             $format = $request.QueryString["format"]
             
             if ($tool) {
@@ -261,16 +267,17 @@ try {
                 if ($ptversion) { $params += "ptversion=$([System.Uri]::EscapeDataString($ptversion))" }
                 if ($envId) { $params += "envId=$([System.Uri]::EscapeDataString($envId))" }
                 if ($ip) { $params += "ip=$([System.Uri]::EscapeDataString($ip))" }
+                if ($token) { $params += "token=$([System.Uri]::EscapeDataString($token))" }
                 if ($params.Count -gt 0) {
                     $mylaunchUrl += "?" + ($params -join "&")
                 }
                 
                 try {
-                    Write-Host "  URL: $mylaunchUrl" -ForegroundColor Gray
+                    Write-Host "  URL: $(Hide-LaunchToken $mylaunchUrl)" -ForegroundColor Gray
                     Write-Host "  Script: $launcherScript" -ForegroundColor Gray
 
                     $stamp0 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss.fff")
-                    $preLine = "[$stamp0] /launch REQUEST user=$userName port=$Port tool=$tool url=$mylaunchUrl"
+                    $preLine = "[$stamp0] /launch REQUEST user=$userName port=$Port tool=$tool url=$(Hide-LaunchToken $mylaunchUrl)"
                     foreach ($logFile in @(
                         $(if (Test-Path "W:\") { "W:\portal\HARP\launcher\logs\server.log" } else { $null }),
                         (Join-Path $PSScriptRoot "logs\server.log"),
