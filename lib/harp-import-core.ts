@@ -107,7 +107,7 @@ export const insertTypeBases = async () => {
     const missing = catalog.filter((row) => !present.has(row.statenv));
 
     if (missing.length === 0) {
-      return { info: "Le seed statutenv est dÃ©jÃ  complet. Aucune ligne manquante." };
+      return { info: "Le seed statutenv est déjà complet. Aucune ligne manquante." };
     }
 
     if (existing.length === 0) {
