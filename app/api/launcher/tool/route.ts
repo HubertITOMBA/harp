@@ -1,33 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readLauncherTool } from "@/lib/launcher-tool";
-import { resolveLauncherIdentity } from "@/lib/launcher-token";
+import { executeLauncherToolRequest } from "@/lib/launcher-execution";
 
 /**
  * Informations d'un outil pour le launcher Windows.
- * L'identité est celle du jeton signé. Le paramètre netid de la query est ignoré.
+ * La version signée du jeton choisit le chemin.
+ * Un jeton v1 est refusé. Les champs libres de la query ne construisent pas la commande.
  *
  * GET /api/launcher/tool?tool=putty&token=...
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const access = resolveLauncherIdentity({
+    const result = await executeLauncherToolRequest({
       token: searchParams.get("token"),
       tool: searchParams.get("tool"),
       queryNetid: searchParams.get("netid"),
-      secret: process.env.AUTH_SECRET,
-    });
-
-    if (!access.ok) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
-    }
-
-    const result = await readLauncherTool({
-      tool: access.tool,
-      netid: access.netid,
       ptversion: searchParams.get("ptversion"),
       aliasql: searchParams.get("aliasql"),
       ip: searchParams.get("ip"),
+      host: searchParams.get("host"),
+      user: searchParams.get("user"),
+      sshkey: searchParams.get("sshkey"),
+      pkeyfile: searchParams.get("pkeyfile"),
+      path: searchParams.get("path"),
+      exe: searchParams.get("exe"),
+      command: searchParams.get("command"),
+      pshome: searchParams.get("pshome"),
+      envId: searchParams.get("envId"),
+      secret: process.env.AUTH_SECRET,
     });
 
     return NextResponse.json(result.body, { status: result.status });

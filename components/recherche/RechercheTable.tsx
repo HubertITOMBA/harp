@@ -38,6 +38,8 @@ export type RechercheRow = {
   url: string | null;
   oraschema: string | null;
   ip: string;
+  envId: number;
+  serverId: number;
 };
 
 interface RechercheTableProps {
@@ -128,6 +130,8 @@ export function RechercheTable({ data }: RechercheTableProps) {
             <PuttyLink
               host={srv || ip}
               ip={ip}
+              envId={row.original.envId}
+              serverId={row.original.serverId}
               className="text-orange-600 hover:text-orange-800 hover:underline font-mono text-xs inline-flex items-center gap-1"
             >
               {srv}

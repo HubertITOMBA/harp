@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { PORTAL_ADMIN_ROLE } from "@/lib/user-roles";
 
 /** Seuls ces codes peuvent être affectés à un utilisateur. UNASSIGNED reste un état d'environnement. */
@@ -236,4 +237,135 @@ export function decideEnvironmentServerAccess(input: {
     return 403;
   }
   return 200;
+}
+
+/**
+ * Autorise les serveurs d'un environnement déjà résolu en base.
+ * Le typenvid vient de cette ligne, jamais d'un paramètre client.
+ * La famille RBAC est exigée avant le périmètre. PORTAL_ADMIN n'est pas
+ * filtré par 4K/150K lorsque le filtre reçu est mode all.
+ *
+ * @param input.authenticated - Présence d'une session
+ * @param input.environment - Ligne envsharp, ou null
+ * @param input.familyAllowed - Résultat RBAC pour le typenvid de cette ligne
+ * @param input.scopeFilter - Filtre de périmètre déjà résolu
+ * @returns 200, 401, 403 ou 404
+ */
+export function decideEnvironmentFamilyAndScope(input: {
+  authenticated: boolean;
+  environment: { scopeId: number | null } | null;
+  familyAllowed: boolean;
+  scopeFilter: EnvironmentScopeFilter;
+}): EnvironmentServerAccess {
+  if (!input.authenticated) {
+    return 401;
+  }
+  if (input.environment == null) {
+    return 404;
+  }
+  if (!input.familyAllowed) {
+    return 403;
+  }
+  return decideEnvironmentServerAccess({
+    authenticated: true,
+    environment: input.environment,
+    scopeFilter: input.scopeFilter,
+  });
+}
+
+/**
+ * Contexte de visibilité chargé une fois pour une liste.
+ * allowedTypenvIds null : toutes les familles, réservé à PORTAL_ADMIN.
+ */
+export type EnvironmentAccessContext = {
+  authenticated: boolean;
+  portalAdmin: boolean;
+  allowedTypenvIds: number[] | null;
+  scopeFilter: EnvironmentScopeFilter;
+};
+
+/**
+ * Décide si une ligne envsharp déjà lue peut être montrée.
+ * PORTAL_ADMIN voit la ligne, y compris sans typenvid et sans scope 4K/150K.
+ * Un autre utilisateur doit avoir la famille et le scope.
+ *
+ * @param context - Contexte de session déjà chargé
+ * @param environment - typenvid et scopeId lus sur envsharp
+ * @returns true seulement si la ligne est visible
+ */
+export function canSeeEnvironment(
+  context: EnvironmentAccessContext,
+  environment: { typenvid: number | null; scopeId: number | null }
+): boolean {
+  if (!context.authenticated) {
+    return false;
+  }
+  if (context.portalAdmin) {
+    return true;
+  }
+  const familyAllowed =
+    context.allowedTypenvIds != null &&
+    environment.typenvid != null &&
+    context.allowedTypenvIds.includes(environment.typenvid);
+  return (
+    decideEnvironmentFamilyAndScope({
+      authenticated: true,
+      environment,
+      familyAllowed,
+      scopeFilter: context.scopeFilter,
+    }) === 200
+  );
+}
+
+/**
+ * Clause Prisma pour ne charger que les envsharp visibles.
+ * null signifie de ne rien interroger. {} signifie aucun filtre supplémentaire.
+ *
+ * @param context - Contexte de session déjà chargé
+ * @returns null, un objet vide, ou typenvid et scopeId
+ */
+export function environmentVisibilityWhere(context: EnvironmentAccessContext): {
+  typenvid?: { in: number[] };
+  scopeId?: { in: number[] };
+} | null {
+  if (!context.authenticated) {
+    return null;
+  }
+  if (context.portalAdmin) {
+    return {};
+  }
+  if (context.allowedTypenvIds == null || context.allowedTypenvIds.length === 0) {
+    return null;
+  }
+  const scopeWhere = environmentScopeWhere(context.scopeFilter);
+  if (scopeWhere == null) {
+    return null;
+  }
+  return {
+    typenvid: { in: context.allowedTypenvIds },
+    ...scopeWhere,
+  };
+}
+
+/**
+ * Traduit le contexte en prédicat SQL sur l'alias envsharp `e`.
+ * null signifie qu'aucune ligne ne doit être lue.
+ *
+ * @param context - Contexte déjà chargé
+ * @returns Fragment SQL, ou null pour une liste vide
+ */
+export function environmentVisibilitySql(context: EnvironmentAccessContext): Prisma.Sql | null {
+  const where = environmentVisibilityWhere(context);
+  if (where == null) {
+    return null;
+  }
+  if (context.portalAdmin) {
+    return Prisma.sql`1 = 1`;
+  }
+  const typenvids = where.typenvid?.in ?? [];
+  const scopeIds = where.scopeId?.in ?? [];
+  if (typenvids.length === 0 || scopeIds.length === 0) {
+    return null;
+  }
+  return Prisma.sql`e.typenvid IN (${Prisma.join(typenvids)}) AND e.scopeId IN (${Prisma.join(scopeIds)})`;
 }

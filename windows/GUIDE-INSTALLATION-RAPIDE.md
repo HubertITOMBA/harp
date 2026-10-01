@@ -66,7 +66,7 @@ Double-cliquez sur `windows/protocol/install-mylaunch.reg` et confirmez l'ajout 
 
 Ouvrez la console développeur (F12) et exécutez :
 ```javascript
-window.location.href = 'mylaunch://putty?host=192.168.1.49&user=root&port=22';
+window.location.href = 'mylaunch://putty?token=<TOKEN_SIGNE>';
 ```
 
 ### Test 2: Vérifier les logs
@@ -79,55 +79,16 @@ C:\apps\portail\launcher\logs\launcher.log
 ### Test 3: Tester le script directement
 
 ```powershell
-C:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?host=test"
+C:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?token=<TOKEN_SIGNE>"
 ```
 
 ## Utilisation dans l'application Next.js
 
-### Méthode 1: Utiliser le composant PuttyLauncher
-
-```tsx
-import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
-
-<PuttyLauncher 
-  host="192.168.1.49" 
-  user="root" 
-  port={22}
-/>
-```
-
-### Méthode 2: Utiliser la fonction launchExternalTool
-
-```tsx
-import { launchExternalTool } from '@/lib/mylaunch';
-
-const handleLaunch = () => {
-  launchExternalTool('putty', {
-    host: '192.168.1.49',
-    user: 'root',
-    port: 22,
-    sshkey: 'C:\\ssh\\key.ppk'
-  });
-};
-```
-
-### Méthode 3: Utiliser le hook useExternalTool
-
-```tsx
-import { useExternalTool } from '@/hooks/use-external-tool';
-
-const { launch, isLaunching, error } = useExternalTool();
-
-const handleLaunch = () => {
-  launch('putty', { host: '192.168.1.49', user: 'root', port: 22 });
-};
-```
+Les boutons du portail envoient un jeton signé au launcher local. Une URL sans jeton, ou qui ne fournit que `host`, `user` ou `sshkey`, est refusée.
 
 ## Applications supportées
 
-- **PuTTY** : `mylaunch://putty?host=...&user=...&port=...&sshkey=...`
-- **PeopleSoft IDE** : `mylaunch://pside?dbname=...&server=...`
-- **PeopleSoft PTSMT** : `mylaunch://ptsmt?dbname=...&server=...`
+Le portail décide de la commande. Le launcher local transporte le jeton, puis exécute le chemin et les arguments renvoyés par `/api/launcher/tool`.
 
 ## Dépannage
 
@@ -177,6 +138,6 @@ $allowed = @{
 ## Support
 
 - Documentation complète : `windows/INSTALLATION.md`
-- Exemples de code : `components/examples/ExternalToolExamples.tsx`
+- Script launcher : `windows/launcher/launcher.ps1`
 - Script launcher : `windows/launcher/launcher.ps1`
 

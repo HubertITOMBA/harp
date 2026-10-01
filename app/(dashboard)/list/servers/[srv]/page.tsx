@@ -172,6 +172,7 @@ const ServSinglePage = async ({ params }: { params: { srv: string } }) => {
               ip={Servs.ip}
               srv={Servs.srv}
               psuser={Servs.psuser || undefined}
+              serverId={Servs.id}
             />
           </CardContent>
         </Card>

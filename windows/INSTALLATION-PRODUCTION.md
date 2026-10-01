@@ -139,14 +139,14 @@ Vous devriez voir les clés du protocole enregistré.
 ### Test 2: Tester le script directement
 
 ```powershell
-D:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?host=test"
+D:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?token=<TOKEN_SIGNE>"
 ```
 
 ### Test 3: Tester depuis le navigateur
 
 Ouvrir la console développeur (F12) et exécuter :
 ```javascript
-window.location.href = 'mylaunch://putty?host=192.168.1.49&user=root&port=22';
+window.location.href = 'mylaunch://putty?token=<TOKEN_SIGNE>';
 ```
 
 ### Test 4: Vérifier les logs
@@ -158,40 +158,7 @@ D:\apps\portail\launcher\logs\launcher.log
 
 ## Utilisation dans l'application
 
-### Exemple : Lancer PuTTY
-
-```tsx
-import { launchExternalTool } from '@/lib/mylaunch';
-
-// Lancer PuTTY avec les paramètres
-launchExternalTool('putty', {
-  host: '192.168.1.49',
-  user: 'root',
-  port: 22,
-  sshkey: 'C:\\ssh\\key.ppk'  // Optionnel
-});
-```
-
-### Exemple : Lancer SQL Developer
-
-```tsx
-import { launchExternalTool } from '@/lib/mylaunch';
-
-launchExternalTool('sqldeveloper');
-```
-
-### Exemple : Lancer PeopleSoft AppDesigner
-
-```tsx
-import { launchExternalTool } from '@/lib/mylaunch';
-
-launchExternalTool('pside', {
-  dbname: 'HR92',
-  server: 'PSDEV',
-  user: 'PS',
-  password: 'PS'
-});
-```
+Les boutons du portail envoient un jeton signé au launcher local. Une URL sans jeton, ou qui ne fournit que `host`, `user` ou `sshkey`, est refusée.
 
 ## Dépannage
 

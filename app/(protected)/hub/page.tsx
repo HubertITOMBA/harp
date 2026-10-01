@@ -1,8 +1,8 @@
 'use client'
 
 import { PuttyLauncher } from '@/components/ui/external-tool-launcher'
-import { checkLauncherHealth, launchExternalTool } from '@/lib/mylaunch'
-import { useState, useEffect } from 'react'
+import { checkLauncherHealth, launchFreeSshPutty } from '@/lib/mylaunch'
+import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -16,43 +16,25 @@ export default function HarpPage() {
   const { data: session } = useSession()
   const [error, setError] = useState<string | null>(null)
   const [host, setHost] = useState<string>('192.168.1.49')
-  const [user, setUser] = useState<string>('')
-
-  // Utiliser automatiquement le netid de l'utilisateur connecté
-  useEffect(() => {
-    if (session?.user?.netid) {
-      setUser(session.user.netid)
-    }
-  }, [session])
+  const connectedNetid = session?.user?.netid?.trim() ?? ""
 
   const handleLaunchPutty = async () => {
     setError(null)
     
-    // Vérifier que le host est fourni
     if (!host || host.trim() === '') {
       setError('Veuillez entrer un hôte (IP ou nom de serveur)')
       return
     }
     
-    // Utiliser le netid de la session si l'utilisateur n'a pas spécifié de user
-    const userToUse = user && user.trim() !== '' 
-      ? user.trim() 
-      : (session?.user?.netid || undefined)
-    
     try {
       const doLaunch = async () => {
-        const result = await launchExternalTool('putty', {
-          host: host.trim(),
-          user: userToUse,
-          port: 22,
-          netid: session?.user?.netid || userToUse,
-        })
+        const result = await launchFreeSshPutty(host.trim(), connectedNetid || undefined)
         if (!result.success) {
           throw new Error(result.error || 'Impossible de lancer PuTTY. Vérifiez que le launcher est installé et démarré.')
         }
       }
 
-      const health = await checkLauncherHealth(800, session?.user?.netid || userToUse)
+      const health = await checkLauncherHealth(800, connectedNetid || undefined)
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() })
         return
@@ -125,16 +107,13 @@ export default function HarpPage() {
               </Label>
               <Input
                 type="text"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                placeholder={session?.user?.netid || "root"}
-                className="w-full"
+                value={connectedNetid}
+                readOnly
+                className="w-full bg-slate-50 text-slate-900"
               />
-              {session?.user?.netid && (
-                <p className="text-xs text-gray-500">
-                  Votre NetID sera utilisé par défaut si le champ est vide
-                </p>
-              )}
+              <p className="text-xs text-gray-500">
+                La connexion utilise l&apos;identité SSH du compte connecté.
+              </p>
             </div>
 
             {/* Bouton de lancement */}
@@ -153,9 +132,8 @@ export default function HarpPage() {
             <div className="pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600 mb-3">Ou utilisez le composant de lancement :</p>
               <PuttyLauncher
-                host={host || 'localhost'}
-                user={user || session?.user?.netid || undefined}
-                port={22}
+                host={host}
+                launchMode="free-ssh"
                 variant="outline"
               />
             </div>

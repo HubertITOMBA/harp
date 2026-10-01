@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { loadVisibleEnvironmentNames } from '@/lib/environment-access';
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +11,11 @@ export async function GET(
     
     const decodedAppli = decodeURIComponent(appli);
     const decodedPsversion = decodeURIComponent(psversion);
+    const visible = await loadVisibleEnvironmentNames();
+    if (visible == null) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    const nameWhere = visible.unrestricted ? {} : { env: { in: visible.names } };
 
     const appliData = await db.psadm_appli.findUnique({
       where: {
@@ -20,6 +26,7 @@ export async function GET(
       },
       include: {
         psadm_env: {
+          where: nameWhere,
           select: {
             env: true,
           },

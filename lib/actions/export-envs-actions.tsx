@@ -1,8 +1,10 @@
 "use server";
 
 import { auth } from "@/auth";
-import { loadEnvironmentScopeFilter } from "@/lib/load-environment-scope-filter";
-import { environmentScopeWhere } from "@/lib/user-scopes";
+import {
+  environmentVisibilityWhere,
+  loadEnvironmentAccessContextForSession,
+} from "@/lib/environment-access";
 import { sendMail } from "@/lib/mail";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -173,15 +175,14 @@ export async function sendEnvsExportByEmail(formData: FormData) {
 
     const validatedData = SendExportEmailSchema.parse(rawData);
 
-    const scopeFilter = await loadEnvironmentScopeFilter();
-    const scopeWhere = environmentScopeWhere(scopeFilter);
+    const accessContext = await loadEnvironmentAccessContextForSession();
+    const visibilityWhere = environmentVisibilityWhere(accessContext);
 
-    // PORTAL_ADMIN : where vide. Utilisateur normal : scopeId IN des identifiants 4K/150K.
-    // Aucun scope autorisé : ne pas charger envsharp.
-    const envsData = scopeWhere == null
+    // PORTAL_ADMIN : where vide. Les autres : typenvid autorisés et scope 4K/150K.
+    const envsData = visibilityWhere == null
       ? []
       : await db.envsharp.findMany({
-          where: scopeWhere,
+          where: visibilityWhere,
           include: {
             statutenv: true,
           },

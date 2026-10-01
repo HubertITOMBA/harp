@@ -564,7 +564,7 @@ Si le problème persiste, activer `skip-name-resolve` dans MariaDB.
 
 3. Tester manuellement :
    ```powershell
-   .\C:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?host=test"
+   .\C:\apps\portail\launcher\launcher.ps1 "mylaunch://putty?token=<TOKEN_SIGNE>"
    ```
 
 #### 3. PuTTY utilise les mauvais paramètres en mode dev

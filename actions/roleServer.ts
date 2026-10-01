@@ -2,17 +2,14 @@
 
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { loadEnvironmentScopeFilter } from '@/lib/load-environment-scope-filter'
-import {
-  decideEnvironmentServerAccess,
-  normalizeEnvironmentName,
-} from '@/lib/user-scopes'
+import { authorizeResolvedEnvironment } from '@/lib/environment-access'
+import { normalizeEnvironmentName } from '@/lib/user-scopes'
 
 /**
  * Serveurs d'un environnement désigné par son nom.
- * La session est obligatoire. envsharp est résolu par env, puis le scope
- * est jugé avant toute lecture de harpenvserv.
- * Un refus ne décrit pas le périmètre.
+ * envsharp est résolu par env. La famille lue sur cette ligne et le périmètre
+ * sont exigés avant toute lecture de harpenvserv.
+ * Un refus renvoie une liste vide.
  *
  * @param envName - Nom envsharp.env saisi par l'appelant
  * @returns Les serveurs autorisés, ou une liste vide
@@ -30,15 +27,10 @@ export async function getServerData(envName: string) {
 
   const environment = await db.envsharp.findUnique({
     where: { env },
-    select: { id: true, scopeId: true },
+    select: { id: true, typenvid: true, scopeId: true },
   })
 
-  const scopeFilter = await loadEnvironmentScopeFilter()
-  const access = decideEnvironmentServerAccess({
-    authenticated: true,
-    environment,
-    scopeFilter,
-  })
+  const access = await authorizeResolvedEnvironment(environment)
 
   if (access !== 200 || environment == null) {
     return []

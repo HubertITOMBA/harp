@@ -241,32 +241,16 @@ try {
         
         if ($path -eq "/launch" -and $request.HttpMethod -eq "GET") {
             $tool = $request.QueryString["tool"]
-            $hostParam = $request.QueryString["host"]
-            $user = $request.QueryString["user"]
-            $portParam = $request.QueryString["port"]
-            $sshkey = $request.QueryString["sshkey"]
             $urlParam = $request.QueryString["url"]
             $browserParam = $request.QueryString["browser"]
-            $aliasql = $request.QueryString["aliasql"]
-            $ptversion = $request.QueryString["ptversion"]
-            $envId = $request.QueryString["envId"]
-            $ip = $request.QueryString["ip"]
             $token = $request.QueryString["token"]
             $format = $request.QueryString["format"]
             
             if ($tool) {
                 $mylaunchUrl = "mylaunch://$tool"
                 $params = @()
-                if ($hostParam) { $params += "host=$([System.Uri]::EscapeDataString($hostParam))" }
-                if ($user) { $params += "user=$([System.Uri]::EscapeDataString($user))" }
-                if ($portParam) { $params += "port=$portParam" }
-                if ($sshkey) { $params += "sshkey=$([System.Uri]::EscapeDataString($sshkey))" }
                 if ($urlParam) { $params += "url=$([System.Uri]::EscapeDataString($urlParam))" }
                 if ($browserParam) { $params += "browser=$([System.Uri]::EscapeDataString($browserParam))" }
-                if ($aliasql) { $params += "aliasql=$([System.Uri]::EscapeDataString($aliasql))" }
-                if ($ptversion) { $params += "ptversion=$([System.Uri]::EscapeDataString($ptversion))" }
-                if ($envId) { $params += "envId=$([System.Uri]::EscapeDataString($envId))" }
-                if ($ip) { $params += "ip=$([System.Uri]::EscapeDataString($ip))" }
                 if ($token) { $params += "token=$([System.Uri]::EscapeDataString($token))" }
                 if ($params.Count -gt 0) {
                     $mylaunchUrl += "?" + ($params -join "&")

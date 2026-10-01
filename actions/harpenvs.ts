@@ -6,10 +6,19 @@ import { getUserByEmail } from "@/data/user";
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 import prisma from "@/lib/prisma";
+import { canAccessTypeEnvForSession } from "@/lib/type-env-access";
 
 
 export const getharpEnv = async (id: any) => {
-      
+     const typenvid = parseInt(id, 10);
+     if (!Number.isInteger(typenvid) || typenvid <= 0) {
+       return [];
+     }
+     const familyAllowed = await canAccessTypeEnvForSession(typenvid);
+     if (!familyAllowed) {
+       return [];
+     }
+
      const DescEnvs = await prisma.psadm_env.findMany(
       {
         //relationLoadStrategy: 'join', // or 'query'

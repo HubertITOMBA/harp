@@ -1,11 +1,17 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { InstSchema } from "@/schemas";
 
 export async function updateInstOra(instanceId: number, formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       oracle_sid: formData.get("oracle_sid") as string,

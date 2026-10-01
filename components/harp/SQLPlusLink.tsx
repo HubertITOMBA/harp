@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchTargetBoundTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -10,9 +10,10 @@ interface SQLPlusLinkProps {
   className?: string;
   children: ReactNode;
   aliasql?: string | null;
+  envId?: number;
 }
 
-export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) {
+export function SQLPlusLink({ className, children, envId }: SQLPlusLinkProps) {
   const { data: session } = useSession();
 
   const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
@@ -39,12 +40,17 @@ export function SQLPlusLink({ className, children, aliasql }: SQLPlusLinkProps) 
         }
       }
 
-      // Lancer SQL*Plus via le protocole mylaunch:// avec les paramètres
-      const params: Record<string, string | undefined> = {};
-      if (aliasql) params.aliasql = aliasql;
-      
+      if (envId == null || !Number.isInteger(envId) || envId <= 0) {
+        toast.error("Lancement indisponible : environnement non identifié.");
+        return;
+      }
+
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('sqlplus', params);
+        const launchResult = await launchTargetBoundTool({
+          targetType: "environment",
+          envId,
+          tool: "sqlplus",
+        });
 
         if (launchResult.success) {
           toast.success('SQL*Plus est en cours de lancement...');

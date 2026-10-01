@@ -101,3 +101,96 @@ export function rolesStringIncludesAny(rolesString: string, rolesToCheck: string
   return hasAnyRole(parsedRoles, rolesToCheck);
 }
 
+/**
+ * Lien déjà résolu harproles → sous-rôle actif ou non → typenvid.
+ * Le rôle est le libellé harproles.role, pas le rôle enum User.role à lui seul.
+ */
+export type TypeEnvAccessGrant = {
+  role: string;
+  active: boolean;
+  typenvid: number;
+};
+
+/**
+ * Autorise une famille d'environnement selon le RBAC des sous-rôles.
+ * PORTAL_ADMIN, présent dans les rôles fournis, est accepté sans ligne de jointure.
+ * Un autre rôle n'est accepté que s'il porte un sous-rôle actif lié au typenvid.
+ * Les menus et les périmètres 4K/150K ne participent pas à cette décision.
+ * Une entrée illisible est refusée.
+ *
+ * @param input.userRoles - Rôles HARP déjà résolus pour l'utilisateur
+ * @param input.typenvid - Identifiant de famille demandé
+ * @param input.grants - Associations rôle / sous-rôle / typenvid déjà chargées
+ * @returns true seulement si la famille est démontrée
+ */
+export function canAccessTypeEnv(input: {
+  userRoles: readonly string[];
+  typenvid: number;
+  grants: readonly TypeEnvAccessGrant[];
+}): boolean {
+  if (!Number.isInteger(input.typenvid) || input.typenvid <= 0) {
+    return false;
+  }
+  if (!Array.isArray(input.userRoles) || input.userRoles.length === 0) {
+    return false;
+  }
+  if (hasRole([...input.userRoles], PORTAL_ADMIN_ROLE)) {
+    return true;
+  }
+  if (!Array.isArray(input.grants)) {
+    return false;
+  }
+
+  return input.grants.some((grant) => {
+    if (!grant || grant.active !== true || grant.typenvid !== input.typenvid) {
+      return false;
+    }
+    if (typeof grant.role !== "string" || grant.role.length === 0) {
+      return false;
+    }
+    return input.userRoles.includes(grant.role);
+  });
+}
+
+/**
+ * Familles visibles d'un coup, pour une liste.
+ * null signifie toutes les familles : cas PORTAL_ADMIN, sans lire les grants.
+ * Les autres rôles reçoivent l'union des typenvid de leurs sous-rôles actifs.
+ *
+ * @param input.userRoles - Rôles HARP de la session
+ * @param input.grants - Liens rôle / sous-rôle / typenvid déjà chargés
+ * @returns null pour tout voir, ou les typenvid autorisés
+ */
+export function accessibleTypenvIds(input: {
+  userRoles: readonly string[];
+  grants: readonly TypeEnvAccessGrant[];
+}): number[] | null {
+  if (!Array.isArray(input.userRoles) || input.userRoles.length === 0) {
+    return [];
+  }
+  if (hasRole([...input.userRoles], PORTAL_ADMIN_ROLE)) {
+    return null;
+  }
+  if (!Array.isArray(input.grants)) {
+    return [];
+  }
+
+  const ids = new Set<number>();
+  for (const grant of input.grants) {
+    if (!grant || grant.active !== true) {
+      continue;
+    }
+    if (!Number.isInteger(grant.typenvid) || grant.typenvid <= 0) {
+      continue;
+    }
+    if (typeof grant.role !== "string" || grant.role.length === 0) {
+      continue;
+    }
+    if (!input.userRoles.includes(grant.role)) {
+      continue;
+    }
+    ids.add(grant.typenvid);
+  }
+  return [...ids];
+}
+

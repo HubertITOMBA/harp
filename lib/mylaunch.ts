@@ -3,7 +3,8 @@
  * Utilisé pour lancer des applications Windows locales depuis le navigateur
  */
 
-import { issueLauncherToken } from "@/actions/issue-launcher-token";
+import { issueAvailabilityToken, issueFreeSshLauncherToken, issueLocalToolLauncherToken, issuePortalAdminServerLaunchToken, issueTargetBoundLauncherToken } from "@/actions/issue-launcher-token";
+import type { LauncherTargetRequest } from "@/lib/launcher-target-access";
 
 /** Retire la valeur du jeton avant tout log. */
 function redactLaunchUrl(url: string): string {
@@ -105,6 +106,25 @@ export function buildSimpleToolUrl(
     return `mylaunch://${tool}?${searchParams.toString()}`;
   }
   return `mylaunch://${tool}`;
+}
+
+/**
+ * Construit l'URI de repli d'un jeton déjà signé.
+ * Seul le jeton opaque est transporté. Aucune cible client n'est ajoutée.
+ *
+ * @param tool - Nom logique de l'outil
+ * @param token - Jeton moderne déjà émis, non relu et non re-signé
+ * @returns URI `mylaunch://`, ou null si le jeton est absent
+ */
+export function buildSignedLaunchProtocolUrl(tool: string, token: string): string | null {
+  const opaque = token.trim();
+  const requested = tool.trim();
+  if (!opaque || !requested) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  params.set("token", opaque);
+  return `mylaunch://${encodeURIComponent(requested)}?${params.toString()}`;
 }
 
 /**
@@ -312,28 +332,53 @@ export async function resolveLauncherPort(
   return { port: first.port, health: first.health };
 }
 
-/**
- * Lance une application externe via le serveur local (port par utilisateur 8800-8999).
- * Citrix sans registre: TOUJOURS prioriser localhost (ignorer protocol-only).
- */
-export async function launchExternalTool(
-  tool: ExternalTool,
-  params?: Record<string, string | number | undefined>
-): Promise<{ success: boolean; error?: string }> {
-  const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
-  // "protocol" seul etait utilise quand mylaunch:// etait dispo via GPO.
-  // Sans droits registre Citrix, on force le serveur local.
-  const allowProtocolFallback = transport === "auto";
+const FREE_TARGET_KEYS = new Set([
+  "host",
+  "ip",
+  "hostname",
+  "aliasql",
+  "ptversion",
+  "envId",
+  "serverId",
+  "targetType",
+  "user",
+  "sshkey",
+  "pkeyfile",
+  "path",
+  "exe",
+  "command",
+  "pshome",
+]);
 
-  const issued = await issueLauncherToken(tool);
-  if (!issued.success) {
-    return { success: false, error: issued.error };
+/**
+ * Livre un jeton déjà émis au launcher local.
+ * Le chemin v2 retire les champs de cible libre avant de construire l'URL.
+ */
+async function deliverToLocalLauncher(
+  tool: string,
+  token: string,
+  params?: Record<string, string | number | undefined>,
+  stripTargetFields = false
+): Promise<{ success: boolean; error?: string }> {
+  const opaqueToken = token?.trim() ?? "";
+  if (!opaqueToken) {
+    return { success: false, error: "Jeton de lancement absent" };
   }
 
+  const transport = process.env.NEXT_PUBLIC_LAUNCHER_TRANSPORT;
+  const allowProtocolFallback = transport === "auto";
+
   const launchParams: Record<string, string | number | undefined> = {
-    ...params,
-    token: issued.token,
+    token: opaqueToken,
   };
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (stripTargetFields && FREE_TARGET_KEYS.has(key)) {
+      return;
+    }
+    if (value !== undefined && value !== null) {
+      launchParams[key] = value;
+    }
+  });
 
   const netid =
     (params?.netid as string | undefined) ||
@@ -437,17 +482,18 @@ export async function launchExternalTool(
       const navResult = await tryNavigationLaunch();
       if (navResult.success) return navResult;
 
-      if (allowProtocolFallback) {
-        let url = buildMyLaunchUrl(tool, launchParams);
-        if (!/[?&]token=/.test(url)) {
-          url += `${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(issued.token)}`;
+      if (allowProtocolFallback && typeof document !== "undefined") {
+        const protocolUrl = buildSignedLaunchProtocolUrl(tool, opaqueToken);
+        if (!protocolUrl) {
+          return { success: false, error: "Jeton de lancement absent" };
         }
         const a = document.createElement("a");
-        a.href = url;
+        a.href = protocolUrl;
         a.style.display = "none";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        return { success: true };
       }
 
       return {
@@ -468,6 +514,82 @@ export async function launchExternalTool(
 }
 
 /**
+ * Lance un des cinq outils supportés avec un jeton v2.
+ * L'autorité est envId et, pour un hôte, serverId. Les champs de cible libres ne partent pas vers le poste.
+ *
+ * @param request - Identifiants stables de la cible
+ * @param params - Compte ou port locaux, jamais une IP, un alias ou une version
+ */
+export async function launchTargetBoundTool(
+  request: LauncherTargetRequest,
+  params?: Record<string, string | number | undefined>
+): Promise<{ success: boolean; error?: string }> {
+  const issued = await issueTargetBoundLauncherToken(request);
+  if (!issued.success) {
+    return { success: false, error: issued.error };
+  }
+  const tool = typeof request.tool === "string" ? request.tool : "";
+  return deliverToLocalLauncher(tool, issued.token, params, true);
+}
+
+/**
+ * Lance PuTTY sur un serveur d'administration.
+ * Seul serverId part vers l'émission. Hôte, compte et clé ne sont pas mis dans l'URL locale.
+ * localNetid ne sert qu'à retrouver le port du launcher du poste.
+ *
+ * @param serverId - harpserve.id
+ * @param localNetid - Identifiant local pour le port, jamais l'autorité SSH
+ */
+export async function launchPortalAdminPutty(
+  serverId: number,
+  localNetid?: string
+): Promise<{ success: boolean; error?: string }> {
+  const issued = await issuePortalAdminServerLaunchToken({ serverId, tool: "putty" });
+  if (!issued.success) {
+    return { success: false, error: issued.error };
+  }
+  return deliverToLocalLauncher("putty", issued.token, { netid: localNetid }, true);
+}
+
+/**
+ * Lance PuTTY vers un hôte saisi librement.
+ * Seul l'hôte est transmis à l'émission. Compte, netid effectif et clé viennent du serveur.
+ * localNetid ne sert qu'à retrouver le port du launcher du poste.
+ *
+ * @param host - IP, hostname ou FQDN saisi
+ * @param localNetid - Identifiant local pour le port, jamais l'autorité SSH
+ */
+export async function launchFreeSshPutty(
+  host: string,
+  localNetid?: string
+): Promise<{ success: boolean; error?: string }> {
+  const issued = await issueFreeSshLauncherToken({ host, tool: "putty" });
+  if (!issued.success) {
+    return { success: false, error: issued.error };
+  }
+  return deliverToLocalLauncher("putty", issued.token, { netid: localNetid }, true);
+}
+
+/**
+ * Lance un outil local autorisé. Seul le nom logique est émis.
+ * Le chemin et les arguments ne partent pas vers le poste : le serveur les relit.
+ * localNetid ne sert qu'à retrouver le port du launcher.
+ *
+ * @param tool - Nom logique, sqldeveloper pour ce palier
+ * @param localNetid - Identifiant local pour le port, jamais une autorité
+ */
+export async function launchLocalTool(
+  tool: "sqldeveloper",
+  localNetid?: string
+): Promise<{ success: boolean; error?: string }> {
+  const issued = await issueLocalToolLauncherToken({ tool });
+  if (!issued.success) {
+    return { success: false, error: issued.error };
+  }
+  return deliverToLocalLauncher(tool, issued.token, { netid: localNetid }, true);
+}
+
+/**
  * Vérifie si le serveur local du launcher répond (port par utilisateur).
  */
 export async function checkLauncherHealth(
@@ -485,10 +607,11 @@ export async function checkLauncherHealth(
 }
 
 /**
- * Vérifie si un outil existe dans la base de données et est configuré
+ * Vérifie si un outil existe dans la base de données et est configuré.
+ * Le jeton émis est limité à cet usage. Il est refusé par le chemin d'exécution.
  * @param tool - Le nom de l'outil à vérifier
  * @param netid - Ignoré pour l'identité. Le jeton est émis depuis la session.
- * @param extraParams - Paramètres optionnels (ptversion requis pour pside/psdmt)
+ * @param extraParams - Ignoré. Une cible ne fait pas partie de ce contrôle.
  */
 export async function checkToolAvailability(
   tool: string,
@@ -496,24 +619,16 @@ export async function checkToolAvailability(
   extraParams?: Record<string, string | undefined>
 ): Promise<{ success: boolean; error?: string; toolInfo?: any }> {
   try {
-    // Le netid passé par l'interface n'est pas une preuve d'identité.
     void netid;
-    const issued = await issueLauncherToken(tool);
+    void extraParams;
+    const issued = await issueAvailabilityToken(tool);
     if (!issued.success) {
       return { success: false, error: issued.error };
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
     const qs = new URLSearchParams({ tool, token: issued.token });
-    if (extraParams) {
-      Object.entries(extraParams).forEach(([k, v]) => {
-        if (k === "netid" || k === "token") return;
-        if (v !== undefined && v !== null && String(v).trim() !== "") {
-          qs.set(k, String(v));
-        }
-      });
-    }
-    const response = await fetch(`${apiUrl}/api/launcher/tool?${qs.toString()}`);
+    const response = await fetch(`${apiUrl}/api/launcher/availability?${qs.toString()}`);
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));

@@ -9,6 +9,11 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { updateEnvironment } from "@/schemas";
 import { formatError } from "@/lib/utils";
+import {
+  environmentVisibilityWhere,
+  loadEnvironmentAccessContextForSession,
+} from "@/lib/environment-access";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 
 
 export async function getAllEnvs({
@@ -30,16 +35,21 @@ export async function getAllEnvs({
         }
       : {};
 
+  const accessContext = await loadEnvironmentAccessContextForSession();
+  const visibilityWhere = environmentVisibilityWhere(accessContext);
+  if (visibilityWhere == null) {
+    return { data: [], totalPages: 0 };
+  }
+
+  const where = { AND: [queryFilter, visibilityWhere] };
   const data = await prisma.envsharp.findMany({
-    where: {
-      ...queryFilter,
-    },
+    where,
     orderBy: { createddt: 'desc' },
     //take: limit,
     //skip: (page - 1) * limit,
   });
 
-  const dataCount = await prisma.envsharp.count();
+  const dataCount = await prisma.envsharp.count({ where });
 
   return {
     data,
@@ -49,6 +59,11 @@ export async function getAllEnvs({
 
 // Delete a user
 export async function deleteEnvsharp(id: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, message: admin.error };
+  }
+
   try {
     await prisma.envsharp.delete({ where: { id } });
 
@@ -68,6 +83,11 @@ export async function deleteEnvsharp(id: number) {
 
 // Update a user
 export async function updateEnvsharp(env: z.infer<typeof updateEnvironment>) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, message: admin.error };
+  }
+
   try {
     await prisma.envsharp.update({
       where: { id: env.id },

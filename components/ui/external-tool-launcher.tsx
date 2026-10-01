@@ -1,62 +1,38 @@
 "use client";
 
 import * as React from "react";
+import { useSession } from "next-auth/react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { 
-  launchExternalTool,
-  checkLauncherHealth,
-  type PuttyParams,
-  type PeopleSoftParams,
-  type ExternalTool 
-} from "@/lib/mylaunch";
+import { launchFreeSshPutty, checkLauncherHealth } from "@/lib/mylaunch";
 import { showLauncherNotRunningToast } from "@/components/harp/launcherToast";
 
-interface ExternalToolLauncherProps {
-  tool: ExternalTool;
-  params?: PuttyParams | PeopleSoftParams | Record<string, string | number | undefined>;
-  variant?: ButtonProps["variant"];
-  size?: ButtonProps["size"];
-  className?: string;
-  children?: React.ReactNode;
-  onLaunch?: () => void;
-  onError?: (error: Error) => void;
-}
+type PuttyLauncherProps = Omit<ButtonProps, "onClick"> & {
+  host?: string;
+  /** Seul mode conservé. Le compte et la clé viennent du serveur. */
+  launchMode: "free-ssh";
+};
 
 /**
- * Composant bouton pour lancer des applications Windows externes
- * 
- * @example
- * <ExternalToolLauncher 
- *   tool="putty" 
- *   params={{ host: "10.0.0.1", user: "admin", port: 22 }}
- *   variant="default"
- * >
- *   Ouvrir PuTTY
- * </ExternalToolLauncher>
+ * Bouton PuTTY du hub. L'hôte est saisi. Le compte et la clé ne partent pas du navigateur.
  */
-export function ExternalToolLauncher({
-  tool,
-  params = {},
-  variant = "default",
-  size = "default",
-  className,
-  children,
-  onLaunch,
-  onError,
-}: ExternalToolLauncherProps) {
-  const handleClick = React.useCallback(async () => {
+function FreeSshPuttyButton({
+  host,
+  ...buttonProps
+}: { host?: string } & Omit<ButtonProps, "onClick">) {
+  const { data: session } = useSession();
+
+  const handleClick = async () => {
     try {
+      const localNetid = session?.user?.netid;
       const doLaunch = async () => {
-        const result = await launchExternalTool(tool, params);
-        if (result.success) {
-          onLaunch?.();
-        } else {
+        const result = await launchFreeSshPutty(host ?? "", localNetid);
+        if (!result.success) {
           throw new Error(result.error || "Impossible de lancer l'application");
         }
       };
 
-      const health = await checkLauncherHealth(800);
+      const health = await checkLauncherHealth(800, localNetid);
       if (!health.running) {
         showLauncherNotRunningToast({ onContinue: () => void doLaunch() });
         return;
@@ -65,98 +41,30 @@ export function ExternalToolLauncher({
       await doLaunch();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error("Erreur lors du lancement:", err);
       toast.error(err.message || "Erreur lors du lancement", { autoClose: 10000 });
-      onError?.(err);
     }
-  }, [tool, params, onLaunch, onError]);
-
-  const defaultLabel = React.useMemo(() => {
-    switch (tool) {
-      case "putty":
-        return "Ouvrir PuTTY";
-      case "pside":
-        return "Ouvrir PeopleSoft IDE";
-      case "ptsmt":
-        return "Ouvrir PeopleSoft PTSMT";
-      default:
-        return "Lancer l'application";
-    }
-  }, [tool]);
+  };
 
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={className}
-      onClick={handleClick}
-      type="button"
-    >
-      {children || defaultLabel}
+    <Button {...buttonProps} onClick={() => void handleClick()} type="button">
+      Ouvrir PuTTY
     </Button>
   );
 }
 
 /**
- * Composant spécialisé pour PuTTY
+ * Lance PuTTY en SSH libre. Ce composant n'a plus de mode legacy.
+ *
+ * @param host - Hôte saisi, validé puis signé côté serveur
+ * @param launchMode - Doit être free-ssh
  */
 export function PuttyLauncher({
   host,
-  user,
-  port,
-  sshkey,
+  launchMode,
   ...buttonProps
-}: PuttyParams & Omit<ButtonProps, "onClick">) {
-  return (
-    <ExternalToolLauncher
-      tool="putty"
-      params={{ host, user, port, sshkey }}
-      {...buttonProps}
-    >
-      Ouvrir PuTTY
-    </ExternalToolLauncher>
-  );
+}: PuttyLauncherProps) {
+  if (launchMode !== "free-ssh") {
+    return null;
+  }
+  return <FreeSshPuttyButton host={host} {...buttonProps} />;
 }
-
-/**
- * Composant spécialisé pour PeopleSoft IDE
- */
-export function PeopleSoftIDELauncher({
-  dbname,
-  server,
-  user,
-  password,
-  ...buttonProps
-}: PeopleSoftParams & Omit<ButtonProps, "onClick">) {
-  return (
-    <ExternalToolLauncher
-      tool="pside"
-      params={{ dbname, server, user, password }}
-      {...buttonProps}
-    >
-      Ouvrir PeopleSoft IDE
-    </ExternalToolLauncher>
-  );
-}
-
-/**
- * Composant spécialisé pour PeopleSoft PTSMT
- */
-export function PeopleSoftPTSMTLauncher({
-  dbname,
-  server,
-  user,
-  password,
-  ...buttonProps
-}: PeopleSoftParams & Omit<ButtonProps, "onClick">) {
-  return (
-    <ExternalToolLauncher
-      tool="ptsmt"
-      params={{ dbname, server, user, password }}
-      {...buttonProps}
-    >
-      Ouvrir PeopleSoft PTSMT
-    </ExternalToolLauncher>
-  );
-}
-

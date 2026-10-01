@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
@@ -17,6 +18,11 @@ const updateMenuRolesSchema = z.object({
  * @param roleIds - Array des IDs des rôles à associer au menu
  */
 export async function updateMenuRoles(menuId: number, roleIds: number[]) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     // Validation des données
     const result = updateMenuRolesSchema.safeParse({ menuId, roleIds });
@@ -97,6 +103,11 @@ export async function updateMenuRoles(menuId: number, roleIds: number[]) {
  * Ajoute un rôle à un menu
  */
 export async function addRoleToMenu(menuId: number, roleId: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     // Vérifier que l'association n'existe pas déjà
     const existing = await prisma.harpmenurole.findUnique({
@@ -141,6 +152,11 @@ export async function addRoleToMenu(menuId: number, roleId: number) {
  * Supprime un rôle d'un menu
  */
 export async function removeRoleFromMenu(menuId: number, roleId: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     await prisma.harpmenurole.delete({
       where: {

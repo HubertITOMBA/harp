@@ -1,9 +1,15 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 
 export async function toggleMenuStatus(menuId: number) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const menu = await db.harpmenus.findUnique({
       where: {

@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma";
+import { loadEnvironmentAccessContextForSession } from "@/lib/environment-access";
+import { environmentVisibilitySql } from "@/lib/user-scopes";
 import { RechercheTable, type RechercheRow } from "@/components/recherche/RechercheTable";
 
 // Toujours exécuter la requête côté serveur avec les données à jour (évite cache en production)
@@ -21,6 +23,8 @@ type RawRow = {
   url: string | null;
   oraschema: string | null;
   ip: string;
+  envid: number;
+  serverid: number;
 };
 
 /**
@@ -30,6 +34,12 @@ type RawRow = {
  * On mappe les clés brutes (minuscules) vers RechercheRow pour le composant.
  */
 async function getRechercheData(): Promise<RechercheRow[]> {
+  const context = await loadEnvironmentAccessContextForSession();
+  const visibility = environmentVisibilitySql(context);
+  if (visibility == null) {
+    return [];
+  }
+
   const raw = await prisma.$queryRaw<RawRow[]>`
     SELECT
       i.typsrv AS typsrv,
@@ -40,7 +50,9 @@ async function getRechercheData(): Promise<RechercheRow[]> {
       s.site AS site,
       e.url AS url,
       e.oraschema AS oraschema,
-      s.ip AS ip
+      s.ip AS ip,
+      e.id AS envid,
+      s.id AS serverid
     FROM harpenvserv i
     INNER JOIN harpserve s ON i.serverId = s.id
     INNER JOIN envsharp e ON i.envId = e.id
@@ -48,6 +60,7 @@ async function getRechercheData(): Promise<RechercheRow[]> {
     WHERE i.envId IS NOT NULL
       AND i.serverId IS NOT NULL
       AND e.typenvid IS NOT NULL
+      AND ${visibility}
     ORDER BY i.envId ASC, i.typsrv ASC
   `;
 
@@ -61,6 +74,8 @@ async function getRechercheData(): Promise<RechercheRow[]> {
     url: r.url,
     oraschema: r.oraschema,
     ip: r.ip,
+    envId: Number(r.envid),
+    serverId: Number(r.serverid),
   }));
 }
 

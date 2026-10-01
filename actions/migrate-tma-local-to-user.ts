@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 
 /**
  * Migration pour :
@@ -9,6 +10,17 @@ import prisma from "@/lib/prisma";
  * 3. Supprimer toutes les relations harpuseroles où le rôle est TMA_LOCAL
  */
 export async function migrateTmaLocalToUser() {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return {
+      success: false,
+      message: admin.error,
+      deletedRelations: 0,
+      updatedHarproles: 0,
+      updatedUsers: 0,
+    };
+  }
+
   try {
     console.log("🚀 Début de la migration TMA_LOCAL -> USER");
 

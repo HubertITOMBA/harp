@@ -1,12 +1,18 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 
 // ID du statut "désactivé" - à ajuster selon votre base de données
 const DISABLED_STATUS_ID = 99;
 
 export async function toggleInstOraStatus(instanceId: number, disable: boolean) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const instance = await db.harpinstance.findUnique({
       where: { id: instanceId },

@@ -249,27 +249,8 @@ function Get-ToolInfoFromAPI($tool, $launchToken) {
         throw "Jeton de lancement absent. Relancez l'outil depuis le portail."
     }
 
-    # Le jeton porte l'identité. Le netid n'est pas envoyé.
+    # Le jeton porte l'identité et la cible. La query locale n'est pas renvoyée à l'API.
     $apiUrl = "$API_BASE_URL/api/launcher/tool?tool=$([System.Uri]::EscapeDataString($tool))&token=$([System.Uri]::EscapeDataString([string]$launchToken))"
-    
-    # Ajouter les paramètres optionnels depuis l'URL mylaunch://
-    $apiParams = @()
-    if ($query.ContainsKey('ptversion')) {
-        $apiParams += "ptversion=$([System.Uri]::EscapeDataString($query.ptversion))"
-    }
-    if ($query.ContainsKey('aliasql')) {
-        $apiParams += "aliasql=$([System.Uri]::EscapeDataString($query.aliasql))"
-    }
-    if ($query.ContainsKey('envId')) {
-        $apiParams += "envId=$([System.Uri]::EscapeDataString($query.envId))"
-    }
-    if ($query.ContainsKey('ip')) {
-        $apiParams += "ip=$([System.Uri]::EscapeDataString($query.ip))"
-    }
-    
-    if ($apiParams.Count -gt 0) {
-        $apiUrl += "&" + ($apiParams -join "&")
-    }
     
     Write-Host "Appel API: $(Hide-LaunchToken $apiUrl)" -ForegroundColor Cyan
     Write-Log "Appel API: $(Hide-LaunchToken $apiUrl)"
@@ -397,18 +378,6 @@ try {
         }
     } else {
         Write-Host "Aucun paramètre de requête" -ForegroundColor Gray
-    }
-
-    # SQL*Plus : si aliasql absent en query, le lire depuis le chemin (mylaunch://sqlplus/ALIAS)
-    if ($tool -eq 'sqlplus' -and (-not $query.ContainsKey('aliasql') -or [string]::IsNullOrWhiteSpace($query['aliasql']))) {
-        $path = $uri.AbsolutePath
-        if ($path -and $path.Length -gt 1) {
-            $aliasFromPath = $path.TrimStart('/').Trim()
-            if ($aliasFromPath) {
-                $query['aliasql'] = [System.Uri]::UnescapeDataString($aliasFromPath)
-                Write-Host "Alias SQL*Net (depuis le chemin): $($query['aliasql'])" -ForegroundColor Yellow
-            }
-        }
     }
 
     # Récupérer le netid (depuis l'URL ou l'environnement Windows)
@@ -554,53 +523,30 @@ try {
     # Ordre recommande: -ssh -P <port> -i <key> user@host
     if ($tool -eq 'putty') {
         $argArray += '-ssh'
-
-        if ($query.ContainsKey('port') -and -not [string]::IsNullOrWhiteSpace([string]$query.port)) {
-            $argArray += '-P'
-            $argArray += [string]$query.port
+        if ($toolInfo.targetBound -ne $true) {
+            throw "PuTTY refuse : la reponse du portail n'est pas une cible signee"
         }
 
-        # Cle SSH (URL prioritaire, sinon pkeyfile API)
-        $sshkey = $query['sshkey']
-        if (-not $sshkey -and $pkeyfile) {
-            $sshkey = $pkeyfile
-        }
+        $sshkey = $pkeyfile
         if ($sshkey -and -not [string]::IsNullOrWhiteSpace([string]$sshkey)) {
             $argArray += '-i'
             $argArray += [string]$sshkey
         }
 
-        if (-not $query.ContainsKey('host') -or [string]::IsNullOrWhiteSpace($query.host)) {
-            throw "Le parametre 'host' est requis pour lancer PuTTY"
+        $hostValue = [string]$toolInfo.launchHost
+        $userValue = [string]$toolInfo.netid
+        if ([string]::IsNullOrWhiteSpace($hostValue) -or [string]::IsNullOrWhiteSpace($userValue)) {
+            throw "Cible PuTTY signee incomplete"
         }
-
-        $hostValue = [string]$query.host
-        if ($query.ContainsKey('user') -and $query.user -and -not [string]::IsNullOrWhiteSpace($query.user)) {
-            $userValue = [string]$query.user
-            $argArray += "${userValue}@${hostValue}"
-        } else {
-            $argArray += $hostValue
-        }
+        $argArray += "${userValue}@${hostValue}"
 
         Write-Log "PUTTY args: $($argArray -join ' ')"
     } else {
-        # Pour les autres outils, utiliser cmdarg renvoyé par l'API (déjà complet pour sqlplus, psdmt, pside, etc.)
+        # sqlplus, pside, psdmt, filezilla et sqldeveloper : cmdarg vient uniquement de l'API.
         if ($cmdarg -and $cmdarg.Trim() -ne '') {
             $cmdargParts = $cmdarg.Trim().Split(' ') | Where-Object { $_ -ne '' }
             foreach ($part in $cmdargParts) {
                 $argArray += $part
-            }
-        }
-        # Ne pas ajouter les paramètres URL comme arguments : cmdarg renvoyé par l'API est déjà complet
-        $toolsWithCompleteCmdarg = @('sqlplus', 'pside', 'psdmt', 'filezilla')
-        if ($tool -notin $toolsWithCompleteCmdarg) {
-            foreach ($key in $query.Keys) {
-                if ($key -ne 'netid' -and $key -ne 'sshkey') {
-                    $value = $query[$key]
-                    if ($value -and $value.Trim() -ne '') {
-                        $argArray += "${key}=${value}"
-                    }
-                }
             }
         }
     }

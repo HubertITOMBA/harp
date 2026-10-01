@@ -156,6 +156,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
       typsrv: true,
       harpserve: {
         select: {
+          id: true,
           ip: true,
           psuser: true,
           srv: true,
@@ -374,7 +375,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="inline-flex">
-                                  <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer" ptversion={envsharp.ptversion} aliasql={envsharp.aliasql}>
+                                  <PSIDELink className="font-semibold text-harpOrange hover:underline cursor-pointer" ptversion={envsharp.ptversion} aliasql={envsharp.aliasql} envId={envsharp.id}>
                                     {envsharp.psversion || "N/A"}
                                   </PSIDELink>
                                 </span>
@@ -453,7 +454,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="inline-flex">
-                                  <PSDMTLink className="font-semibold text-harpOrange hover:underline cursor-pointer" ptversion={envsharp.ptversion} aliasql={envsharp.aliasql}>
+                                  <PSDMTLink className="font-semibold text-harpOrange hover:underline cursor-pointer" ptversion={envsharp.ptversion} aliasql={envsharp.aliasql} envId={envsharp.id}>
                                     {envsharp.oraschema || "N/A"}
                                   </PSDMTLink>
                                 </span>
@@ -486,7 +487,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="inline-flex">
-                                  <SQLPlusLink className="font-semibold text-harpOrange hover:underline cursor-pointer" aliasql={envsharp.aliasql}>
+                                  <SQLPlusLink className="font-semibold text-harpOrange hover:underline cursor-pointer" aliasql={envsharp.aliasql} envId={envsharp.id}>
                                     {envsharp.aliasql || "N/A"} / {envsharp.oraschema || "N/A"}
                                   </SQLPlusLink>
                                 </span>
@@ -507,6 +508,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                       <PuttyLink
                                         host={envsharp.serverInfo.srv || envsharp.serverInfo.ip || ""}
                                         ip={envsharp.serverInfo.ip || ""}
+                                        envId={envsharp.id}
+                                        serverId={envsharp.serverInfo.id}
                                         className="font-semibold text-harpOrange hover:underline cursor-pointer"
                                       >
                                         {envsharp.serverInfo.srv || "N/A"} {envsharp.serverInfo.ip ? `(${envsharp.serverInfo.ip})` : ""}
@@ -528,6 +531,8 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                                         host={envsharp.serverInfo.ip || envsharp.serverInfo.srv}
                                         ip={envsharp.serverInfo.ip || undefined}
                                         pshome={envsharp.serverInfo.pshome}
+                                        envId={envsharp.id}
+                                        serverId={envsharp.serverInfo.id}
                                         className="font-semibold text-harpOrange hover:underline cursor-pointer"
                                       >
                                         {envsharp.serverInfo.pshome ? `${envsharp.serverInfo.pshome}/HARP_FILES` : "N/A"}

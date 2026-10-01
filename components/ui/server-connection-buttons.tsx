@@ -1,8 +1,7 @@
 "use client";
 
 import { useSession } from 'next-auth/react';
-import { PuttyLauncher, PeopleSoftIDELauncher } from '@/components/ui/external-tool-launcher';
-import { launchExternalTool, checkLauncherHealth, getLauncherPortForUser } from '@/lib/mylaunch';
+import { launchPortalAdminPutty, checkLauncherHealth, getLauncherPortForUser } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ interface ServerConnectionButtonsProps {
   ip?: string | null;
   srv?: string | null;
   psuser?: string | null;
+  serverId?: number;
   className?: string;
 }
 
@@ -24,6 +24,7 @@ export function ServerConnectionButtons({
   ip,
   srv,
   psuser,
+  serverId,
   className = "",
 }: ServerConnectionButtonsProps) {
   const { data: session } = useSession();
@@ -34,41 +35,22 @@ export function ServerConnectionButtons({
   }
 
   const handlePuttyClick = async () => {
-    if (!ip || ip.trim() === '') {
-      toast.error('Aucune adresse IP spécifiée pour PuTTY');
+    const adminServerId = typeof serverId === "number" && Number.isInteger(serverId) && serverId > 0
+      ? serverId
+      : null;
+    if (adminServerId == null) {
+      toast.error("Lancement indisponible : serveur non identifié.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Récupérer le netid et pkeyfile de la session
       const netid = session?.user?.netid;
-      const pkeyfile = session?.user?.pkeyfile;
-
-      // Vérifier si on est en mode dev
-      const isDevMode = 
-        process.env.NEXT_PUBLIC_DEV_MODE === 'true' || 
-        process.env.NEXT_PUBLIC_DEV_MODE === '1' ||
-        process.env.NODE_ENV === 'development';
-
-      // En mode dev : utiliser "hubert" sans clé SSH
-      // En production : utiliser netid et pkeyfile de la session
-      const userToUse = isDevMode 
-        ? "hubert"
-        : (netid || psuser || undefined);
-    
-      const sshkeyToUse = isDevMode
-        ? undefined
-        : (pkeyfile || undefined);
+      void psuser;
 
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('putty', {
-          host: ip,
-          user: userToUse,
-          sshkey: sshkeyToUse,
-          netid: netid || userToUse,
-        });
+        const launchResult = await launchPortalAdminPutty(adminServerId, netid ?? undefined);
 
         if (launchResult.success) {
           toast.success('PuTTY est en cours de lancement...');
@@ -97,7 +79,7 @@ export function ServerConnectionButtons({
 
   return (
     <div className={`flex gap-2 flex-wrap ${className}`}>
-      {ip && (
+      {typeof serverId === "number" && serverId > 0 && (
         <Button
           onClick={handlePuttyClick}
           disabled={isLoading}
@@ -113,13 +95,6 @@ export function ServerConnectionButtons({
             'Ouvrir PuTTY'
           )}
         </Button>
-      )}
-      {srv && (
-        <PeopleSoftIDELauncher
-          server={srv}
-          size="default"
-          variant="outline"
-        />
       )}
     </div>
   );

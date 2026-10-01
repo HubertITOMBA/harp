@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchTargetBoundTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { normalizePeopleToolsVersion } from '@/lib/ptools-path';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
@@ -13,6 +13,7 @@ interface PSIDELinkProps {
   children: ReactNode;
   ptversion?: string | null;
   aliasql?: string | null;
+  envId?: number;
 }
 
 /**
@@ -21,7 +22,7 @@ interface PSIDELinkProps {
  * @param ptversion - Version PeopleTools de l'env (ex. "8.61" → pt861)
  * @param aliasql - Alias SQL pour -CD
  */
-export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELinkProps) {
+export function PSIDELink({ className, children, ptversion, envId }: PSIDELinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,24 +49,25 @@ export function PSIDELink({ className, children, ptversion, aliasql }: PSIDELink
         process.env.NODE_ENV === 'development';
 
       if (!isDevMode && netid) {
-        const checkResult = await checkToolAvailability('pside', netid, {
-          ptversion: ptCheck.display,
-          aliasql: aliasql || undefined,
-        });
+        const checkResult = await checkToolAvailability('pside', netid);
         if (!checkResult.success) {
           toast.error(checkResult.error || 'PSIDE n\'est pas configuré ou non accessible');
           return;
         }
       }
 
-      const params: Record<string, string | undefined> = {
-        ptversion: ptCheck.display,
-        netid: netid || undefined,
-      };
-      if (aliasql) params.aliasql = aliasql;
-      
+      if (envId == null || !Number.isInteger(envId) || envId <= 0) {
+        toast.error("Lancement indisponible : environnement non identifié.");
+        setIsLoading(false);
+        return;
+      }
+
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('pside', params);
+        const launchResult = await launchTargetBoundTool({
+          targetType: "environment",
+          envId,
+          tool: "pside",
+        });
 
         if (launchResult.success) {
           toast.success(`Application Designer (PTools ${ptCheck.display} / pt${ptCheck.folderSuffix}) en cours de lancement...`);

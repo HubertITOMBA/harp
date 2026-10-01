@@ -4,12 +4,17 @@
 import * as z from "zod";
 import { HarpserSchema } from "@/schemas";
 import prisma  from "@/lib/prisma";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { toast } from "react-toastify";
 
 
 
 export async function migratePsadmData ()  {
- 
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
 
     // Réinitialiser l'auto-increment

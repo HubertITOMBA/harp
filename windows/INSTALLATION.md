@@ -101,7 +101,7 @@ Pour éviter la boîte de dialogue de confirmation à chaque lancement:
 1. Ouvrir un navigateur
 2. Dans la console développeur, tester:
    ```javascript
-   window.location.href = 'mylaunch://putty?host=localhost&user=test';
+   window.location.href = 'mylaunch://putty?token=<TOKEN_SIGNE>';
    ```
 3. Vérifier les logs dans `C:\apps\portail\launcher\logs\launcher.log`
 
@@ -111,15 +111,7 @@ Voir `windows/README.md` pour des exemples détaillés.
 
 ### Exemple rapide
 
-```tsx
-import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
-
-<PuttyLauncher 
-  host="10.0.0.1" 
-  user="admin" 
-  port={22}
-/>
-```
+Les boutons du portail envoient un jeton signé au launcher local. Une URL sans jeton, ou qui ne fournit que `host` et `user`, est refusée.
 
 ## Sécurité
 
@@ -152,7 +144,7 @@ import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
 
 3. Tester le script PowerShell directement:
    ```powershell
-   .\launcher.ps1 "mylaunch://putty?host=test"
+   .\launcher.ps1 "mylaunch://putty?token=<TOKEN_SIGNE>"
    ```
 
 ### L'application externe ne se lance pas
@@ -171,5 +163,5 @@ import { PuttyLauncher } from '@/components/ui/external-tool-launcher';
 
 Pour toute question ou problème, consulter:
 - `windows/README.md` - Documentation technique
-- `components/examples/ExternalToolExamples.tsx` - Exemples d'utilisation
+- `windows/launcher/launcher.ps1` - Script de lancement local
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchTargetBoundTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { normalizePeopleToolsVersion } from '@/lib/ptools-path';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
@@ -13,12 +13,13 @@ interface PSDMTLinkProps {
   children: ReactNode;
   ptversion?: string | null;
   aliasql?: string | null;
+  envId?: number;
 }
 
 /**
  * Lance PeopleSoft Data Mover (psdmt.exe) pour la Version PTools de l'environnement.
  */
-export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLinkProps) {
+export function PSDMTLink({ className, children, ptversion, envId }: PSDMTLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -45,24 +46,25 @@ export function PSDMTLink({ className, children, ptversion, aliasql }: PSDMTLink
         process.env.NODE_ENV === 'development';
 
       if (!isDevMode && netid) {
-        const checkResult = await checkToolAvailability('psdmt', netid, {
-          ptversion: ptCheck.display,
-          aliasql: aliasql || undefined,
-        });
+        const checkResult = await checkToolAvailability('psdmt', netid);
         if (!checkResult.success) {
           toast.error(checkResult.error || 'PSDMT n\'est pas configuré ou non accessible');
           return;
         }
       }
 
-      const params: Record<string, string | undefined> = {
-        ptversion: ptCheck.display,
-        netid: netid || undefined,
-      };
-      if (aliasql) params.aliasql = aliasql;
+      if (envId == null || !Number.isInteger(envId) || envId <= 0) {
+        toast.error("Lancement indisponible : environnement non identifié.");
+        setIsLoading(false);
+        return;
+      }
 
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('psdmt', params);
+        const launchResult = await launchTargetBoundTool({
+          targetType: "environment",
+          envId,
+          tool: "psdmt",
+        });
 
         if (launchResult.success) {
           toast.success(`Data Mover (PTools ${ptCheck.display} / pt${ptCheck.folderSuffix}) en cours de lancement...`);

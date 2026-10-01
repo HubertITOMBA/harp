@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -16,6 +17,11 @@ const UpdateMenuSchema = z.object({
 });
 
 export async function updateMenu(menuId: number, formData: FormData) {
+  const admin = await requirePortalAdmin();
+  if (!admin.ok) {
+    return { success: false, error: admin.error };
+  }
+
   try {
     const rawData = {
       menu: formData.get("menu") as string,

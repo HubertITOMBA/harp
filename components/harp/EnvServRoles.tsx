@@ -38,6 +38,7 @@ interface HarpPageProps {
 }
 
 interface ServerDataItem {
+  serverId: number | null;
   harpserve: {
     srv: string;
     ip: string;
@@ -352,6 +353,8 @@ export default function HarpPage({ id }: HarpPageProps) {
           <PuttyLink
             host={item.harpserve.srv || item.harpserve.ip || ""}
             ip={item.harpserve.ip || ""}
+            envId={id}
+            serverId={item.serverId ?? undefined}
             className="inline-flex items-center justify-center h-6 w-6 p-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
           >
             <Server className="h-4 w-4" />
@@ -360,7 +363,7 @@ export default function HarpPage({ id }: HarpPageProps) {
       },
       enableSorting: false,
     },
-  ], []);
+  ], [id]);
 
   // Callback pour gérer la visibilité des colonnes
   const handleColumnVisibilityChange = useCallback((updater: VisibilityState | ((old: VisibilityState) => VisibilityState)) => {

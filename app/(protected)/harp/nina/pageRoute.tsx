@@ -28,6 +28,11 @@ export default function HarpPage() {
     try {
       const response = await fetch('/api/getServerData')
       const data = await response.json()
+      if (!response.ok || !Array.isArray(data)) {
+        setServerData([])
+        setError("Accès refusé")
+        return
+      }
       setServerData(data)
     } catch (err) {
       setError("Erreur lors de la récupération des données")

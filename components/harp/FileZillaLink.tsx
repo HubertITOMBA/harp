@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchTargetBoundTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -11,11 +11,13 @@ interface FileZillaLinkProps {
   host?: string;
   ip?: string;
   pshome?: string;
+  envId?: number;
+  serverId?: number;
   className?: string;
   children: ReactNode;
 }
 
-export function FileZillaLink({ host, ip, pshome, className, children }: FileZillaLinkProps) {
+export function FileZillaLink({ envId, serverId, className, children }: FileZillaLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,13 +48,22 @@ export function FileZillaLink({ host, ip, pshome, className, children }: FileZil
         }
       }
 
-      // Lancer FileZilla via le protocole mylaunch:// avec les paramètres
-      const params: Record<string, string | undefined> = {};
-      if (ip) params.ip = ip;
-      if (netid) params.netid = netid;
-      
+      if (envId == null || serverId == null || !Number.isInteger(envId) || envId <= 0 || !Number.isInteger(serverId) || serverId <= 0) {
+        toast.error("Lancement indisponible : environnement ou serveur non identifié.");
+        setIsLoading(false);
+        return;
+      }
+
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('filezilla', params);
+        const launchResult = await launchTargetBoundTool(
+          {
+            targetType: "server",
+            envId,
+            serverId,
+            tool: "filezilla",
+          },
+          { netid: netid ?? undefined }
+        );
 
         if (launchResult.success) {
           toast.success('FileZilla est en cours de lancement...');

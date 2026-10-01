@@ -1,24 +1,17 @@
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { loadEnvironmentScopeFilter } from "@/lib/load-environment-scope-filter";
-import { decideEnvironmentServerAccess } from "@/lib/user-scopes";
+import { canAccessEnvironmentForSession } from "@/lib/environment-access";
 import { NextResponse } from "next/server";
 
 /**
  * Serveurs d'un environnement.
- * La session est obligatoire. Le scope est jugé sur envsharp.scopeId
- * avant toute lecture de harpenvserv.
+ * [id] est envsharp.id. La famille est lue sur cette ligne, puis le RBAC
+ * et le périmètre sont exigés avant toute lecture de harpenvserv.
  */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-    }
-
     const { id } = await params;
     const envId = parseInt(id, 10);
 
@@ -26,18 +19,14 @@ export async function GET(
       return NextResponse.json({ error: "ID invalide" }, { status: 400 });
     }
 
-    const environment = await prisma.envsharp.findUnique({
-      where: { id: envId },
-      select: { id: true, scopeId: true },
-    });
+    const access = await canAccessEnvironmentForSession(envId);
 
-    const scopeFilter = await loadEnvironmentScopeFilter();
-    const access = decideEnvironmentServerAccess({
-      authenticated: true,
-      environment,
-      scopeFilter,
-    });
-
+    if (access === 401) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+    if (access === 400) {
+      return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+    }
     if (access === 404) {
       return NextResponse.json({ error: "Environnement introuvable" }, { status: 404 });
     }

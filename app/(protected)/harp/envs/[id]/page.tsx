@@ -2,8 +2,7 @@ import Link from "next/link";
 import HarpEnvPage from "@/components/harp/ListEnvs";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { getAllUserRoles } from "@/actions/get-all-user-roles";
-import { authorizeIdentifiedMenu } from "@/lib/user-roles";
+import { canAccessTypeEnvForSession } from "@/lib/type-env-access";
 
 /**
  * Message de refus déjà utilisé par le layout dashboard.
@@ -28,8 +27,11 @@ function FamilyAccessDenied() {
 
 /**
  * Page d'une famille d'environnements.
- * Le paramètre d'URL est harptypenv.typenvid, égal à harpmenus.display
- * pour le menu de niveau 3 du même nom.
+ * Le paramètre d'URL est harptypenv.typenvid.
+ * L'accès est décidé par le RBAC des sous-rôles, puis le périmètre
+ * 4K/150K est appliqué dans ListEnvs. Le menu n'autorise plus cette page.
+ *
+ * Transition : EFO users must be reassigned to TMA_LOCAL before RBAC enforcement / GO LIVE.
  *
  * @param params - Segment dynamique id de l'URL /harp/envs/[id]
  */
@@ -40,6 +42,11 @@ const EnvSinglePage = async ({ params }: { params: { id: string } }) => {
 
     if (isNaN(typenvid) || typenvid <= 0) {
       return notFound();
+    }
+
+    const familyAllowed = await canAccessTypeEnvForSession(typenvid);
+    if (!familyAllowed) {
+      return <FamilyAccessDenied />;
     }
 
     let typenv;
@@ -56,47 +63,6 @@ const EnvSinglePage = async ({ params }: { params: { id: string } }) => {
       return notFound();
     }
 
-    const menu = await prisma.harpmenus.findFirst({
-      where: {
-        level: 3,
-        display: typenvid,
-        menu: typenv.typenv,
-      },
-      include: {
-        harpmenurole: {
-          include: {
-            harproles: {
-              select: { role: true },
-            },
-          },
-        },
-      },
-    });
-
-    const menuRoles = new Set<string>();
-    if (menu?.role) {
-      menuRoles.add(String(menu.role));
-    }
-    for (const relation of menu?.harpmenurole ?? []) {
-      if (relation.harproles?.role) {
-        menuRoles.add(String(relation.harproles.role));
-      }
-    }
-
-    const userRoles = await getAllUserRoles();
-    const allowed = authorizeIdentifiedMenu(
-      userRoles,
-      menu
-        ? { active: menu.active, roles: [...menuRoles] }
-        : null
-    );
-
-    if (!allowed) {
-      return <FamilyAccessDenied />;
-    }
-
-    // L'autorisation de famille s'arrête ici.
-    // Le filtre de périmètre est appliqué dans ListEnvs.
     return (
       <div>
         <HarpEnvPage typenvid={typenvid} />

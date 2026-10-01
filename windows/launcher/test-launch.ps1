@@ -89,7 +89,7 @@ foreach ($f in $files) {
 Write-Host "`n[6] Test direct launcher.ps1 (fenetre visible)" -ForegroundColor Yellow
 $script = Join-Path $root "launcher.ps1"
 if (Test-Path $script) {
-    $url = "mylaunch://putty?host=127.0.0.1&user=test&port=22"
+    $url = "mylaunch://putty?token=<TOKEN_SIGNE>"
     $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($url))
     Write-Host "  Demarrage: powershell -File launcher.ps1 -UrlBase64 ..." -ForegroundColor Gray
     Start-Process powershell.exe -ArgumentList @(

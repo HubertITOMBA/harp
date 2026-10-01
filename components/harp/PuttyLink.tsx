@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchTargetBoundTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -10,19 +10,21 @@ import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
 interface PuttyLinkProps {
   host: string;
   ip?: string;
+  envId?: number;
+  serverId?: number;
   className?: string;
   children: ReactNode;
 }
 
-export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
+export function PuttyLink({ envId, serverId, className, children }: PuttyLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async (e: React.MouseEvent<HTMLSpanElement>) => {
     e.preventDefault();
     
-    if (!host || host.trim() === '') {
-      toast.error('Aucun serveur spécifié pour PuTTY');
+    if (envId == null || serverId == null || !Number.isInteger(envId) || envId <= 0 || !Number.isInteger(serverId) || serverId <= 0) {
+      toast.error("Lancement indisponible : environnement ou serveur non identifié.");
       return;
     }
 
@@ -53,9 +55,6 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
         }
       }
 
-      // Utiliser l'IP si disponible, sinon le host (nom du serveur)
-      const hostToUse = ip && ip.trim() !== '' ? ip : host;
-
       // En mode dev : utiliser "hubert" sans clé SSH
       // En production : utiliser netid et pkeyfile de la session
       const userToUse = isDevMode 
@@ -67,12 +66,15 @@ export function PuttyLink({ host, ip, className, children }: PuttyLinkProps) {
         : (session?.user?.pkeyfile || undefined);
 
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('putty', {
-          host: hostToUse,
-          user: userToUse,
-          sshkey: sshkeyToUse,
-          netid: netid || userToUse,
-        });
+        const launchResult = await launchTargetBoundTool(
+          {
+            targetType: "server",
+            envId,
+            serverId,
+            tool: "putty",
+          },
+          { user: userToUse, sshkey: sshkeyToUse, netid: netid || userToUse }
+        );
 
         if (launchResult.success) {
           toast.success('PuTTY est en cours de lancement...');

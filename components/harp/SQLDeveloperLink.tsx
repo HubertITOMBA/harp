@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { launchExternalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
+import { launchLocalTool, checkToolAvailability, checkLauncherHealth } from '@/lib/mylaunch';
 import { toast } from 'react-toastify';
 import { ReactNode } from 'react';
 import { showLauncherNotRunningToast } from '@/components/harp/launcherToast';
@@ -44,7 +44,7 @@ export function SQLDeveloperLink({ className, children }: SQLDeveloperLinkProps)
       }
 
       const doLaunch = async () => {
-        const launchResult = await launchExternalTool('sqldeveloper');
+        const launchResult = await launchLocalTool('sqldeveloper', netid ?? undefined);
 
         if (launchResult.success) {
           toast.success('SQL Developer est en cours de lancement...');

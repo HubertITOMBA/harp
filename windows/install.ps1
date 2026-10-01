@@ -120,7 +120,7 @@ if ($check) {
     # Tester le script
     Write-Host "`nTest du script launcher..." -ForegroundColor Yellow
     try {
-        $testUrl = "mylaunch://putty?host=test"
+        $testUrl = "mylaunch://putty?token=<TOKEN_SIGNE>"
         & $targetScript $testUrl 2>&1 | Out-Null
         Write-Host "[OK] Script fonctionne correctement" -ForegroundColor Green
     } catch {
@@ -130,7 +130,7 @@ if ($check) {
     Write-Host "`n=== Installation terminee avec succes ===" -ForegroundColor Green
     Write-Host "Vous pouvez maintenant utiliser mylaunch:// dans votre application Next.js" -ForegroundColor Cyan
     Write-Host "`nExemple de test dans la console du navigateur:" -ForegroundColor Yellow
-    Write-Host '  window.location.href = "mylaunch://putty?host=192.168.1.49&user=root&port=22"' -ForegroundColor Gray
+    Write-Host '  window.location.href = "mylaunch://putty?token=<TOKEN_SIGNE>"' -ForegroundColor Gray
 } else {
     Write-Host "[ERREUR] L'installation semble avoir echoue" -ForegroundColor Red
     exit 1
