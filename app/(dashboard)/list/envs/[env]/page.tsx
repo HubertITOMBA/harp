@@ -5,6 +5,7 @@ import Link from 'next/link'
 import prisma from "@/lib/prisma";
 import { notFound } from 'next/navigation';
 import EnvServRoles from '@/components/harp/EnvServRoles';
+import { FamilyAccessSection } from '@/components/env/FamilyAccessSection';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -347,6 +348,8 @@ const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
             </div>
           </CardContent>
         </Card>
+
+        <FamilyAccessSection typenvid={Envs.typenvid} />
 
         {/* Section Rôles de serveurs */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">

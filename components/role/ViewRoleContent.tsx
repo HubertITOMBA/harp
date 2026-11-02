@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Shield, FileText, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RoleSubrolesPanel } from "@/components/role/RoleSubrolesPanel";
 import { 
   ColumnDef,
   flexRender,
@@ -186,7 +188,12 @@ export function ViewRoleContent({ role }: ViewRoleContentProps) {
         </CardContent>
       </Card>
 
-      {/* Liste des utilisateurs */}
+      <Tabs defaultValue="users" className="space-y-2">
+        <TabsList>
+          <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+          <TabsTrigger value="subroles">Sous-rôles</TabsTrigger>
+        </TabsList>
+        <TabsContent value="users">
       {users.length > 0 && (
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-t-lg py-2 px-3">
@@ -256,6 +263,11 @@ export function ViewRoleContent({ role }: ViewRoleContentProps) {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+        <TabsContent value="subroles">
+          <RoleSubrolesPanel roleId={role.id} roleName={role.role} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

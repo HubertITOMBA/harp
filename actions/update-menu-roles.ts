@@ -6,26 +6,33 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 const updateMenuRolesSchema = z.object({
-  menuId: z.number().min(1, "L'ID du menu est requis"),
-  roleIds: z.array(z.number()).default([]),
+  menuId: z.number().int().positive("L'ID du menu est requis"),
+  roleIds: z.array(z.number().int().positive("Un rôle sélectionné est invalide")).default([]),
+  confirmPublic: z.boolean().default(false),
 });
 
 /**
- * Met à jour les rôles associés à un menu
- * Supprime les anciennes associations et crée les nouvelles
- * 
- * @param menuId - ID du menu
- * @param roleIds - Array des IDs des rôles à associer au menu
+ * Remplace les rôles visibles d'un menu.
+ * harpmenurole reçoit l'ensemble coché. harpmenus.role est conservé s'il reste coché,
+ * ou passé à null s'il est reconnu et décoché. Le défaut PORTAL_ADMIN n'est jamais rétabli.
+ *
+ * @param menuId - Identifiant harpmenus
+ * @param roleIds - Identifiants harproles cochés
+ * @param confirmPublic - Confirmation explicite lorsque l'ensemble vide rend le menu public
+ * @returns Succès, ou un refus sans écriture
  */
-export async function updateMenuRoles(menuId: number, roleIds: number[]) {
+export async function updateMenuRoles(
+  menuId: number,
+  roleIds: number[],
+  confirmPublic = false
+) {
   const admin = await requirePortalAdmin();
   if (!admin.ok) {
     return { success: false, error: admin.error };
   }
 
   try {
-    // Validation des données
-    const result = updateMenuRolesSchema.safeParse({ menuId, roleIds });
+    const result = updateMenuRolesSchema.safeParse({ menuId, roleIds, confirmPublic });
     if (!result.success) {
       return {
         success: false,
@@ -34,9 +41,10 @@ export async function updateMenuRoles(menuId: number, roleIds: number[]) {
       };
     }
 
-    // Vérifier que le menu existe
+    const uniqueRoleIds = [...new Set(result.data.roleIds)];
     const menu = await prisma.harpmenus.findUnique({
-      where: { id: menuId },
+      where: { id: result.data.menuId },
+      select: { id: true, role: true },
     });
 
     if (!menu) {
@@ -46,37 +54,55 @@ export async function updateMenuRoles(menuId: number, roleIds: number[]) {
       };
     }
 
-    // Vérifier que tous les rôles existent
-    if (roleIds.length > 0) {
-      const roles = await prisma.harproles.findMany({
-        where: {
-          id: { in: roleIds },
-        },
-      });
-
-      if (roles.length !== roleIds.length) {
-        return {
-          success: false,
-          error: "Un ou plusieurs rôles sont introuvables",
-        };
-      }
+    const catalog = await prisma.harproles.findMany({
+      select: { id: true, role: true },
+    });
+    const selected = catalog.filter((role) => uniqueRoleIds.includes(role.id));
+    if (selected.length !== uniqueRoleIds.length) {
+      return {
+        success: false,
+        error: "Un ou plusieurs rôles sont introuvables",
+      };
     }
 
-    // Transaction pour supprimer les anciennes associations et créer les nouvelles
+    const columnRole = menu.role ? String(menu.role).trim() : "";
+    const columnKnown = columnRole.length > 0 && catalog.some((role) => role.role === columnRole);
+    if (columnRole.length > 0 && !columnKnown) {
+      return {
+        success: false,
+        error: "Ce menu porte une restriction historique non reconnue. L'enregistrement est refusé.",
+      };
+    }
+
+    if (uniqueRoleIds.length === 0 && !result.data.confirmPublic) {
+      return {
+        success: false,
+        error: "Confirmation requise : ce menu deviendrait visible pour tous les rôles, sans ouvrir les familles RBAC.",
+      };
+    }
+
+    const selectedNames = new Set(selected.map((role) => role.role));
+    const clearColumn = columnKnown && !selectedNames.has(columnRole);
+
     await prisma.$transaction(async (tx) => {
-      // Supprimer toutes les associations existantes pour ce menu
       await tx.harpmenurole.deleteMany({
-        where: { menuId },
+        where: { menuId: menu.id },
       });
 
-      // Créer les nouvelles associations si des rôles sont fournis
-      if (roleIds.length > 0) {
+      if (uniqueRoleIds.length > 0) {
         await tx.harpmenurole.createMany({
-          data: roleIds.map((roleId) => ({
-            menuId,
+          data: uniqueRoleIds.map((roleId) => ({
+            menuId: menu.id,
             roleId,
             datmaj: new Date(),
           })),
+        });
+      }
+
+      if (clearColumn) {
+        await tx.harpmenus.update({
+          where: { id: menu.id },
+          data: { role: null },
         });
       }
     });

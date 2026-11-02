@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormDialog } from '@/components/ui/form-dialog';
 import {
@@ -19,12 +19,6 @@ import { Menu, Pencil, Loader2 } from "lucide-react";
 import { updateMenu } from '@/actions/update-menu';
 import { toast } from 'react-toastify';
 import Image from "next/image";
-import { getAllRoles } from '@/lib/actions/menu-actions';
-
-interface Role {
-  role: string;
-  descr: string;
-}
 
 const AVAILABLE_ICONS = [
   "anonym.png",
@@ -155,28 +149,8 @@ export function EditMenuDialog({ menu, open: controlledOpen, onOpenChange }: Edi
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const isControlled = controlledOpen !== undefined || onOpenChange !== undefined;
-  const [role, setRole] = useState<string>(menu.role || "");
   const [icone, setIcone] = useState<string>(menu.icone || "");
   const [active, setActive] = useState<string>(menu.active.toString());
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loadingRoles, setLoadingRoles] = useState(true);
-
-  // Charger les rôles psadm_role (pour le champ role du menu)
-  useEffect(() => {
-    async function fetchRoles() {
-      try {
-        setLoadingRoles(true);
-        const rolesData = await getAllRoles();
-        setRoles(rolesData);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des rôles:", error);
-        toast.error("Erreur lors du chargement des rôles");
-      } finally {
-        setLoadingRoles(false);
-      }
-    }
-    fetchRoles();
-  }, []);
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -186,9 +160,7 @@ export function EditMenuDialog({ menu, open: controlledOpen, onOpenChange }: Edi
     setErrors({});
     
     const formData = new FormData(e.currentTarget);
-    if (role) {
-      formData.set("role", role);
-    }
+    formData.delete("role");
     if (icone) {
       formData.set("icone", icone);
     }
@@ -330,29 +302,17 @@ export function EditMenuDialog({ menu, open: controlledOpen, onOpenChange }: Edi
           />
         </div>
 
-        {/* Rôle */}
-        <div className="space-y-2">
-          <Label htmlFor="role" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <div className="space-y-2 md:col-span-2">
+          <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Menu className="h-4 w-4 text-orange-600" />
-            Rôle
+            Rôle principal
           </Label>
-          <Select value={role || undefined} onValueChange={(value) => setRole(value || "")} disabled={loadingRoles}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder={loadingRoles ? "Chargement..." : "Sélectionner un rôle"} />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((r) => (
-                <SelectItem key={r.role} value={r.role}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{r.role}</span>
-                    {r.descr && (
-                      <span className="text-xs text-gray-500">{r.descr}</span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="p-2 bg-slate-50 rounded-md border border-slate-200 text-sm font-medium text-slate-900">
+            {menu.role || "Aucun"}
+          </div>
+          <p className="text-xs text-slate-600">
+            Les rôles associés se gèrent depuis l&apos;action Rôles HARP.
+          </p>
         </div>
 
         {/* Statut */}

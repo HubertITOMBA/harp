@@ -13,6 +13,8 @@ import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
 import { MenuRolesTable } from '@/components/menus/menu-roles-table';
+import { MenuFamilyCoherenceCard } from '@/components/menu/MenuFamilyCoherenceCard';
+import { listVisibleMenuRoles } from '@/lib/rbac-menu-coherence';
 import { ArrowLeft } from 'lucide-react';
  
 // import { readdir } from 'fs/promises';
@@ -60,7 +62,15 @@ const getImageFiles = () => {
     // IDs des rôles actuellement associés au menu
     const currentMenuRoleIds = MenuRoles.map(mr => mr.roleId);
 
-    const concatenatedRoles = MenuRoles.map(role => `"${role.harproles.role}"`).join(', ');
+    const visibleRoles = listVisibleMenuRoles({
+      columnRole: Menus.role ? String(Menus.role) : null,
+      linked: MenuRoles.map((link) => ({
+        role: link.harproles.role,
+        descr: link.harproles.descr,
+      })),
+      knownRoleNames: allRoles.map((role) => role.role),
+    });
+    const concatenatedRoles = visibleRoles.roles.map((role) => `"${role.role}"`).join(', ');
 
     const imageFiles =  getImageFiles();
 
@@ -184,6 +194,11 @@ const getImageFiles = () => {
                             <div className="flex gap-4 items-center">
                               <Label className="py-2 whitespace-nowrap text-xl text-muted-foreground">Autorisé à :</Label><Label className="whitespace-nowrap text-2xl text-foreground">{concatenatedRoles}</Label>  
                             </div>
+                            {visibleRoles.unrecognizedRole && (
+                              <p className="text-sm text-amber-800">
+                                La restriction historique « {visibleRoles.unrecognizedRole} » ne correspond à aucun rôle harproles.
+                              </p>
+                            )}
 
                            
                             
@@ -197,6 +212,8 @@ const getImageFiles = () => {
 
             </div>
              {/** BOTTOM */}
+
+            <MenuFamilyCoherenceCard menuId={parseInt(id)} />
 
             {/* DataTable TanStack pour les rôles */}
             <MenuRolesTable

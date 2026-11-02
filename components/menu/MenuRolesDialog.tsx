@@ -30,6 +30,54 @@ interface MenuRolesDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+export const EMPTY_MENU_ROLES_WARNING =
+  "Attention : aucun rôle ne sera associé à ce menu. Il deviendra visible pour tous les rôles. Cela ne donne pas automatiquement accès aux familles d'environnements protégées par RBAC.";
+
+type MenuRoleChoice = {
+  id: number;
+  role: string;
+};
+
+export type MenuRoleSelection = {
+  selectedIds: number[];
+  unrecognizedRole: string | null;
+};
+
+/**
+ * Réunit harpmenurole et harpmenus.role sans inventer de rôle absent du catalogue.
+ *
+ * @param input.columnRole - Valeur harpmenus.role, ou null
+ * @param input.linkedRoleIds - Identifiants déjà présents dans harpmenurole
+ * @param input.availableRoles - Rôles harproles proposés dans le dialogue
+ * @returns Cases à cocher, et la colonne historique si elle est inconnue
+ */
+export function resolveMenuRoleSelection(input: {
+  columnRole: string | null;
+  linkedRoleIds: number[];
+  availableRoles: MenuRoleChoice[];
+}): MenuRoleSelection {
+  const knownIds = new Set(input.availableRoles.map((role) => role.id));
+  const selected = new Set<number>();
+  for (const roleId of input.linkedRoleIds) {
+    if (knownIds.has(roleId)) {
+      selected.add(roleId);
+    }
+  }
+
+  const column = input.columnRole?.trim() ?? "";
+  if (column.length === 0) {
+    return { selectedIds: [...selected], unrecognizedRole: null };
+  }
+
+  const columnRole = input.availableRoles.find((role) => role.role === column);
+  if (!columnRole) {
+    return { selectedIds: [...selected], unrecognizedRole: column };
+  }
+
+  selected.add(columnRole.id);
+  return { selectedIds: [...selected], unrecognizedRole: null };
+}
+
 /**
  * Composant dialog pour gérer les rôles HARP associés à un menu
  * 
@@ -45,13 +93,16 @@ export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpen
   const [harpRoles, setHarpRoles] = useState<HarpRole[]>([]);
   const [loadingHarpRoles, setLoadingHarpRoles] = useState(true);
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [unrecognizedRole, setUnrecognizedRole] = useState<string | null>(null);
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
   // Charger les rôles HARP et les rôles actuels du menu
   useEffect(() => {
     if (!open) {
-      // Réinitialiser les sélections quand le dialog se ferme
       setSelectedRoleIds([]);
+      setUnrecognizedRole(null);
+      setConfirmEmpty(false);
       return;
     }
 
@@ -64,18 +115,19 @@ export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpen
         ]);
         
         setHarpRoles(harpRolesData);
-        
-        // Extraire les IDs des rôles actuellement assignés au menu
-        if (menuData?.harpmenurole && menuData.harpmenurole.length > 0) {
-          const currentRoleIds = menuData.harpmenurole.map(mr => mr.harproles.id);
-          setSelectedRoleIds(currentRoleIds);
-        } else {
-          setSelectedRoleIds([]);
-        }
+        const selection = resolveMenuRoleSelection({
+          columnRole: menuData?.role ? String(menuData.role) : null,
+          linkedRoleIds: menuData?.harpmenurole?.map((link) => link.harproles.id) ?? [],
+          availableRoles: harpRolesData,
+        });
+        setSelectedRoleIds(selection.selectedIds);
+        setUnrecognizedRole(selection.unrecognizedRole);
+        setConfirmEmpty(false);
       } catch (error) {
         console.error("Erreur lors de la récupération des rôles HARP:", error);
         toast.error("Erreur lors du chargement des rôles HARP");
         setSelectedRoleIds([]);
+        setUnrecognizedRole(null);
       } finally {
         setLoadingHarpRoles(false);
       }
@@ -113,12 +165,25 @@ export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpen
       );
       setLastSelectedIndex(index);
     }
+    setConfirmEmpty(false);
   };
 
 
   const handleSubmit = async () => {
+    if (unrecognizedRole) {
+      toast.error("Enregistrement refusé : une restriction historique n'est pas reconnue.");
+      return;
+    }
+    if (selectedRoleIds.length === 0 && !confirmEmpty) {
+      setConfirmEmpty(true);
+      return;
+    }
     startTransition(async () => {
-      const result = await updateMenuRoles(menuId, selectedRoleIds);
+      const result = await updateMenuRoles(
+        menuId,
+        selectedRoleIds,
+        selectedRoleIds.length === 0
+      );
       
       if (result.success) {
         toast.success(result.message);
@@ -168,6 +233,27 @@ export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpen
               {selectedRoleIds.length}/{harpRoles.length}
             </span>
           </div>
+
+          {unrecognizedRole && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+              La colonne du menu contient « {unrecognizedRole} », qui ne correspond à aucun rôle disponible.
+              Les cases ne représentent pas toutes les restrictions. L&apos;enregistrement est désactivé pour ne pas modifier cette restriction inconnue.
+            </p>
+          )}
+
+          {confirmEmpty && (
+            <div className="space-y-2 border border-amber-300 rounded-md p-2 bg-amber-50">
+              <p className="text-xs text-amber-900">{EMPTY_MENU_ROLES_WARNING}</p>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="destructive" disabled={isPending} onClick={handleSubmit}>
+                  Confirmer la visibilité générale
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setConfirmEmpty(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
 
           {loadingHarpRoles ? (
             <div className="text-center py-6">
@@ -244,7 +330,7 @@ export function MenuRolesDialog({ menuId, menuName, open: controlledOpen, onOpen
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isPending || loadingHarpRoles}
+              disabled={isPending || loadingHarpRoles || unrecognizedRole !== null}
               size="sm"
               className="h-8 text-xs bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
             >

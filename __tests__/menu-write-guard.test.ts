@@ -145,7 +145,35 @@ describe("écritures menus", () => {
     (db.harpmenus.update as jest.Mock).mockResolvedValue({ id: 3 });
     const result = await updateMenu(3, menuForm());
     expect(result.success).toBe(true);
-    expect(db.harpmenus.update).toHaveBeenCalled();
+    expect(db.harpmenus.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 3 },
+        data: expect.objectContaining({
+          menu: "ACCUEIL",
+          href: "/accueil",
+          descr: "Accueil",
+          display: 1,
+          level: 0,
+          active: 1,
+          role: undefined,
+        }),
+      })
+    );
+  });
+
+  it("écrit le rôle seulement si un appelant l'envoie encore", async () => {
+    asVisitor(["PORTAL_ADMIN"]);
+    (db.harpmenus.findUnique as jest.Mock).mockResolvedValue({ id: 3, menu: "ACCUEIL" });
+    (db.harpmenus.update as jest.Mock).mockResolvedValue({ id: 3 });
+    const form = menuForm();
+    form.set("role", "TMA_LOCAL");
+    const result = await updateMenu(3, form);
+    expect(result.success).toBe(true);
+    expect(db.harpmenus.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ role: "TMA_LOCAL", menu: "ACCUEIL" }),
+      })
+    );
   });
 
   it("autorise toggleMenuStatus pour PORTAL_ADMIN", async () => {

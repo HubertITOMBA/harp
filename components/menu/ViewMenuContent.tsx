@@ -24,11 +24,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowUpDown } from "lucide-react";
+import { listVisibleMenuRoles, type VisibleMenuRole } from "@/lib/rbac-menu-coherence";
 
 interface RoleWithMenu {
   id: number;
   role: string;
-  descr: string;
+  descr: string | null;
 }
 
 interface ViewMenuContentProps {
@@ -46,9 +47,10 @@ interface ViewMenuContentProps {
       harproles: RoleWithMenu | null;
     }>;
   };
+  knownRoleNames?: readonly string[] | null;
 }
 
-type RoleRow = RoleWithMenu;
+type RoleRow = VisibleMenuRole;
 
 const roleColumns: ColumnDef<RoleRow>[] = [
   {
@@ -84,18 +86,26 @@ const roleColumns: ColumnDef<RoleRow>[] = [
       )
     },
     cell: ({ row }) => {
-      return <div className="text-[10px] sm:text-xs">{row.getValue('descr') || '-'}</div>
+      const label = row.original.unrecognized
+        ? "Restriction historique non reconnue"
+        : row.original.descr || "-";
+      return <div className="text-[10px] sm:text-xs">{label}</div>
     }
   },
 ];
 
-export function ViewMenuContent({ menu }: ViewMenuContentProps) {
+export function ViewMenuContent({ menu, knownRoleNames = null }: ViewMenuContentProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  // Extraire les rôles depuis harpmenurole
-  const roles = menu.harpmenurole
-    .map(mr => mr.harproles)
-    .filter((role): role is RoleWithMenu => role !== null);
+  const visible = listVisibleMenuRoles({
+    columnRole: menu.role,
+    linked: menu.harpmenurole
+      .map((link) => link.harproles)
+      .filter((role): role is RoleWithMenu => role !== null)
+      .map((role) => ({ role: role.role, descr: role.descr })),
+    knownRoleNames,
+  });
+  const roles = visible.roles;
 
   const table = useReactTable({
     data: roles,
@@ -103,6 +113,7 @@ export function ViewMenuContent({ menu }: ViewMenuContentProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getRowId: (row) => row.role,
     onSortingChange: setSorting,
     state: {
       sorting,
@@ -222,6 +233,12 @@ export function ViewMenuContent({ menu }: ViewMenuContentProps) {
           </div>
         </CardContent>
       </Card>
+
+      {visible.unrecognizedRole && (
+        <p className="text-xs sm:text-sm text-amber-800">
+          La restriction historique « {visible.unrecognizedRole} » ne correspond à aucun rôle harproles.
+        </p>
+      )}
 
       {/* Liste des rôles associés */}
       {roles.length > 0 && (

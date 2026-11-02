@@ -13,7 +13,64 @@ import {
 import { Button } from "@/components/ui/button";
 import { Eye, Loader2, ArrowLeft } from "lucide-react";
 import { ViewMenuContent } from './ViewMenuContent';
-import { getMenuById } from '@/lib/actions/menu-actions';
+import { MenuFamilyCoherenceView, type MenuFamilyCoherenceShown } from './MenuFamilyCoherenceView';
+import { getAllHarpRoles, getMenuById } from '@/lib/actions/menu-actions';
+import { readMenuFamilyCoherence } from '@/actions/rbac-admin';
+
+/**
+ * Charge la cohérence déjà calculée pour un menu de niveau 3.
+ * N'écrit rien. Masque la carte si le menu n'est pas une famille.
+ *
+ * @param menuId - Identifiant du menu ouvert
+ */
+function MenuFamilyCoherencePanel({ menuId }: { menuId: number }) {
+  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [error, setError] = useState("");
+  const [data, setData] = useState<MenuFamilyCoherenceShown | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+    readMenuFamilyCoherence(menuId)
+      .then((result) => {
+        if (cancelled) return;
+        if (!result.success) {
+          setError(result.error);
+          setStatus("error");
+          return;
+        }
+        if (result.data.kind === "not-family-menu") {
+          setData(null);
+          setStatus("ready");
+          return;
+        }
+        setData(result.data);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Impossible de charger la cohérence RBAC.");
+        setStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [menuId]);
+
+  if (status === "loading") {
+    return (
+      <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
+        <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+        Chargement de la cohérence RBAC…
+      </div>
+    );
+  }
+  if (status === "error") {
+    return <p className="mt-4 text-sm text-red-700">{error}</p>;
+  }
+  if (!data) return null;
+  return <MenuFamilyCoherenceView data={data} />;
+}
 
 interface ViewMenuDialogProps {
   menuId: number;
@@ -43,6 +100,7 @@ interface MenuData {
 export function ViewMenuDialog({ menuId, open: controlledOpen, onOpenChange }: ViewMenuDialogProps) {
   const router = useRouter();
   const [menuData, setMenuData] = useState<MenuData | null>(null);
+  const [knownRoleNames, setKnownRoleNames] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -56,23 +114,38 @@ export function ViewMenuDialog({ menuId, open: controlledOpen, onOpenChange }: V
   };
 
   useEffect(() => {
-    if (open) {
-      setLoading(true);
-      getMenuById(menuId)
-        .then((data) => {
-          setMenuData(data as MenuData | null);
-        })
-        .catch((error) => {
-          console.error("Erreur lors du chargement du menu:", error);
-          setMenuData(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      // Réinitialiser les données quand le dialog se ferme
+    if (!open) {
       setMenuData(null);
+      setKnownRoleNames(null);
+      return;
     }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      getMenuById(menuId),
+      getAllHarpRoles().catch((error) => {
+        console.error("Erreur lors du chargement des rôles du menu:", error);
+        return null;
+      }),
+    ])
+      .then(([data, roles]) => {
+        if (cancelled) return;
+        setMenuData(data as MenuData | null);
+        setKnownRoleNames(roles ? roles.map((role) => role.role) : null);
+      })
+      .catch((error) => {
+        console.error("Erreur lors du chargement du menu:", error);
+        if (!cancelled) {
+          setMenuData(null);
+          setKnownRoleNames(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, menuId]);
 
   // Si open/onOpenChange sont fournis, ne pas afficher de trigger (contrôlé depuis l'extérieur)
@@ -109,7 +182,8 @@ export function ViewMenuDialog({ menuId, open: controlledOpen, onOpenChange }: V
                   Retour à la liste
                 </Button>
               </div>
-              <ViewMenuContent menu={menuData} />
+              <ViewMenuContent menu={menuData} knownRoleNames={knownRoleNames} />
+              {menuData.level === 3 && <MenuFamilyCoherencePanel menuId={menuData.id} />}
               <div className="mt-3 flex justify-start pt-2 border-t border-slate-200">
                 <Button 
                   onClick={handleBackToList}
@@ -176,7 +250,8 @@ export function ViewMenuDialog({ menuId, open: controlledOpen, onOpenChange }: V
                   Retour à la liste
                 </Button>
               </div>
-              <ViewMenuContent menu={menuData} />
+              <ViewMenuContent menu={menuData} knownRoleNames={knownRoleNames} />
+              {menuData.level === 3 && <MenuFamilyCoherencePanel menuId={menuData.id} />}
               <div className="mt-3 flex justify-start pt-2 border-t border-slate-200">
                 <Button 
                   onClick={handleBackToList}
