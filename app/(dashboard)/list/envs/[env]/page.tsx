@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { notFound } from 'next/navigation';
 import EnvServRoles from '@/components/harp/EnvServRoles';
 import { FamilyAccessSection } from '@/components/env/FamilyAccessSection';
+import { CopyPasswordButton } from '@/components/harp/CopyPasswordButton';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -290,6 +291,22 @@ const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
                       <Button size="sm" variant="outline" className="h-7 text-xs">
                         Copier
                       </Button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-500">-</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <Key className="h-3 w-3 text-orange-600" />
+                  Password ORAQUERY
+                </Label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  {envInfos?.pswd_oraquery ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive" className="text-xs">Disponible</Badge>
+                      <CopyPasswordButton password={envInfos.pswd_oraquery} />
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>

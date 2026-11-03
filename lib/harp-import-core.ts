@@ -2217,6 +2217,7 @@ export const importerLesEnvInfos = async () => {
       deploycbldt: string | null;
       userunx: string | null;
       pswd_ft_exploit: string | null;
+      pswd_oraquery: string | null;
     };
 
     const rawJoined = await prisma.$queryRaw<Row[]>`
@@ -2231,7 +2232,8 @@ export const importerLesEnvInfos = async () => {
         i.datmaj AS datmaj,
         i.deploycbldt AS deploycbldt,
         i.userunx AS userunx,
-        i.pswd_ft_exploit AS pswd_ft_exploit
+        i.pswd_ft_exploit AS pswd_ft_exploit,
+        i.pswd_oraquery AS pswd_oraquery
       FROM envsharp e
       INNER JOIN psadm_envinfo i
         ON LOWER(TRIM(i.env)) = LOWER(TRIM(e.env))
@@ -2249,6 +2251,7 @@ export const importerLesEnvInfos = async () => {
       deploycbldt: r.deploycbldt,
       userunx: r.userunx,
       pswd_ft_exploit: r.pswd_ft_exploit,
+      pswd_oraquery: r.pswd_oraquery,
     }));
 
     if (allDataToImport.length === 0) {
@@ -3725,6 +3728,7 @@ export const importerLesEnvPUMInfos = async () => {
       deploycbldt: string | null;
       userunx: string | null;
       pswd_ft_exploit: string | null;
+      pswd_oraquery: string | null;
     };
 
     const rawJoined = await prisma.$queryRaw<Row[]>`
@@ -3739,7 +3743,8 @@ export const importerLesEnvPUMInfos = async () => {
         i.datmaj AS datmaj,
         i.deploycbldt AS deploycbldt,
         i.userunx AS userunx,
-        i.pswd_ft_exploit AS pswd_ft_exploit
+        i.pswd_ft_exploit AS pswd_ft_exploit,
+        i.pswd_oraquery AS pswd_oraquery
       FROM envsharp e
       INNER JOIN psadm_envinfo i
         ON LOWER(TRIM(i.env)) = LOWER(TRIM(e.env))
@@ -3758,6 +3763,7 @@ export const importerLesEnvPUMInfos = async () => {
       deploycbldt: r.deploycbldt,
       userunx: r.userunx,
       pswd_ft_exploit: r.pswd_ft_exploit,
+      pswd_oraquery: r.pswd_oraquery,
     }));
 
     if (allDataToImport.length === 0) {

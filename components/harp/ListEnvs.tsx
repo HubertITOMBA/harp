@@ -60,6 +60,7 @@ type EnvsharpRow = Prisma.envsharpGetPayload<{
         datmaj: true;
         refreshdt: true;
         pswd_ft_exploit: true;
+        pswd_oraquery: true;
         datadt: true;
         modedt: true;
         userunx: true;
@@ -122,6 +123,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
             datmaj: true,
             refreshdt: true,
             pswd_ft_exploit: true,
+            pswd_oraquery: true,
             datadt: true,
             modedt: true,
             userunx: true,
@@ -422,6 +424,15 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                             <Label className="text-[11px] font-semibold text-slate-800">Password FT_EXPLOIT</Label>
                             <div className="text-right">
                               <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_ft_exploit!} />
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {envsharp.harpenvinfo?.[0]?.pswd_oraquery ? (
+                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
+                            <Label className="text-[11px] font-semibold text-slate-800">Password ORAQUERY</Label>
+                            <div className="text-right">
+                              <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_oraquery} />
                             </div>
                           </div>
                         ) : null}

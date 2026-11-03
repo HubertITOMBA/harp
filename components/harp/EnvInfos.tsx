@@ -82,6 +82,12 @@ export const EnvInfos = async ({
                     <CopyPasswordButton password={envInfos.pswd_ft_exploit} />
                 </div>
             )}
+            {envInfos.pswd_oraquery && (
+                <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                    <Label className="w-32 text-muted-foreground">password ORAQUERY :</Label>
+                    <CopyPasswordButton password={envInfos.pswd_oraquery} />
+                </div>
+            )}
             {envInfos.userunx && (
                 <div className="flex gap-4 items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <Label className="w-32 text-muted-foreground">Sudo Sudoer :</Label>

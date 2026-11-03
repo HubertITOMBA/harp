@@ -105,6 +105,7 @@ interface EnvCsvData {
   login: string;
   logindt: string;
   pswd_ft_exploit: string;
+  pswd_oraquery: string;
   edi: string;
 }
 
@@ -165,7 +166,7 @@ async function safeUpdateHarpenvservStatusOne(params: { id: number; status: numb
  */
 function parseCsvLine(line: string): EnvCsvData | null {
   const parts = line.split(';');
-  if (parts.length < 30) {
+  if (parts.length !== 31) {
     return null;
   }
   return {
@@ -198,7 +199,8 @@ function parseCsvLine(line: string): EnvCsvData | null {
     login: parts[26] || '',
     logindt: parts[27] || '',
     pswd_ft_exploit: parts[28] || '',
-    edi: parts[29] || '',
+    pswd_oraquery: parts[29] || '',
+    edi: parts[30] || '',
   };
 }
 
@@ -377,7 +379,13 @@ export async function processOneEnvFile(fileName: string, options?: { startNewLo
 
     for (let i = 0; i < lines.length; i++) {
       const csvData = parseCsvLine(lines[i]!);
-      if (!csvData?.env?.trim()) continue;
+      if (!csvData?.env?.trim()) {
+        const fieldCount = lines[i]!.split(";").length;
+        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, ${fieldCount} champ(s) (31 attendus ou environnement manquant).`;
+        errors.push(error);
+        appendRefreshUpdateLog(error);
+        continue;
+      }
       if (csvData.env.trim().toLowerCase() === "env") continue; // ligne d'en-tête
 
       const result = await processEnvData(csvData);
@@ -442,7 +450,13 @@ export async function processOneReleaseFile(fileName: string): Promise<UpdateEnv
 
     for (let i = 0; i < lines.length; i++) {
       const csvData = parseCsvLine(lines[i]!);
-      if (!csvData?.env?.trim()) continue;
+      if (!csvData?.env?.trim()) {
+        const fieldCount = lines[i]!.split(";").length;
+        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, ${fieldCount} champ(s) (31 attendus ou environnement manquant).`;
+        errors.push(error);
+        appendRefreshUpdateLog(error);
+        continue;
+      }
       if (csvData.env.trim().toLowerCase() === "env") continue; // ligne d'en-tête
 
       const result = await processEnvData(csvData, { isRelease: true });
@@ -696,6 +710,7 @@ async function processEnvData(
     const infodt = parseDate(data.infodt);
     const deploycbl = data.deploycbl === 'null' ? null : data.deploycbl.trim();
     const pswd_ft_exploit = data.pswd_ft_exploit === 'null' ? null : data.pswd_ft_exploit.trim();
+    const pswd_oraquery = data.pswd_oraquery === 'null' ? null : data.pswd_oraquery.trim();
 
     // harpenvinfo est liée à envsharp par envId ; le nom d'env (FHHPR1, GASSI_PRODUCTION, etc.) est dans envsharp.env.
     // GASSI = mode restreint (datmaj + modetp/modedt) ; non-GASSI = datmaj + refreshdt + datadt.
@@ -741,6 +756,7 @@ async function processEnvData(
       data: {
         deploycbldt: deploycbl,
         pswd_ft_exploit,
+        pswd_oraquery,
         refreshdt,
         datadt,
       }

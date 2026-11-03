@@ -12,6 +12,7 @@ import EnvServRoles from '@/components/harp/EnvServRoles';
 import { EnvInfos } from '@/components/harp/EnvInfos';
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
+import { CopyPasswordButton } from '@/components/harp/CopyPasswordButton';
 import { ServerConnectionButtons } from '@/components/ui/server-connection-buttons';
 
 
@@ -285,6 +286,12 @@ interface EnvInfoProps {
                   Copier le mot de passe
               </Button>
               }
+         </div>
+         <div className="flex gap-4 items-center">
+              <Label>password ORAQUERY</Label>
+              {enfInfos?.pswd_oraquery ? (
+                <CopyPasswordButton password={enfInfos.pswd_oraquery} />
+              ) : null}
          </div>
          <div className="flex gap-4 items-center">
 

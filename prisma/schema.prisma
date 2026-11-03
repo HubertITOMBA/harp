@@ -297,6 +297,7 @@ model harpenvinfo {
   deploycbldt     String?   @db.VarChar(25)
   userunx         String?   @db.VarChar(12)
   pswd_ft_exploit String?   @db.VarChar(32)
+  pswd_oraquery   String?   @db.VarChar(32)
   envsharp        envsharp  @relation(fields: [envId], references: [id])
 
   @@index([envId, datadt])
@@ -389,6 +390,7 @@ model psadm_envinfo {
   deploycbldt     String?   @db.VarChar(25)
   userunx         String?   @db.VarChar(12)
   pswd_ft_exploit String?   @db.VarChar(32)
+  pswd_oraquery   String?   @db.VarChar(32)
   // psadm_env      psadm_env   @relation(fields: [env], references: [env], map: "psadm_env_infk") 
 
   // @@index([env], map: "env")
