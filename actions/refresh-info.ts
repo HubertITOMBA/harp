@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { parseCsvLine, type CsvFamily, type EnvCsvData } from "@/lib/refresh-info-csv";
 
 const execAsync = promisify(exec);
 
@@ -73,43 +74,6 @@ export async function executeRefreshInfo() {
 }
 
 /**
- * Interface pour les données CSV d'un environnement
- */
-interface EnvCsvData {
-  env: string;
-  harprelease: string;
-  refreshdt: string;
-  datadt: string;
-  modetp: string;
-  modedt: string;
-  cobver: string;
-  deploycbl: string;
-  orarelease: string;
-  ptversion: string;
-  psversion: string;
-  anonym: string;
-  infodt: string;
-  dbstatus: string;
-  nbdom: string;
-  asstatus1: string;
-  asstatus2: string;
-  asstatus3: string;
-  asstatus4: string;
-  asstatus5: string;
-  lastasdt: string;
-  psunxstatus: string;
-  psunxdt: string;
-  psntstatus: string;
-  psntdt: string;
-  webstatus: string;
-  login: string;
-  logindt: string;
-  pswd_ft_exploit: string;
-  pswd_oraquery: string;
-  edi: string;
-}
-
-/**
  * Convertit une chaîne de date MySQL en Date ou null
  */
 function parseDate(dateStr: string | null | undefined): Date | null {
@@ -162,46 +126,16 @@ async function safeUpdateHarpenvservStatusOne(params: { id: number; status: numb
 }
 
 /**
- * Parse une ligne CSV avec séparateur ';'
+ * Message d'erreur de ligne, sans les valeurs des champs.
  */
-function parseCsvLine(line: string): EnvCsvData | null {
+function csvLineError(fileName: string, lineNumber: number, line: string, family: CsvFamily): string {
   const parts = line.split(';');
-  if (parts.length !== 31) {
-    return null;
+  const fieldCount = parts.length;
+  if (family === "env" && fieldCount === 31 && parts[30] === '') {
+    return `CSV invalide : ${fileName}, ligne ${lineNumber}, 31 champs avec dernière case vide (format ambigu, ligne rejetée).`;
   }
-  return {
-    env: parts[0] || '',
-    harprelease: parts[1] || '',
-    refreshdt: parts[2] || '',
-    datadt: parts[3] || '',
-    modetp: parts[4] || '',
-    modedt: parts[5] || '',
-    cobver: parts[6] || '',
-    deploycbl: parts[7] || '',
-    orarelease: parts[8] || '',
-    ptversion: parts[9] || '',
-    psversion: parts[10] || '',
-    anonym: parts[11] || '',
-    infodt: parts[12] || '',
-    dbstatus: parts[13] || '',
-    nbdom: parts[14] || '',
-    asstatus1: parts[15] || '',
-    asstatus2: parts[16] || '',
-    asstatus3: parts[17] || '',
-    asstatus4: parts[18] || '',
-    asstatus5: parts[19] || '',
-    lastasdt: parts[20] || '',
-    psunxstatus: parts[21] || '',
-    psunxdt: parts[22] || '',
-    psntstatus: parts[23] || '',
-    psntdt: parts[24] || '',
-    webstatus: parts[25] || '',
-    login: parts[26] || '',
-    logindt: parts[27] || '',
-    pswd_ft_exploit: parts[28] || '',
-    pswd_oraquery: parts[29] || '',
-    edi: parts[30] || '',
-  };
+  const expected = family === "release" ? "30 champs attendus" : "30 ou 31 champs attendus";
+  return `CSV invalide : ${fileName}, ligne ${lineNumber}, ${fieldCount} champ(s) (${expected}).`;
 }
 
 /** Dossier des fichiers générés par refresh_info_harp.ksh (env.*, release.*) */
@@ -378,10 +312,15 @@ export async function processOneEnvFile(fileName: string, options?: { startNewLo
     const updatedEnvs: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-      const csvData = parseCsvLine(lines[i]!);
-      if (!csvData?.env?.trim()) {
-        const fieldCount = lines[i]!.split(";").length;
-        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, ${fieldCount} champ(s) (31 attendus ou environnement manquant).`;
+      const csvData = parseCsvLine(lines[i]!, "env");
+      if (!csvData) {
+        const error = csvLineError(fileName, i + 1, lines[i]!, "env");
+        errors.push(error);
+        appendRefreshUpdateLog(error);
+        continue;
+      }
+      if (!csvData.env.trim()) {
+        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, environnement manquant.`;
         errors.push(error);
         appendRefreshUpdateLog(error);
         continue;
@@ -423,7 +362,7 @@ export async function processOneEnvFile(fileName: string, options?: { startNewLo
 }
 
 /**
- * Traite un seul fichier release.* (même format CSV que env.*, mais sans harpora/harpmonitor et avec lastcheckstatus en fin de lot).
+ * Traite un seul fichier release.* (30 champs, sans ORAQUERY, sans harpora/harpmonitor, avec lastcheckstatus en fin de lot).
  */
 export async function processOneReleaseFile(fileName: string): Promise<UpdateEnvFromFilesResult> {
   try {
@@ -449,10 +388,15 @@ export async function processOneReleaseFile(fileName: string): Promise<UpdateEnv
     const updatedEnvs: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-      const csvData = parseCsvLine(lines[i]!);
-      if (!csvData?.env?.trim()) {
-        const fieldCount = lines[i]!.split(";").length;
-        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, ${fieldCount} champ(s) (31 attendus ou environnement manquant).`;
+      const csvData = parseCsvLine(lines[i]!, "release");
+      if (!csvData) {
+        const error = csvLineError(fileName, i + 1, lines[i]!, "release");
+        errors.push(error);
+        appendRefreshUpdateLog(error);
+        continue;
+      }
+      if (!csvData.env.trim()) {
+        const error = `CSV invalide : ${fileName}, ligne ${i + 1}, environnement manquant.`;
         errors.push(error);
         appendRefreshUpdateLog(error);
         continue;
@@ -710,7 +654,14 @@ async function processEnvData(
     const infodt = parseDate(data.infodt);
     const deploycbl = data.deploycbl === 'null' ? null : data.deploycbl.trim();
     const pswd_ft_exploit = data.pswd_ft_exploit === 'null' ? null : data.pswd_ft_exploit.trim();
-    const pswd_oraquery = data.pswd_oraquery === 'null' ? null : data.pswd_oraquery.trim();
+    const oraqueryTrimmed = data.pswd_oraquery?.trim();
+    const pswdOraqueryUpdate =
+      data.pswd_oraquery === undefined
+        ? {}
+        : {
+            pswd_oraquery:
+              oraqueryTrimmed === "" || oraqueryTrimmed === "null" ? null : oraqueryTrimmed,
+          };
 
     // harpenvinfo est liée à envsharp par envId ; le nom d'env (FHHPR1, GASSI_PRODUCTION, etc.) est dans envsharp.env.
     // GASSI = mode restreint (datmaj + modetp/modedt) ; non-GASSI = datmaj + refreshdt + datadt.
@@ -750,13 +701,14 @@ async function processEnvData(
       });
     }
 
-    // Mettre à jour deploycbldt, pswd_ft_exploit, refreshdt et datadt pour tous (env.* et release.*)
+    // deploycbldt, pswd_ft_exploit, refreshdt et datadt pour tous (env.* et release.*).
+    // pswd_oraquery n'est écrit que si la colonne est présente dans le CSV.
     await db.harpenvinfo.update({
       where: { envId },
       data: {
         deploycbldt: deploycbl,
         pswd_ft_exploit,
-        pswd_oraquery,
+        ...pswdOraqueryUpdate,
         refreshdt,
         datadt,
       }

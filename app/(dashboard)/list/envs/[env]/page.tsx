@@ -279,34 +279,36 @@ const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
                   {envInfos?.modedt ? new Intl.DateTimeFormat("fr-FR", {dateStyle: 'short', timeStyle: 'medium'}).format(envInfos.modedt) : '-'}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
                   <Key className="h-3 w-3 text-orange-600" />
                   Password FT_EXPLOIT
                 </Label>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 min-w-0">
                   {envInfos?.pswd_ft_exploit ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-col items-start gap-2">
                       <Badge variant="destructive" className="text-xs">Disponible</Badge>
-                      <Button size="sm" variant="outline" className="h-7 text-xs">
-                        Copier
-                      </Button>
+                      <div className="min-w-0 max-w-full [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal">
+                        <CopyPasswordButton password={envInfos.pswd_ft_exploit} label="Copier le mot de passe" />
+                      </div>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>
                   )}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
                   <Key className="h-3 w-3 text-orange-600" />
                   Password ORAQUERY
                 </Label>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 min-w-0">
                   {envInfos?.pswd_oraquery ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-col items-start gap-2">
                       <Badge variant="destructive" className="text-xs">Disponible</Badge>
-                      <CopyPasswordButton password={envInfos.pswd_oraquery} />
+                      <div className="min-w-0 max-w-full [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal">
+                        <CopyPasswordButton password={envInfos.pswd_oraquery} label="Copier le mot de passe" />
+                      </div>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>
@@ -356,7 +358,7 @@ const EnvSinglePage = async ({ params }: { params: { env: string } }) => {
               <div className="space-y-2">
                 <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
                   <Code className="h-3 w-3 text-orange-600" />
-                  Version Cobol
+                  COBOL
                 </Label>
                 <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-medium text-gray-900">
                   {Envs.volum || '-'}

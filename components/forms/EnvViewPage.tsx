@@ -287,10 +287,12 @@ interface EnvInfoProps {
               </Button>
               }
          </div>
-         <div className="flex gap-4 items-center">
+         <div className="flex min-w-0 w-full flex-wrap items-center gap-4">
               <Label>password ORAQUERY</Label>
               {enfInfos?.pswd_oraquery ? (
-                <CopyPasswordButton password={enfInfos.pswd_oraquery} />
+                <div className="min-w-0 max-w-full [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal">
+                  <CopyPasswordButton password={enfInfos.pswd_oraquery} label="Copier le mot de passe" />
+                </div>
               ) : null}
          </div>
          <div className="flex gap-4 items-center">
@@ -322,7 +324,7 @@ interface EnvInfoProps {
                 <Label>Message  :</Label> <Label className="font-semibold text-sm">{Envs.msg}</Label>
           </div>
           <div className="w-full flex items-center gap-2">
-          <Label>Version Cobol  :</Label> <Label className="font-semibold text-sm">{Envs.volum}</Label>
+          <Label>COBOL  :</Label> <Label className="font-semibold text-sm">{Envs.volum}</Label>
         </div>
         {/* <div className="w-full flex items-center gap-2">
           <Label>Url  :</Label> <Link href={Envs.url}><Label className="font-semibold text-sm">{Envs.url}</Label>  </Link>

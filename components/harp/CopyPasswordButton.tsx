@@ -5,12 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { toast } from "react-toastify";
 
+const DEFAULT_COPY_LABEL = "Cliquer ici pour copier le mot de passe";
+
 /**
  * Composant client pour copier le mot de passe dans le presse-papiers
- * 
+ *
  * @param password - Le mot de passe à copier
+ * @param label - Texte affiché avant la copie. Par défaut, le libellé historique.
  */
-export function CopyPasswordButton({ password }: { password: string }) {
+export function CopyPasswordButton({
+  password,
+  label = DEFAULT_COPY_LABEL,
+}: {
+  password: string;
+  label?: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -73,7 +82,7 @@ export function CopyPasswordButton({ password }: { password: string }) {
       ) : (
         <>
           <Copy className="h-3 w-3" />
-          Cliquer ici pour copier le mot de passe
+          {label}
         </>
       )}
     </Button>

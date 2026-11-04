@@ -397,7 +397,7 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         </div>
 
                         <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
-                          <Label className="text-[11px] font-semibold text-slate-800">Version Cobol</Label>
+                          <Label className="text-[11px] font-semibold text-slate-800">COBOL</Label>
                           <div className="text-xs font-mono text-slate-900 text-right">{envsharp.volum || "N/A"}</div>
                         </div>
 
@@ -420,19 +420,19 @@ const HarpEnvPage = async ({ typenvid }: EnvInfoProps) => {
                         ) : null}
 
                         {envsharp.harpenvinfo?.[0]?.pswd_ft_exploit ? (
-                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
+                          <div className="py-2 grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[165px_1fr] sm:items-center sm:gap-3">
                             <Label className="text-[11px] font-semibold text-slate-800">Password FT_EXPLOIT</Label>
-                            <div className="text-right">
-                              <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_ft_exploit!} />
+                            <div className="min-w-0 max-w-full sm:text-right [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal">
+                              <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_ft_exploit!} label="Copier le mot de passe" />
                             </div>
                           </div>
                         ) : null}
 
                         {envsharp.harpenvinfo?.[0]?.pswd_oraquery ? (
-                          <div className="py-2 grid grid-cols-[165px_1fr] items-center gap-3">
+                          <div className="py-2 grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[165px_1fr] sm:items-center sm:gap-3">
                             <Label className="text-[11px] font-semibold text-slate-800">Password ORAQUERY</Label>
-                            <div className="text-right">
-                              <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_oraquery} />
+                            <div className="min-w-0 max-w-full sm:text-right [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal">
+                              <CopyPasswordButton password={envsharp.harpenvinfo[0].pswd_oraquery} label="Copier le mot de passe" />
                             </div>
                           </div>
                         ) : null}
