@@ -1759,17 +1759,20 @@ export const importerLesTypesEnv = async () => {
     // RÃ©cupÃ©rer les types d'environnement dÃ©jÃ  prÃ©sents dans harptypenv
     const existingTypenvs = await prisma.harptypenv.findMany({
       select: {
-        typenv: true
+        typenv: true,
+        typenvid: true,
       }
     });
 
-    // CrÃ©er un Set des types d'environnement existants pour une recherche rapide
-    // ClÃ© unique: typenv
+    // Une famille déjà présente par son nom ou par son typenvid n'est pas réimportée.
+    // Un renommage de typenv conserve typenvid et ne recrée donc pas l'ancienne ligne.
     const existingTypenvsSet = new Set(existingTypenvs.map(te => te.typenv));
+    const existingTypenvIds = new Set(
+      existingTypenvs.flatMap((te) => (te.typenvid == null ? [] : [te.typenvid]))
+    );
 
-    // Filtrer uniquement les types d'environnement qui n'existent pas encore (delta)
     const typenvsToImport = allTypenvData.filter(record =>
-      !existingTypenvsSet.has(record.typenv)
+      !existingTypenvsSet.has(record.typenv) && !existingTypenvIds.has(record.display)
     );
 
     if (typenvsToImport.length === 0) {

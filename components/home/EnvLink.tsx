@@ -17,7 +17,14 @@ export function EnvLink({ href, icon, label, className = "" }: EnvLinkProps) {
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    // Forcer la navigation avec revalidation
+
+    if (window.location.pathname === href) {
+      router.refresh();
+      return;
+    }
+
+    // Autre famille : navigation puis revalidation. L'ordre ne garantit pas
+    // à lui seul que Next.js revalide la destination.
     router.push(href);
     router.refresh();
   };

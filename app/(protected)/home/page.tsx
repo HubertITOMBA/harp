@@ -13,6 +13,7 @@ import {
   Wrench,
   Link as LinkIcon,
   Menu as MenuIcon,
+  FolderTree,
   Mail,
   Clock,
   AlertCircle,
@@ -167,6 +168,14 @@ const HomePage = async () => {
       href: "/list/roles",
       color: "from-gray-100 to-gray-200",
       iconColor: "text-gray-600",
+    },
+    {
+      icon: FolderTree,
+      title: "Familles",
+      description: "Consultation des familles d'environnements, de leurs menus et de leurs accès",
+      href: "/list/families",
+      color: "from-orange-100 to-orange-200",
+      iconColor: "text-orange-600",
     },
     {
       icon: Database,

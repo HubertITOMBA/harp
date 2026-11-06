@@ -31,6 +31,25 @@ interface EnvSearchAndNavigationProps {
 }
 
 /**
+ * Remonte jusqu'au premier ancêtre qui défile.
+ * Sur cette page, c'est le cadre overflow-auto du layout protégé.
+ *
+ * @param element - Point de départ dans la liste
+ * @returns L'ancêtre défilant, ou null
+ */
+function findScrollableAncestor(element: HTMLElement | null): HTMLElement | null {
+  let node = element?.parentElement ?? null;
+  while (node) {
+    const overflowY = window.getComputedStyle(node).overflowY;
+    if (overflowY === "auto" || overflowY === "scroll") {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/**
  * Composant client pour ajouter la recherche et la navigation (haut/bas) à la liste des environnements
  * 
  * @param children - Le contenu à afficher (liste des environnements)
@@ -41,7 +60,8 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
   const [showScrollButtons, setShowScrollButtons] = useState(false);
   const [isAtTop, setIsAtTop] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollParentRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Normalisation tolérante pour la recherche :
@@ -52,31 +72,37 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
       .toLowerCase()
       .replace(/[\s_-]+/g, "");
 
-  // Vérifier la position du scroll
+  // Le défilement réel est celui du layout protégé (overflow-auto autour de la page),
+  // pas un second cadre dans la liste.
   useEffect(() => {
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const scrollPercentage = scrollTop / (scrollHeight - clientHeight);
-
-      setIsAtTop(scrollTop < 100);
-      setIsAtBottom(scrollPercentage > 0.95 || scrollHeight <= clientHeight);
-      setShowScrollButtons(scrollHeight > clientHeight);
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      handleScroll(); // Vérifier au chargement initial
+    const parent = findScrollableAncestor(rootRef.current);
+    scrollParentRef.current = parent;
+    if (!parent) {
+      setShowScrollButtons(false);
+      setIsAtTop(true);
+      setIsAtBottom(true);
+      return;
     }
 
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = parent;
+      const distance = scrollHeight - clientHeight;
+      const scrollPercentage = distance > 0 ? scrollTop / distance : 1;
+
+      setIsAtTop(scrollTop < 100);
+      setIsAtBottom(scrollPercentage > 0.95 || distance <= 0);
+      setShowScrollButtons(distance > 1);
     };
-  }, [children]);
+
+    parent.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    handleScroll();
+
+    return () => {
+      parent.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [children, searchTerm]);
 
   // Filtrer les environnements en fonction du terme de recherche
   const filteredChildren = React.useMemo(() => {
@@ -143,22 +169,19 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
     });
   }, [children, searchTerm, envsData]);
 
-  // Navigation vers le haut
   const scrollToTop = () => {
-    containerRef.current?.scrollTo({
+    scrollParentRef.current?.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: "smooth",
     });
   };
 
-  // Navigation vers le bas
   const scrollToBottom = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
+    const parent = scrollParentRef.current;
+    parent?.scrollTo({
+      top: parent.scrollHeight,
+      behavior: "smooth",
+    });
   };
 
   // Focus sur la recherche avec Ctrl+F ou Cmd+F
@@ -175,9 +198,9 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
   }, []);
 
   return (
-    <div className="relative">
-      {/* Barre de recherche fixe */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-orange-200 shadow-sm mb-4 p-4 rounded-lg">
+    <div ref={rootRef} className="relative">
+      {/* Barre de recherche fixe dans le défilement de la page */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-orange-200 shadow-sm mb-3 p-3 rounded-lg">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
@@ -214,12 +237,8 @@ export function EnvSearchAndNavigation({ children, envCount, envsData }: EnvSear
         </div>
       </div>
 
-      {/* Conteneur scrollable avec la liste filtrée */}
-      <div
-        ref={containerRef}
-        className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto scroll-smooth"
-        style={{ scrollPaddingTop: '20px' }}
-      >
+      {/* Liste, défilée par le layout protégé */}
+      <div className="space-y-3">
         {searchTerm ? (
           React.Children.count(filteredChildren) > 0 ? (
             filteredChildren

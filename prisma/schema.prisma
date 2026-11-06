@@ -256,6 +256,13 @@ model harptypenv {
   harpsubroletypenv harpsubroletypenv[]
 }
 
+/// Verrou transactionnel d'un typenvid HARP. Aucune donnée métier.
+model harpdisplaylock {
+  typenvid Int @id
+
+  @@map("harpdisplaylock")
+}
+
 model harptools {
   id       Int     @id @default(autoincrement())
   tool     String  @db.VarChar(255)

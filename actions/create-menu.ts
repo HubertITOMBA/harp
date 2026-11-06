@@ -1,9 +1,17 @@
 "use server"
 
 import { db } from "@/lib/db";
+import {
+  HarpDisplayLockError,
+  withHarpDisplayLock,
+  type HarpDisplayLockClient,
+} from "@/lib/harp-display-lock";
 import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+
+const FAMILY_DISPLAY_MIN = 1;
+const FAMILY_DISPLAY_MAX = 32767;
 
 const CreateMenuSchema = z.object({
   menu: z.string().min(1, "Le nom du menu est requis").max(32),
@@ -16,6 +24,77 @@ const CreateMenuSchema = z.object({
   role: z.string().optional(),
 });
 
+type MenuInput = z.infer<typeof CreateMenuSchema>;
+
+type MenuWriteResult =
+  | { created: true }
+  | { created: false; error: string };
+
+/**
+ * Indique si ce menu partage l'identifiant d'une famille.
+ * Hors niveau 3, ou hors de la plage 1–32767, aucun verrou n'est pris.
+ *
+ * @param level - Niveau du menu
+ * @param display - Valeur display déjà validée
+ * @returns true seulement pour un menu de famille verrouillable
+ */
+function locksFamilyDisplay(level: number, display: number): boolean {
+  return (
+    level === 3 &&
+    Number.isInteger(display) &&
+    display >= FAMILY_DISPLAY_MIN &&
+    display <= FAMILY_DISPLAY_MAX
+  );
+}
+
+/**
+ * Vérifie l'unicité du nom puis insère le menu.
+ * Une famille déjà présente avec typenvid = display n'est pas un refus :
+ * c'est la convention qui relie le menu de niveau 3 à la famille.
+ *
+ * @param client - Client courant, ou transaction qui tient le verrou
+ * @param data - Champs validés du menu
+ * @returns Création, ou le refus de nom déjà utilisé
+ */
+async function writeMenu(
+  client: HarpDisplayLockClient | typeof db,
+  data: MenuInput,
+): Promise<MenuWriteResult> {
+  const existingMenu = await client.harpmenus.findUnique({
+    where: {
+      menu: data.menu,
+    },
+  });
+
+  if (existingMenu) {
+    return { created: false, error: "Un menu avec ce nom existe déjà" };
+  }
+
+  await client.harpmenus.create({
+    data: {
+      menu: data.menu,
+      href: data.href || null,
+      descr: data.descr || null,
+      icone: data.icone || null,
+      display: data.display,
+      level: data.level,
+      active: data.active,
+      role: data.role as any || undefined,
+    },
+  });
+
+  return { created: true };
+}
+
+/**
+ * Crée un menu harpmenus.
+ * PORTAL_ADMIN est exigé. Un menu de niveau 3 dont le display est un entier
+ * de 1 à 32767 prend le verrou de cet identifiant, le temps du contrôle
+ * de nom et de l'insertion, pour se coordonner avec createFamily.
+ *
+ * @param formData - Champs du formulaire de création
+ * @returns Succès avec message, ou un refus sans menu créé
+ */
 export async function createMenu(formData: FormData) {
   const admin = await requirePortalAdmin();
   if (!admin.ok) {
@@ -35,30 +114,13 @@ export async function createMenu(formData: FormData) {
     };
 
     const validatedData = CreateMenuSchema.parse(rawData);
+    const outcome = locksFamilyDisplay(validatedData.level, validatedData.display)
+      ? await withHarpDisplayLock(validatedData.display, (tx) => writeMenu(tx, validatedData))
+      : await writeMenu(db, validatedData);
 
-    // Vérifier si le menu existe déjà (menu est unique)
-    const existingMenu = await db.harpmenus.findUnique({
-      where: {
-        menu: validatedData.menu,
-      },
-    });
-
-    if (existingMenu) {
-      return { success: false, error: "Un menu avec ce nom existe déjà" };
+    if (!outcome.created) {
+      return { success: false, error: outcome.error };
     }
-
-    const newMenu = await db.harpmenus.create({
-      data: {
-        menu: validatedData.menu,
-        href: validatedData.href || null,
-        descr: validatedData.descr || null,
-        icone: validatedData.icone || null,
-        display: validatedData.display,
-        level: validatedData.level,
-        active: validatedData.active,
-        role: validatedData.role as any || undefined,
-      },
-    });
 
     return { 
       success: true, 
@@ -71,6 +133,9 @@ export async function createMenu(formData: FormData) {
         error: error.errors[0].message 
       };
     }
+    if (error instanceof HarpDisplayLockError) {
+      return { success: false, error: error.message };
+    }
     console.error("Erreur lors de la création du menu:", error);
     return { 
       success: false, 
@@ -80,4 +145,3 @@ export async function createMenu(formData: FormData) {
     revalidatePath("/list/menus");
   }
 }
-

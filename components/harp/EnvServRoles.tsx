@@ -30,11 +30,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Server, Network, Monitor, User, Globe, Tag, FileText, Activity, ArrowUpDown, Columns, Terminal } from 'lucide-react'
+import { Server, Network, Monitor, User, Globe, Tag, FileText, Activity, ArrowUpDown, Columns, Terminal, FolderInput } from 'lucide-react'
 import { PuttyLink } from "@/components/harp/PuttyLink";
+import { FileZillaLink } from "@/components/harp/FileZillaLink";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HarpPageProps {
   id: number
+}
+
+/**
+ * Indique si l'identifiant peut être transmis à FileZilla.
+ *
+ * @param serverId - harpserve.id lu sur la ligne
+ * @returns true pour un entier strictement positif
+ */
+function isLaunchableServerId(serverId: number | null): serverId is number {
+  return typeof serverId === "number" && Number.isInteger(serverId) && serverId > 0;
 }
 
 interface ServerDataItem {
@@ -348,17 +360,51 @@ export default function HarpPage({ id }: HarpPageProps) {
       cell: ({ row }) => {
         const item = row.original;
         if (!item.harpserve) return null;
-        
+        const serverId = item.serverId;
+        const hasIp = item.harpserve.ip.trim() !== "";
+
         return (
-          <PuttyLink
-            host={item.harpserve.srv || item.harpserve.ip || ""}
-            ip={item.harpserve.ip || ""}
-            envId={id}
-            serverId={item.serverId ?? undefined}
-            className="inline-flex items-center justify-center h-6 w-6 p-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
-          >
-            <Server className="h-4 w-4" />
-          </PuttyLink>
+          <div className="flex items-center gap-1">
+            <PuttyLink
+              host={item.harpserve.srv || item.harpserve.ip || ""}
+              ip={item.harpserve.ip || ""}
+              envId={id}
+              serverId={item.serverId ?? undefined}
+              className="inline-flex items-center justify-center h-6 w-6 p-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md"
+            >
+              <Server className="h-4 w-4" />
+            </PuttyLink>
+            {isLaunchableServerId(serverId) ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      {hasIp ? (
+                        <FileZillaLink
+                          envId={id}
+                          serverId={serverId}
+                          className="inline-flex items-center justify-center h-6 w-6 p-0 border border-sky-300 bg-background text-sky-700 hover:bg-sky-50 rounded-md"
+                        >
+                          <FolderInput className="h-4 w-4" />
+                        </FileZillaLink>
+                      ) : (
+                        <span
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-md border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
+                          tabIndex={0}
+                          aria-disabled="true"
+                        >
+                          <FolderInput className="h-4 w-4" />
+                        </span>
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="z-[250]">
+                    {hasIp ? "FileZilla" : "FileZilla : adresse IP absente"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+          </div>
         );
       },
       enableSorting: false,

@@ -1,9 +1,17 @@
 "use server"
 
 import { db } from "@/lib/db";
+import {
+  HarpDisplayLockError,
+  withHarpDisplayLock,
+  type HarpDisplayLockClient,
+} from "@/lib/harp-display-lock";
 import { requirePortalAdmin } from "@/lib/require-portal-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+
+const FAMILY_LOCK_MIN = 1;
+const FAMILY_LOCK_MAX = 32767;
 
 const CreateEnvSchema = z.object({
   env: z.string().min(1, "Le nom de l'environnement est requis").max(32),
@@ -24,6 +32,84 @@ const CreateEnvSchema = z.object({
   statenvId: z.string().optional(),
 });
 
+type EnvInput = z.infer<typeof CreateEnvSchema>;
+
+type EnvWriteResult =
+  | { created: true }
+  | { created: false; error: string };
+
+/**
+ * Indique si la valeur qui va être écrite est un identifiant de famille verrouillable.
+ * null, NaN et les entiers hors 1–32767 restent sur le chemin sans verrou.
+ *
+ * @param typenvid - Valeur produite par parseInt, ou null
+ * @returns true seulement pour un entier de 1 à 32767
+ */
+function isLockableFamilyId(typenvid: number | null): typenvid is number {
+  return (
+    typeof typenvid === "number" &&
+    Number.isInteger(typenvid) &&
+    typenvid >= FAMILY_LOCK_MIN &&
+    typenvid <= FAMILY_LOCK_MAX
+  );
+}
+
+/**
+ * Vérifie le nom puis insère l'environnement.
+ *
+ * @param client - Client courant, ou transaction qui tient le verrou
+ * @param data - Champs validés
+ * @param typenvid - Valeur réellement écrite, y compris null ou NaN
+ * @param statenvId - Statut écrit, ou 4 par défaut
+ * @returns Création, ou le refus de nom déjà utilisé
+ */
+async function writeEnv(
+  client: HarpDisplayLockClient | typeof db,
+  data: EnvInput,
+  typenvid: number | null,
+  statenvId: number,
+): Promise<EnvWriteResult> {
+  const existingEnv = await client.envsharp.findUnique({
+    where: { env: data.env },
+  });
+
+  if (existingEnv) {
+    return { created: false, error: "Un environnement avec ce nom existe déjà" };
+  }
+
+  await client.envsharp.create({
+    data: {
+      env: data.env,
+      aliasql: data.aliasql || null,
+      oraschema: data.oraschema || null,
+      orarelease: data.orarelease || null,
+      url: data.url || null,
+      appli: data.appli || null,
+      psversion: data.psversion || null,
+      ptversion: data.ptversion || null,
+      harprelease: data.harprelease || null,
+      pshome: data.pshome || null,
+      volum: data.volum || null,
+      descr: data.descr || null,
+      anonym: data.anonym || null,
+      edi: data.edi || null,
+      typenvid: typenvid,
+      statenvId: statenvId,
+    },
+  });
+
+  return { created: true };
+}
+
+/**
+ * Crée un environnement envsharp.
+ * PORTAL_ADMIN est exigé. Si le typenvid écrit est un entier de 1 à 32767,
+ * ce verrou est pris avant le contrôle de nom et l'insertion.
+ * Une valeur absente reste null et ne prend pas le verrou.
+ *
+ * @param formData - Champs du formulaire de création
+ * @returns Succès avec message, ou un refus
+ */
 export async function createEnv(formData: FormData) {
   const admin = await requirePortalAdmin();
   if (!admin.ok) {
@@ -51,41 +137,17 @@ export async function createEnv(formData: FormData) {
     };
 
     const validatedData = CreateEnvSchema.parse(rawData);
-
-    // Vérifier si l'environnement existe déjà
-    const existingEnv = await db.envsharp.findUnique({
-      where: { env: validatedData.env },
-    });
-
-    if (existingEnv) {
-      return { success: false, error: "Un environnement avec ce nom existe déjà" };
-    }
-
-    // Convertir les IDs si présents
     const typenvid = validatedData.typenvid ? parseInt(validatedData.typenvid) : null;
-    const statenvId = validatedData.statenvId ? parseInt(validatedData.statenvId) : 4; // Statut par défaut
+    const statenvId = validatedData.statenvId ? parseInt(validatedData.statenvId) : 4;
+    const outcome = isLockableFamilyId(typenvid)
+      ? await withHarpDisplayLock(typenvid, (tx) =>
+          writeEnv(tx, validatedData, typenvid, statenvId),
+        )
+      : await writeEnv(db, validatedData, typenvid, statenvId);
 
-    // Créer l'environnement
-    await db.envsharp.create({
-      data: {
-        env: validatedData.env,
-        aliasql: validatedData.aliasql || null,
-        oraschema: validatedData.oraschema || null,
-        orarelease: validatedData.orarelease || null,
-        url: validatedData.url || null,
-        appli: validatedData.appli || null,
-        psversion: validatedData.psversion || null,
-        ptversion: validatedData.ptversion || null,
-        harprelease: validatedData.harprelease || null,
-        pshome: validatedData.pshome || null,
-        volum: validatedData.volum || null,
-        descr: validatedData.descr || null,
-        anonym: validatedData.anonym || null,
-        edi: validatedData.edi || null,
-        typenvid: typenvid,
-        statenvId: statenvId,
-      },
-    });
+    if (!outcome.created) {
+      return { success: false, error: outcome.error };
+    }
 
     return { 
       success: true, 
@@ -98,6 +160,9 @@ export async function createEnv(formData: FormData) {
         error: error.errors[0].message 
       };
     }
+    if (error instanceof HarpDisplayLockError) {
+      return { success: false, error: error.message };
+    }
     console.error("Erreur lors de la création de l'environnement:", error);
     return { 
       success: false, 
@@ -107,4 +172,3 @@ export async function createEnv(formData: FormData) {
     revalidatePath("/list/envs");
   }
 }
-
