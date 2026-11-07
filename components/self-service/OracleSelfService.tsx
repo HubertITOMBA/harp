@@ -7,10 +7,11 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import type { SortingState } from "@tanstack/react-table";
+import type { SortingState, Table as TanStackTable } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,6 +54,68 @@ interface OracleSelfServiceProps {
 
 const formatLabel = (r: OracleRecord) => r.aliasql;
 
+/**
+ * Barre de pagination des sessions Oracle.
+ * Les deux emplacements reçoivent la même instance TanStack Table.
+ *
+ * @param table - Instance du tableau des sessions
+ */
+function SessionsPagination({ table }: { table: TanStackTable<SessionRow> }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span>
+          Page{" "}
+          <span className="font-semibold text-gray-800">
+            {table.getState().pagination.pageIndex + 1}
+          </span>
+          {" / "}
+          {table.getPageCount() || 1}
+        </span>
+        <span>
+          ({table.getPaginationRowModel().rows.length} ligne(s) sur cette page)
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          aria-label="Lignes par page"
+          className="h-8 text-xs border border-gray-300 rounded px-2 bg-white"
+          value={table.getState().pagination.pageSize}
+          onChange={(e) => table.setPageSize(Number(e.target.value))}
+        >
+          {[10, 25, 50, 100].map((size) => (
+            <option key={size} value={size}>
+              {size} / page
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Précédent
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Suivant
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const sessionsBaseColumns: ColumnDef<SessionRow>[] = [
   { accessorKey: "sid", header: "sid" },
   { accessorKey: "serial", header: "serial#" },
@@ -82,6 +145,11 @@ function SessionsTableContent({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: 10 },
+    },
+    autoResetPageIndex: true,
     onSortingChange: setSorting,
     onGlobalFilterChange: (updater) => {
       const v = typeof updater === "function" ? updater(globalFilter) : globalFilter;
@@ -104,9 +172,13 @@ function SessionsTableContent({
     state: { sorting, globalFilter },
   });
 
+  const pageRows = table.getPaginationRowModel().rows;
+
   return (
-    <div className="rounded-md border border-gray-200 overflow-hidden">
-      <Table>
+    <div className="min-w-0 space-y-2">
+      <SessionsPagination table={table} />
+      <div className="min-w-0 max-w-full rounded-md border border-gray-200 overflow-x-auto">
+      <Table className="min-w-[1000px] w-full">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="border-b-2 border-orange-300 bg-orange-600 hover:bg-orange-600">
@@ -156,11 +228,18 @@ function SessionsTableContent({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
+          {pageRows.length ? (
+            pageRows.map((row) => (
               <TableRow key={row.id} className="hover:bg-orange-100 h-8 transition-colors">
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="text-xs py-0.5 px-2">
+                  <TableCell
+                    key={cell.id}
+                    className={
+                      cell.column.id === "module"
+                        ? "text-xs py-0.5 px-2 whitespace-normal break-words"
+                        : "text-xs py-0.5 px-2 whitespace-nowrap"
+                    }
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -175,6 +254,8 @@ function SessionsTableContent({
           )}
         </TableBody>
       </Table>
+      </div>
+      <SessionsPagination table={table} />
     </div>
   );
 }
@@ -328,8 +409,8 @@ export function OracleSelfService({ records, sessions = [] }: OracleSelfServiceP
   }, [current, killingSessionKey]);
 
   return (
-    <div className="bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-2 sm:p-3 lg:p-4 pb-10">
-      <div className="max-w-7xl mx-auto space-y-3 w-full">
+    <div className="min-h-screen min-w-0 max-w-full bg-gray-100 p-2 sm:p-3 lg:p-4 pb-10">
+      <div className="w-full min-w-0 space-y-3">
         <div className="space-y-0.5">
           <h1 className="text-lg sm:text-xl font-bold text-gray-900">
             Self-service <span className="text-orange-600">Oracle</span>

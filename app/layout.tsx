@@ -56,7 +56,7 @@ export default function RootLayout({
       <body
             className={`${montserrat.className} antialiased min-h-screen grid grid-rows-[auto_1fr_auto]`}
       >
-            <div className=" h-screen">
+            <div className=" h-screen min-w-0">
                 {modal}
                 {children}
               

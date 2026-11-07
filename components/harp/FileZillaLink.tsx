@@ -14,10 +14,19 @@ interface FileZillaLinkProps {
   envId?: number;
   serverId?: number;
   className?: string;
+  title?: string;
+  "aria-label"?: string;
   children: ReactNode;
 }
 
-export function FileZillaLink({ envId, serverId, className, children }: FileZillaLinkProps) {
+export function FileZillaLink({
+  envId,
+  serverId,
+  className,
+  title,
+  "aria-label": ariaLabel,
+  children,
+}: FileZillaLinkProps) {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,6 +103,8 @@ export function FileZillaLink({ envId, serverId, className, children }: FileZill
     <span
       onClick={handleClick}
       className={className}
+      title={title}
+      aria-label={ariaLabel}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

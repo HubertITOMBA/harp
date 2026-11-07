@@ -83,7 +83,7 @@ export default async function RecherchePage() {
   const data = await getRechercheData();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-200 to-orange-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
       <RechercheTable data={data} />
     </div>
   );

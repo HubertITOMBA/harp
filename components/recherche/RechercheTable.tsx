@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import type { SortingState } from "@tanstack/react-table";
+import type { ColumnFiltersState, SortingState, Table as TanStackTable } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +27,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Search, Server, ExternalLink, FolderOp
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import { PuttyLink } from "@/components/harp/PuttyLink";
+import { FileZillaLink } from "@/components/harp/FileZillaLink";
 
 export type RechercheRow = {
   typsrv: string | null;
@@ -46,9 +47,71 @@ interface RechercheTableProps {
   data: RechercheRow[];
 }
 
+/**
+ * Barre de pagination du tableau de recherche.
+ * Les deux emplacements reçoivent la même instance TanStack Table.
+ *
+ * @param table - Instance du tableau, partagée entre le haut et le bas
+ */
+function RecherchePagination({ table }: { table: TanStackTable<RechercheRow> }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span>
+          Page{" "}
+          <span className="font-semibold text-gray-800">
+            {table.getState().pagination.pageIndex + 1}
+          </span>
+          {" / "}
+          {table.getPageCount() || 1}
+        </span>
+        <span>
+          ({table.getPaginationRowModel().rows.length} ligne(s) sur cette page)
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          aria-label="Lignes par page"
+          className="h-8 text-xs border border-gray-300 rounded px-2 bg-white"
+          value={table.getState().pagination.pageSize}
+          onChange={(e) => table.setPageSize(Number(e.target.value))}
+        >
+          {[10, 25, 50, 100].map((size) => (
+            <option key={size} value={size}>
+              {size} / page
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Précédent
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Suivant
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function RechercheTable({ data }: RechercheTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
-  const [columnFilters, setColumnFilters] = useState<{ id: string; value: string }[]>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const handleEnvClick = (url: string | null, env: string) => {
@@ -127,16 +190,27 @@ export function RechercheTable({ data }: RechercheTableProps) {
           const ip = row.original.ip;
           const srv = row.original.srv;
           return (
-            <PuttyLink
-              host={srv || ip}
-              ip={ip}
-              envId={row.original.envId}
-              serverId={row.original.serverId}
-              className="text-orange-600 hover:text-orange-800 hover:underline font-mono text-xs inline-flex items-center gap-1"
-            >
-              {srv}
-              <Server className="h-3 w-3" />
-            </PuttyLink>
+            <span className="inline-flex items-center gap-2">
+              <PuttyLink
+                host={srv || ip}
+                ip={ip}
+                envId={row.original.envId}
+                serverId={row.original.serverId}
+                className="text-orange-600 hover:text-orange-800 hover:underline font-mono text-xs inline-flex items-center gap-1"
+              >
+                {srv}
+                <Server className="h-3 w-3" />
+              </PuttyLink>
+              <FileZillaLink
+                envId={row.original.envId}
+                serverId={row.original.serverId}
+                title="Ouvrir avec FileZilla"
+                aria-label="Ouvrir avec FileZilla"
+                className="inline-flex items-center text-sky-700 hover:text-sky-900 cursor-pointer rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                <FolderOpen className="h-4 w-4" aria-hidden="true" />
+              </FileZillaLink>
+            </span>
           );
         },
       },
@@ -176,7 +250,7 @@ export function RechercheTable({ data }: RechercheTableProps) {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-3">
+    <div className="w-full min-w-0 space-y-3">
       <div className="space-y-0.5">
         <h1 className="text-lg sm:text-xl font-bold text-gray-900">
           Recherche <span className="text-orange-600">environnements / serveurs</span>
@@ -224,6 +298,8 @@ export function RechercheTable({ data }: RechercheTableProps) {
           </p>
         </CardContent>
       </Card>
+
+      <RecherchePagination table={table} />
 
       <Card className="shadow-sm border border-orange-100 bg-white/90 backdrop-blur-sm overflow-hidden">
         <CardContent className="p-0">
@@ -316,54 +392,7 @@ export function RechercheTable({ data }: RechercheTableProps) {
           </div>
         </CardContent>
       </Card>
-      <div className="flex items-center justify-between gap-2 text-[10px] text-gray-600">
-        <div className="flex items-center gap-2">
-          <span>
-            Page{" "}
-            <strong>
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
-            </strong>
-          </span>
-          <span className="hidden sm:inline">
-            ({table.getPaginationRowModel().rows.length} ligne(s) sur cette page)
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="h-7 text-[10px] border-gray-300 rounded px-1"
-            value={table.getState().pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-          >
-            {[10, 25, 50, 100].map((size) => (
-              <option key={size} value={size}>
-                {size} / page
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-[10px]"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Préc.
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-[10px]"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Suiv.
-            </Button>
-          </div>
-        </div>
-      </div>
+      <RecherchePagination table={table} />
     </div>
   );
 }
